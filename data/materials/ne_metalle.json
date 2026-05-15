@@ -1,0 +1,31 @@
+[
+  {
+    "id": "alu_6061",
+    "name": "Aluminium 6061",
+    "kategorie": "ne_metall",
+    "dichte": 2.7,
+    "presets": [
+      { "werkzeug_id": "einschneider_3mm_alu", "rpm": 14000, "vorschub": 600, "plunge": 100, "stepdown": 0.3, "stepover_prozent": 25 },
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 12000, "vorschub": 800, "plunge": 150, "stepdown": 0.3, "stepover_prozent": 25 }
+    ],
+    "risiken": "Spaeneabfuhr kritisch. Mit Druckluft oder Kuehlmittel arbeiten. Werkzeug rubbelt schnell."
+  },
+  {
+    "id": "alu_7075",
+    "name": "Aluminium 7075",
+    "kategorie": "ne_metall",
+    "dichte": 2.81,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 12000, "vorschub": 700, "plunge": 130, "stepdown": 0.25, "stepover_prozent": 20 }
+    ]
+  },
+  {
+    "id": "messing_cuzn37",
+    "name": "Messing CuZn37",
+    "kategorie": "ne_metall",
+    "dichte": 8.5,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 10000, "vorschub": 800, "plunge": 150, "stepdown": 0.5, "stepover_prozent": 30 }
+    ]
+  }
+]

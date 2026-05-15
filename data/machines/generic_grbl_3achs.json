@@ -1,0 +1,19 @@
+{
+  "id": "generic_grbl_3achs",
+  "name": "Generic GRBL 3-Achs Router",
+  "hersteller": "Generisch",
+  "modell": "GRBL Router",
+  "controller": "GRBL",
+  "arbeitsraum": { "x": 300, "y": 300, "z": 80 },
+  "max_vorschub": 2000,
+  "sicherer_vorschub": 1500,
+  "eilgang": 3000,
+  "spindel_typ": "PWM",
+  "spindel_rpm_min": 8000,
+  "spindel_rpm_max": 24000,
+  "sicherheitshoehe": 5.0,
+  "postprozessor": "grbl_standard",
+  "modi": ["standard_xyz"],
+  "aktiver_modus": "standard_xyz",
+  "notizen": "Default-Profil fuer beliebige GRBL-3-Achs-Maschine. Werte konservativ."
+}

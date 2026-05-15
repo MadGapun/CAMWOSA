@@ -2,7 +2,7 @@
 
 <sup>An <b>ELWOSA</b> Project</sup>
 
-> CAMWOSA ist ein browserbasiertes 2.5D CAM-Tool, das direkt mit Claude zusammenarbeitet. Du importierst dein DXF, definierst was gefräst werden soll — und bekommst fertigen G-Code für deine Maschine. Läuft lokal, kostet nichts, deine Daten bleiben bei dir.
+> CAMWOSA ist eine 2.5D CAM-Desktop-App, die direkt mit Claude zusammenarbeitet. Du importierst dein DXF, definierst was gefräst werden soll — und bekommst fertigen G-Code für deine Maschine. Läuft lokal als Electron-App, kostet nichts, deine Daten bleiben bei dir.
 
 [![Status](https://img.shields.io/badge/Status-Konzeptphase-orange.svg)](#roadmap)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
@@ -39,48 +39,82 @@ Der Unterschied: **CAMWOSA ist Claude-nativ.** Claude kann nicht nur helfen — 
 
 ### Phase 1 — 2.5D Kern
 - **DXF-Import** (Solid Edge, Inkscape, LibreCAD, …)
-- **Visueller Toolpath-Preview** im Browser (2D-Ansicht)
+- **Integriertes Zeichnen** (LightBurn-inspiriert) — schnelle Formen ohne CAD-Wechsel
+- **Visueller Toolpath-Preview** (2D-Ansicht im Desktop-Fenster)
 - **Nullpunkt setzen** — Ecke, Mitte, beliebiger Punkt per Klick
 - **Rotation & Ausrichtung** — Modell drehen bis es stimmt
-- **Operationen:** Kontur (innen/außen), Tasche, Bohren, Gravur
+- **Operationen:** Kontur (innen/außen), Tasche, Bohren, Gravur (V-Carving)
 - **Tabs** — für Konturfräsungen ohne Ausbrechen
 - **G-Code Export** — GRBL-kompatibel, direkt für ProVerXL und ähnliche Maschinen
+- **G-Code-Editor** (Monaco) mit Befehlsbibliothek und Live-Sync
 - **Feeds & Speeds Rechner** — Material + Fräser → optimale Werte
+- **Sicherheits-Checks** — Crash-Erkennung vor Export
+- **Multi-Setup-Workflow** — mehrere Aufspannungen + druckbarer Arbeitsplan
+- **Verschnittoptimierung (Nesting)** — mehrere Teile auf einer Platte
 
-### Phase 2 — STL & Relief
-- **STL-Import** für 2.5D-Reliefs
-- **Tiefenkarte** aus STL-Geometrie
-- **Relief-Strategien:** Raster, Kontur, kombiniert
-- **Vorschau** der Relieftiefe als Heatmap
+### Phase 2 — STL, 3D-Simulation, Plugins
+- **STL-Import** für 2.5D-Reliefs mit Heatmap-Vorschau
+- **3D-Materialabtrag-Simulation** (Three.js)
+- **Plugin-System für Postprozessoren** — eigene Controller nachrüsten
+- **Englische Übersetzung**
 
-### Phase 3 — Erweiterungen
-- **Werkzeugbibliothek** — deine Fräser gespeichert, wiederverwendbar
-- **Maschinenprofile** — Voreinstellungen für ProVerXL 4030 V2 und andere GRBL-Maschinen
-- **Post-Prozessor-System** — unterschiedliche GRBL-Varianten
-- **Simulation** — einfache 2D-Simulation des Toolpaths vor dem Export
+### Phase 3 — Rotary
+- **Maschinen-Modi-Konzept** (Standard XYZ vs. Rotary)
+- **Rotary-Postprozessor** — Y-Achse als Rotationsachse
+- **Wrapping** (2D-Geometrie auf Zylinder)
+- **4-Achs-Indexing**
+
+### Phase 4 — Drechseln
+- **Drechsel-Operationen** (Plandrehen, Längsdrehen, Spirale, Helix)
+- DeskProto-Ablösung Teil 2
+
+### Phase 5 — Pro
+- **Werkzeug-Standzeit-Tracking**
+- **Kollisionsanalyse Werkzeughalter**
+- **Adaptive Clearing**
+- **Community-Sharing** für Werkzeuge und Materialien
+
+Vollständiger Plan: siehe [Master-Plan im Wiki](docs/wiki/Master-Plan.md).
 
 ---
 
 ## Architektur
 
+CAMWOSA ist eine **Electron-Desktop-App** mit Python-Backend als Subprozess. **Pure CAM** — keine Maschinen-Steuerung (das übernimmt CNCjs o.ä.).
+
 ```
 CAMWOSA
 ├── backend/          # Python (Flask) — Geometrie, CAM-Logik, G-Code
-│   ├── dxf/          # DXF-Parser (ezdxf)
-│   ├── stl/          # STL-Parser für Relief
-│   ├── cam/          # Toolpath-Berechnung (shapely)
-│   ├── gcode/        # G-Code Generator (GRBL)
-│   └── api/          # REST-API für das Frontend
-├── frontend/         # Browser-UI (React + Vite)
-│   ├── viewer/       # 2D-Toolpath-Vorschau
-│   ├── operations/   # Operationen definieren
-│   └── export/       # G-Code Export
-└── docs/             # Dokumentation
+│   └── camwosa/
+│       ├── dxf/          # DXF-Parser (ezdxf)
+│       ├── stl/          # STL-Parser für Relief
+│       ├── cam/          # Toolpath-Berechnung (shapely)
+│       ├── gcode/        # G-Code Builder
+│       ├── postprocessor/# GRBL, Genmitsu, Rotary, Plugins
+│       ├── feeds/        # Feeds & Speeds Rechner
+│       ├── safety/       # Sicherheits-Checks
+│       ├── nesting/      # Verschnittoptimierung
+│       ├── workflow/     # Multi-Setup-Modul
+│       ├── project/      # .cwp-Format
+│       ├── db/           # SQLAlchemy + Alembic
+│       └── api/          # Flask-Endpoints (localhost only)
+├── frontend/         # Electron-Renderer (React 19 + Vite + TS)
+├── electron/         # Electron-Main-Process
+├── mcp_server/       # FastMCP-Server für Claude-Integration
+├── installer/        # Cross-Platform-Installer
+├── data/             # Default-Profile (Maschinen, Werkzeuge, Material)
+└── docs/
+    ├── SPECIFICATION.md
+    ├── ROTARY.md
+    └── wiki/         # Wiki (gespiegelt nach GitHub-Wiki)
 ```
 
 **Technologie-Stack:**
-- Backend: Python 3.11+, Flask, ezdxf, shapely, numpy
-- Frontend: React 19, Vite, Tailwind CSS
+- Desktop: Electron 30+
+- Frontend: React 19, Vite, TypeScript, Tailwind, Konva (2D), Three.js (3D), Monaco (Editor), zustand, i18next
+- Backend: Python 3.11+, Flask, ezdxf, shapely, pyclipper, trimesh, pydantic 2, SQLAlchemy 2 + SQLite + Alembic
+- Nesting: rectpack (MIT) + optional nest2D (LGPL)
+- MCP: FastMCP
 - Lokal: kein Server, kein Account, keine Cloud
 
 ---
@@ -107,10 +141,14 @@ CAMWOSA wird von Anfang an auf realen Maschinen entwickelt und getestet:
 
 | Phase | Inhalt | Status |
 |-------|--------|--------|
-| **Konzept** | Vision, Architektur, Repository | ✅ |
-| **Phase 1** | DXF → Kontur/Tasche/Bohren → Preview → G-Code | 🔜 |
-| **Phase 2** | STL → Relief → G-Code | ⏳ |
-| **Phase 3** | Werkzeugbibliothek, Maschinenprofile, Simulation | ⏳ |
+| **Konzept** | Vision, Architektur, Repository, Wiki | ✅ |
+| **Phase 1 — MVP** | Backend-Kern, Electron+UI, DXF, Operations, Editor, Feeds&Speeds, Safety, Workflow, Nesting, GRBL-Output | 🟨 in Arbeit |
+| **Phase 2 — Tiefe** | STL-Relief, 3D-Simulation, Plugin-System Postprozessoren, EN | ⏳ |
+| **Phase 3 — Rotary** | Rotary-Modus, Wrapping, 4-Achs-Indexing | ⏳ |
+| **Phase 4 — Drechseln** | Drechsel-Operationen | ⏳ |
+| **Phase 5 — Pro** | Standzeit, Kollisionsanalyse, Adaptive Clearing, Community-Sharing | ⏳ |
+
+Detaillierter Status pro Funktion: [Master-Plan im Wiki](docs/wiki/Master-Plan.md).
 
 ---
 

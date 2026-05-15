@@ -1,0 +1,18 @@
+{
+  "id": "genmitsu_prover_3018",
+  "name": "Genmitsu PROVer 3018",
+  "hersteller": "Genmitsu",
+  "modell": "PROVer 3018",
+  "controller": "GRBL",
+  "arbeitsraum": { "x": 300, "y": 180, "z": 45 },
+  "max_vorschub": 1500,
+  "sicherer_vorschub": 1000,
+  "eilgang": 2000,
+  "spindel_typ": "PWM",
+  "spindel_rpm_min": 4000,
+  "spindel_rpm_max": 10000,
+  "sicherheitshoehe": 3.0,
+  "postprozessor": "grbl_genmitsu",
+  "modi": ["standard_xyz"],
+  "aktiver_modus": "standard_xyz"
+}

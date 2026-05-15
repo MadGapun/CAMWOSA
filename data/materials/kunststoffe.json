@@ -1,0 +1,41 @@
+[
+  {
+    "id": "acryl_pmma",
+    "name": "Acryl (PMMA)",
+    "kategorie": "kunststoff",
+    "dichte": 1.18,
+    "presets": [
+      { "werkzeug_id": "einschneider_3mm_alu", "rpm": 16000, "vorschub": 1500, "plunge": 300, "stepdown": 1.5, "stepover_prozent": 35 },
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 16000, "vorschub": 1500, "plunge": 300, "stepdown": 1.5, "stepover_prozent": 35 }
+    ],
+    "risiken": "Bei zu hohem Vorschub: schmilzt am Werkzeug fest. Besser Einschneider verwenden."
+  },
+  {
+    "id": "pom",
+    "name": "POM (Delrin)",
+    "kategorie": "kunststoff",
+    "dichte": 1.41,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 16000, "vorschub": 1800, "plunge": 350, "stepdown": 2.0, "stepover_prozent": 40 }
+    ]
+  },
+  {
+    "id": "hdpe",
+    "name": "HDPE / PE",
+    "kategorie": "kunststoff",
+    "dichte": 0.95,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 14000, "vorschub": 2000, "plunge": 400, "stepdown": 2.5, "stepover_prozent": 45 }
+    ]
+  },
+  {
+    "id": "pvc_hart",
+    "name": "PVC hart",
+    "kategorie": "kunststoff",
+    "dichte": 1.4,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 16000, "vorschub": 1800, "plunge": 350, "stepdown": 2.0, "stepover_prozent": 40 }
+    ],
+    "risiken": "Bei Hitze: HCl-Daempfe. Absaugung empfohlen."
+  }
+]

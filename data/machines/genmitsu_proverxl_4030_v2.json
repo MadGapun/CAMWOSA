@@ -1,0 +1,20 @@
+{
+  "id": "genmitsu_proverxl_4030_v2",
+  "name": "Genmitsu ProVerXL 4030 V2",
+  "hersteller": "Genmitsu",
+  "modell": "ProVerXL 4030 V2",
+  "controller": "GRBL",
+  "arbeitsraum": { "x": 400, "y": 400, "z": 110 },
+  "max_vorschub": 3000,
+  "sicherer_vorschub": 2000,
+  "eilgang": 5000,
+  "spindel_typ": "manuell",
+  "spindel_rpm_min": 10000,
+  "spindel_rpm_max": 30000,
+  "sicherheitshoehe": 5.0,
+  "werkzeugwechsel_position": [0, 0, 100],
+  "postprozessor": "grbl_genmitsu",
+  "modi": ["standard_xyz", "rotary_y"],
+  "aktiver_modus": "standard_xyz",
+  "notizen": "Markus' Test-Maschine. Spindel: Makita RT0700 (manuell). Rotary-Setup: Y-Achse umgemappt, $101=88.889 steps/deg."
+}

@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+build/
+dist/
+*.egg
+
+# Node
+node_modules/
+.npm/
+.yarn/
+.pnp.*
+*.tsbuildinfo
+.parcel-cache/
+
+# Frontend Build
+frontend/dist/
+frontend/build/
+electron/dist/
+electron/out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# CAMWOSA
+*.cwp.bak
+backend/camwosa.db
+backend/camwosa.db-journal
+backend/instance/
+data/user/
+camwosa-logs/
+
+# Tests
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Installer Output
+installer/output/
+installer/*/output/

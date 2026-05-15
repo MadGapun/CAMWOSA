@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "camwosa"
+version = "0.1.0"
+description = "CAMWOSA Backend — 2.5D CAM für GRBL-Maschinen"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Markus Birzite" }
+]
+dependencies = [
+    "flask>=3.0",
+    "flask-cors>=4.0",
+    "ezdxf>=1.3",
+    "shapely>=2.0",
+    "pyclipper>=1.3",
+    "numpy>=1.26",
+    "trimesh>=4.0",
+    "numpy-stl>=3.1",
+    "pydantic>=2.6",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "rectpack>=0.2.2",
+    "reportlab>=4.0",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "hypothesis>=6.100",
+    "ruff>=0.4",
+    "black>=24.0",
+    "mypy>=1.10",
+    "types-reportlab",
+]
+nesting-extra = [
+    # nest2D ist optional und LGPL-3.0 lizenziert.
+    # Nur installieren wenn No-Fit-Polygon-Nesting gewuenscht.
+    # "nest2D>=0.4",
+]
+
+[project.scripts]
+camwosa-backend = "camwosa.api.app:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["camwosa*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --strict-markers --tb=short"
+markers = [
+    "integration: integration tests, langsamer als unit tests",
+    "snapshot: snapshot-tests gegen erwartete Outputs",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B", "UP", "RUF"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]

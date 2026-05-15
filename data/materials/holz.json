@@ -1,0 +1,89 @@
+[
+  {
+    "id": "buche_massiv",
+    "name": "Buche massiv",
+    "kategorie": "holz",
+    "unter_kategorie": "Hartholz",
+    "janka_haerte": 1300,
+    "dichte": 0.72,
+    "schnittgeschwindigkeit_min": 300,
+    "schnittgeschwindigkeit_max": 600,
+    "presets": [
+      { "werkzeug_id": "schaft_3mm_2s_hm", "rpm": 20000, "vorschub": 1500, "plunge": 300, "stepdown": 1.0, "stepover_prozent": 35 },
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 18000, "vorschub": 2000, "plunge": 400, "stepdown": 2.0, "stepover_prozent": 40 },
+      { "werkzeug_id": "schaft_8mm_2s_hm", "rpm": 16000, "vorschub": 2400, "plunge": 500, "stepdown": 3.0, "stepover_prozent": 45 },
+      { "werkzeug_id": "kugel_3mm_2s_hm", "rpm": 22000, "vorschub": 1200, "plunge": 250, "stepdown": 0.5, "stepover_prozent": 25 },
+      { "werkzeug_id": "kugel_6mm_2s_hm", "rpm": 18000, "vorschub": 1800, "plunge": 350, "stepdown": 1.0, "stepover_prozent": 30 },
+      { "werkzeug_id": "vbit_60grad", "rpm": 18000, "vorschub": 1500, "plunge": 300, "stepdown": 0.5, "stepover_prozent": 30 }
+    ],
+    "spaeneabsaugung_empfohlen": true
+  },
+  {
+    "id": "eiche_massiv",
+    "name": "Eiche massiv",
+    "kategorie": "holz",
+    "unter_kategorie": "Hartholz",
+    "janka_haerte": 1360,
+    "dichte": 0.69,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 18000, "vorschub": 1800, "plunge": 350, "stepdown": 1.5, "stepover_prozent": 35 }
+    ],
+    "spaeneabsaugung_empfohlen": true
+  },
+  {
+    "id": "kiefer_massiv",
+    "name": "Kiefer massiv",
+    "kategorie": "holz",
+    "unter_kategorie": "Weichholz",
+    "janka_haerte": 380,
+    "dichte": 0.5,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 16000, "vorschub": 2500, "plunge": 500, "stepdown": 3.0, "stepover_prozent": 50 }
+    ],
+    "spaeneabsaugung_empfohlen": true
+  },
+  {
+    "id": "fichte_massiv",
+    "name": "Fichte massiv",
+    "kategorie": "holz",
+    "unter_kategorie": "Weichholz",
+    "janka_haerte": 380,
+    "dichte": 0.45,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 16000, "vorschub": 2500, "plunge": 500, "stepdown": 3.0, "stepover_prozent": 50 }
+    ]
+  },
+  {
+    "id": "walnuss_massiv",
+    "name": "Walnuss massiv",
+    "kategorie": "holz",
+    "unter_kategorie": "Hartholz",
+    "janka_haerte": 1010,
+    "dichte": 0.65,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 18000, "vorschub": 2000, "plunge": 400, "stepdown": 2.0, "stepover_prozent": 40 }
+    ]
+  },
+  {
+    "id": "kirsche_massiv",
+    "name": "Kirsche massiv",
+    "kategorie": "holz",
+    "unter_kategorie": "Hartholz",
+    "janka_haerte": 950,
+    "dichte": 0.62,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 18000, "vorschub": 2000, "plunge": 400, "stepdown": 2.0, "stepover_prozent": 40 }
+    ]
+  },
+  {
+    "id": "birke_massiv",
+    "name": "Birke massiv",
+    "kategorie": "holz",
+    "unter_kategorie": "Hartholz",
+    "janka_haerte": 910,
+    "dichte": 0.65,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 18000, "vorschub": 2200, "plunge": 450, "stepdown": 2.0, "stepover_prozent": 40 }
+    ]
+  }
+]

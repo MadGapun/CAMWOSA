@@ -1,0 +1,46 @@
+[
+  {
+    "id": "mdf",
+    "name": "MDF",
+    "kategorie": "holzwerkstoff",
+    "unter_kategorie": "Mitteldichte Faserplatte",
+    "dichte": 0.75,
+    "presets": [
+      { "werkzeug_id": "schaft_3mm_2s_hm", "rpm": 22000, "vorschub": 1800, "plunge": 350, "stepdown": 1.5, "stepover_prozent": 40 },
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 20000, "vorschub": 2500, "plunge": 500, "stepdown": 3.0, "stepover_prozent": 45 },
+      { "werkzeug_id": "schaft_8mm_2s_hm", "rpm": 18000, "vorschub": 3000, "plunge": 600, "stepdown": 4.0, "stepover_prozent": 50 }
+    ],
+    "spaeneabsaugung_empfohlen": true,
+    "risiken": "MDF-Staub ist gesundheitsschaedlich. Absaugung Pflicht."
+  },
+  {
+    "id": "spanplatte",
+    "name": "Spanplatte",
+    "kategorie": "holzwerkstoff",
+    "dichte": 0.65,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 18000, "vorschub": 2200, "plunge": 450, "stepdown": 2.5, "stepover_prozent": 45 }
+    ],
+    "spaeneabsaugung_empfohlen": true
+  },
+  {
+    "id": "multiplex",
+    "name": "Multiplex / Sperrholz",
+    "kategorie": "holzwerkstoff",
+    "dichte": 0.6,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 18000, "vorschub": 2000, "plunge": 400, "stepdown": 2.0, "stepover_prozent": 40 }
+    ]
+  },
+  {
+    "id": "hdf",
+    "name": "HDF",
+    "kategorie": "holzwerkstoff",
+    "unter_kategorie": "Hochdichte Faserplatte",
+    "dichte": 0.85,
+    "presets": [
+      { "werkzeug_id": "schaft_6mm_2s_hm", "rpm": 20000, "vorschub": 2200, "plunge": 450, "stepdown": 2.0, "stepover_prozent": 40 }
+    ],
+    "spaeneabsaugung_empfohlen": true
+  }
+]
