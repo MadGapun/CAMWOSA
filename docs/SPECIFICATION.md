@@ -1,22 +1,27 @@
 # CAMWOSA — Funktionale Spezifikation
 
-> Stand: 15.05.2026 · Status: Konzept
+> Stand: 15.05.2026 · Status: Konzept (Architektur entschieden)
 
 Dieses Dokument beschreibt was CAMWOSA können soll. Es ist die Grundlage für alle weiteren Issues und die Roadmap. Lebendiges Dokument — wird weiter ausgearbeitet.
 
 ## Inhalt
 
 1. [Leitprinzipien](#leitprinzipien)
-2. [Maschinen-Setup](#1-maschinen-setup)
-3. [Werkzeug-Verwaltung](#2-werkzeug-verwaltung)
-4. [Bearbeitungsoperationen](#3-bearbeitungsoperationen)
-5. [Material-Datenbank](#4-material-datenbank)
-6. [Feeds & Speeds Rechner](#5-feeds--speeds-rechner)
-7. [Rohmaterial-Definition](#6-rohmaterial-definition)
-8. [Simulation & Visualisierung](#7-simulation--visualisierung)
-9. [Claude-Integration (MCP)](#8-claude-integration-mcp)
-10. [Architektur](#9-architektur)
-11. [Workflow von der Zeichnung zum G-Code](#10-workflow-von-der-zeichnung-zum-g-code)
+2. [Architektur-Entscheidungen](#architektur-entscheidungen)
+3. [Maschinen-Setup](#1-maschinen-setup)
+4. [Werkzeug-Verwaltung](#2-werkzeug-verwaltung)
+5. [Bearbeitungsoperationen](#3-bearbeitungsoperationen)
+6. [Material-Datenbank](#4-material-datenbank)
+7. [Feeds & Speeds Rechner](#5-feeds--speeds-rechner)
+8. [Rohmaterial-Definition](#6-rohmaterial-definition)
+9. [Integriertes Zeichnen](#7-integriertes-zeichnen)
+10. [Simulation & Visualisierung](#8-simulation--visualisierung)
+11. [G-Code Editor](#9-g-code-editor)
+12. [Projekt-Management](#10-projekt-management)
+13. [Plugin-System für CNC-Steuerungen](#11-plugin-system-für-cnc-steuerungen)
+14. [Claude-Integration (MCP)](#12-claude-integration-mcp)
+15. [Architektur](#13-architektur)
+16. [Workflow von der Zeichnung zum G-Code](#14-workflow-von-der-zeichnung-zum-g-code)
 
 ---
 
@@ -31,6 +36,24 @@ Dieses Dokument beschreibt was CAMWOSA können soll. Es ist die Grundlage für a
 **Lokal & datenschutzfreundlich.** Wie PBP: läuft auf deinem Rechner, deine Daten bleiben bei dir, keine Cloud-Abhängigkeit.
 
 **Wenig Klicks, gute Defaults.** Wenn du nichts änderst, kommt ein vernünftiges Ergebnis raus. Profis können trotzdem alles anpassen.
+
+**Offene Architektur.** GRBL ist der erste Fokus — aber das System ist so gebaut, dass weitere Controller (Marlin, LinuxCNC, Mach3, …) als Plugin nachrüstbar sind.
+
+---
+
+## Architektur-Entscheidungen
+
+Die Grundentscheidungen die alle weiteren Themen prägen:
+
+| Entscheidung | Begründung |
+|---|---|
+| **Desktop-App (Electron)** | Native Datei-Integration, Drag&Drop, OS-Tray. Browser-UI später möglich (gleiches Backend) |
+| **Integriertes Zeichnen** | LightBurn-inspiriert — schnelle Formen direkt erzeugen, kein Tool-Wechsel |
+| **Simulation: stufenweise** | Phase 1: 2D + Sicherheits-Checks (Eilbewegung im Material, Bounding-Box). Phase 2: 3D-Materialabtrag. Phase 3: Kollisionsanalyse Werkzeughalter |
+| **Sprachen: DE-zuerst, dann EN** | Entwicklung auf Deutsch (präziser), Übersetzung danach. i18n-fähig von Anfang an |
+| **G-Code Editor: vollintegriert** | Editor + Befehlsbibliothek + zeilenweise Simulation + Such-/Ersetzen-Funktionen |
+| **G-Code speichern, kein Job-Send** | Save-As genügt — CNCjs übernimmt das Ausführen |
+| **Plugin-System für Controller** | GRBL zuerst, andere Controller erweiterbar (Endnutzer-fähig) |
 
 ---
 
@@ -59,14 +82,14 @@ Eine CAM-Software muss wissen welche Maschine den G-Code ausführt. Falsche Anna
 
 ### Anforderungen
 
-- Mehrere Maschinen-Profile parallel speichern (für Bekannte / spätere Erweiterung)
+- Mehrere Maschinen-Profile parallel speichern
 - Profil aktiv setzen — alle Operationen folgen den Limits des aktiven Profils
 - Warnung wenn Toolpath Arbeitsraum verlässt
 - Import/Export von Profilen als JSON (Community-Sharing)
 
 ### Voreingestellte Profile (mitgeliefert)
 
-- Genmitsu ProVerXL 4030 V2 (Markus' Maschine — primäres Testgerät)
+- Genmitsu ProVerXL 4030 V2 (primäres Testgerät)
 - Genmitsu PROVer 3018
 - Shapeoko Standard
 - OpenBuilds LEAD CNC
@@ -209,20 +232,9 @@ Folgt einer Kurve mit definierter Tiefe.
 
 Material grob abtragen, Schlichten kommt später mit anderem Werkzeug.
 
-**Optionen:**
-- Höhere Vorschübe und Stepdown
-- Aufmass das nach dem Schruppen noch übrig bleibt
-- Vermeidung scharfer Ecken (für Schlichten reserviert)
-
 ### 3.6 Schlichten (Finishing)
 
 Letzter Durchgang für saubere Oberfläche.
-
-**Optionen:**
-- Geringe Zustellung
-- Glatte Bewegungen
-- Höhere Spindeldrehzahl
-- Spring Pass (Pass ohne Zustellung — Werkzeug-Flex ausgleichen)
 
 ### 3.7 2.5D-Relief (Phase 2)
 
@@ -257,14 +269,12 @@ Material:
   Unter-Kategorie: Hartholz
   Janka-Haerte: 1300 (fuer Holz)
   Dichte: 0.72 g/cm3
-  Zugfestigkeit: -
-  Schnittgeschwindigkeit (Vc): 300-600 m/min (fuer Hartmetall)
+  Schnittgeschwindigkeit (Vc): 300-600 m/min
   Empfohlene Zahnvorschuebe (fz) je Werkzeug-Durchmesser
   Empfohlene Spindeldrehzahl-Range
-  Empfohlener Werkzeugtyp: Upcut Schaftfraeser, Hartmetall
-  Risiken / Hinweise: "Brennt bei zu langsamem Vorschub, Maserung beachten"
+  Empfohlener Werkzeugtyp
+  Risiken / Hinweise
   Spaeneabsaugung: empfohlen
-  Klimaanlage: nein
 ```
 
 ### Vorgehaltene Material-Familien (Start)
@@ -275,45 +285,23 @@ Material:
 - Harthölzer: Esche, Robinie, Hickory, Ebenholz
 
 **Holzwerkstoffe**
-- MDF (verschiedene Dichten)
-- Spanplatte (roh / beschichtet)
-- Sperrholz / Multiplex
-- OSB
-- HDF
-- Kork
+- MDF, Spanplatte, Sperrholz/Multiplex, OSB, HDF, Kork
 
 **Kunststoffe**
-- Acryl (PMMA)
-- POM (Delrin)
-- HDPE / PE
-- PVC (Hart / Schaum)
-- ABS
-- PC (Polycarbonat)
-- Nylon (PA6)
-- GFK / CFK (mit Warnung: Atemschutz!)
+- Acryl (PMMA), POM, HDPE/PE, PVC, ABS, PC, Nylon, GFK/CFK
 
 **NE-Metalle**
-- Aluminium: 6061, 7075, AlMg3, AlCuMg
-- Messing: CuZn37 (klassisch)
-- Kupfer (rein)
-- Bronze
+- Aluminium (6061, 7075, AlMg3), Messing CuZn37, Kupfer, Bronze
 
 **Stähle** (eher unrealistisch auf ProVerXL — als Warnung verfügbar)
-- Baustahl S235
-- Werkzeugstahl
-- Edelstahl 1.4301
 
 **Sonstiges**
-- Wachs (für Gussmodelle)
-- Carbon-Platten (mit Atemschutz-Warnung)
-- Schichtstoff (HPL)
-- Renshape / Modellbauschaum
+- Wachs, Carbon, HPL, Renshape
 
 ### Import / Export
 
 - Material als JSON exportierbar
-- Community-Materialien importieren (z.B. exotische Hölzer von anderen CAMWOSA-Nutzern)
-- "Janka-Hardness Importer" — automatische Anlage aus Wikipedia-Daten
+- Community-Materialien importieren
 
 ---
 
@@ -358,12 +346,6 @@ Spanvolumen (Q) in cm³/min:
   - Maschinen-Vorschub übersteigt Limit
   - Material-Werkzeug-Kombination nicht empfohlen
 
-### Lernende Anpassung (später)
-
-- Nutzer markiert "war zu langsam" / "war zu schnell" → Preset wird angepasst
-- Erfahrungswerte werden pro Werkzeug+Material gespeichert
-- Optional: Anonyme Telemetrie-Sharing für Community-Daten
-
 ---
 
 ## 6. Rohmaterial-Definition
@@ -382,12 +364,6 @@ Das CAM-System muss wissen wo das Material anfängt und aufhört, sonst kann es 
 - STL als Rohmaterial-Modell (z.B. unregelmaessiges Restholz)
 - DXF-Konturen für unregelmaessige flache Formen
 
-**Eigenes Zeichnen:**
-- Rechteck mit Maßen
-- Kreis mit Durchmesser
-- Polygon
-- Spline / Frei
-
 ### Positionierung
 
 - **Nullpunkt setzen** — Klick auf Ecke / Mitte / beliebige Stelle
@@ -401,17 +377,79 @@ Optional — wo sind Klemmen, Schraubzwingen, Schraubstock?
 
 - Klemmen-Positionen einzeichnen → Toolpath weicht aus
 - Tab-Höhe automatisch über Klemmen
-- Spannmittel-Bibliothek (Standard-Niederhalter, Schraubstock)
 
 ---
 
-## 7. Simulation & Visualisierung
+## 7. Integriertes Zeichnen
 
-Das Herzstück gegen Crashes und Ausschuss.
+CAMWOSA bringt einen **eingebauten 2D-Zeichner** mit — LightBurn-inspiriert, für schnelle Formen ohne den Umweg über ein externes CAD-Tool.
 
-### 7.1 2D-Vorschau (Phase 1)
+### Warum integriert?
 
-- **Top-Down-Ansicht** (von oben)
+Solid Edge ist für komplexe Bauteile super, aber für eine schnelle Tasche, eine Beschriftung oder einen einfachen Ausschnitt ist der Toolwechsel zu langsam.
+**Workflow-Vergleich:**
+
+| Klassisch (4 Tools) | CAMWOSA (1 Tool) |
+|---|---|
+| CAD öffnen | CAMWOSA öffnen |
+| Zeichnen | Zeichnen |
+| Als DXF exportieren | Operation anlegen |
+| CAM öffnen | G-Code speichern |
+| DXF importieren | |
+| Operation anlegen | |
+| G-Code exportieren | |
+
+### Zeichnen-Funktionen (Phase 1)
+
+**Primitive:**
+- Linie (zwei Punkte, oder Punkt + Winkel + Länge)
+- Rechteck (Eckpunkte oder Mitte + Maße, mit/ohne abgerundete Ecken)
+- Kreis (Mittelpunkt + Radius/Durchmesser)
+- Ellipse
+- Polygon (Anzahl Ecken, Mittelpunkt, Größe — innen/außen)
+- Polylinie / Freihand
+- Spline / Bezier-Kurve
+- Bogen (drei Punkte, oder Mitte/Radius/Winkel)
+- Text (mit Font-Auswahl — für Gravuren und Beschriftungen)
+
+**Operationen auf Objekten:**
+- Verschieben, Drehen, Skalieren, Spiegeln
+- Vervielfältigen (lineares Array, Polar-Array, Raster)
+- Verbinden / Trennen
+- Offset (Parallel-Kurve in Abstand X)
+- Boolean: Vereinigung, Differenz, Schnitt
+- Trimmen / Verlängern
+- Fillet (Verrundung) / Chamfer (Fase)
+
+**Hilfsmittel:**
+- Snap to Grid / Snap to Object (Endpunkt, Mittelpunkt, Schnittpunkt, Tangent)
+- Bemaßungen (nur zur Information beim Zeichnen, nicht im G-Code)
+- Layer / Ebenen
+- Maßstab + Einheiten (mm)
+- Bezugspunkt (Origin) verschieben
+
+### Verbindung Zeichnen → CAM
+
+- Jedes Zeichnungsobjekt kann **direkt einer Operation zugewiesen** werden — Rechtsklick → "als Tasche fräsen"
+- Layer können Operationen zugeordnet werden (alle Objekte auf Layer "Tasche-3mm" werden gemeinsam mit denselben Parametern bearbeitet)
+- Import von DXF (aus Solid Edge) wird automatisch ins Zeichnen-Modul übernommen und kann dort weiterbearbeitet werden
+
+### Was NICHT eingebaut wird
+
+- 3D-Modellierung (dafür gibt es Solid Edge / Blender)
+- Komplexe Bemaßungstools für technische Zeichnungen
+- Parametrische Constraints
+- DWG-Editor
+
+---
+
+## 8. Simulation & Visualisierung
+
+Das Herzstück gegen Crashes und Ausschuss. Stufenweise umgesetzt:
+
+### 8.1 Phase 1 — 2D-Vorschau + Sicherheits-Checks
+
+**2D-Vorschau (Top-Down):**
 - Rohmaterial als Rahmen
 - DXF-Konturen
 - Toolpath als farbige Linien (verschiedene Operationen unterschiedliche Farben)
@@ -421,36 +459,37 @@ Das Herzstück gegen Crashes und Ausschuss.
 - Werkzeug-Radius als Overlay
 - Zoom + Pan + Messen
 
-### 7.2 Tiefen-Vorschau
-
-- **Seitenansicht** mit Z-Verlauf
+**Tiefen-Vorschau (Seitenansicht):**
+- Z-Verlauf
 - Mehrere Tiefen-Durchgänge als Linien gestapelt
 - Sicherheitshöhe sichtbar
 
-### 7.3 3D-Materialabtrag-Simulation (Phase 2)
+**Sicherheits-Checks (automatisch beim Generieren):**
+- Toolpath verlässt Arbeitsraum? → Warnung mit Markierung
+- Eilbewegung (G0) unterhalb Sicherheitshöhe? → **kritische Warnung** (klassische Crash-Ursache!)
+- Eilbewegung im Material? → kritische Warnung
+- Werkzeug zu kurz für Schnitttiefe? → Warnung
+- Plunge ohne Rampe bei nicht-Bohrer? → Hinweis
 
-**Das wichtigste Feature für deine Anforderung:**
+### 8.2 Phase 2 — 3D-Materialabtrag-Simulation
 
-- Rohmaterial wird als 3D-Block dargestellt
+- Rohmaterial als 3D-Block dargestellt
 - Werkzeug bewegt sich entlang Toolpath
 - Material wird "abgetragen" — visueller Abtrag in Echtzeit
 - Geschwindigkeit einstellbar (Zeitlupe → Schnellvorlauf)
 - Pause / Step-Forward / Springen
-- **Mit oder ohne Toolpath-Linien** — auf Wunsch zu/abschaltbar
-- **Endergebnis** vergleichbar mit Soll-Modell (Differenz-Anzeige)
+- Toolpath-Linien zu/abschaltbar
+- Endergebnis vergleichbar mit Soll-Modell (Differenz-Anzeige)
 
-**Technologische Optionen:**
-- WebGL-basiert (Three.js) — läuft im Browser
-- Mesh-basierter Materialabtrag (Boolean Subtraction)
-- Alternativ: Voxel-basiert (einfacher, weniger genau, aber schneller)
+**Technologie:** Three.js, Voxel-basiert für Performance, optional Mesh-basiert für Genauigkeit.
 
-### 7.4 Werkzeug-Visualisierung
+### 8.3 Phase 3 — Kollisionsanalyse
 
-- Aktuelles Werkzeug 3D dargestellt (mit korrektem Durchmesser/Länge)
-- Spindel und Halter optional
+- Werkzeughalter + Spindel als 3D-Geometrie
 - Kollisionswarnung wenn Halter ins Material taucht
+- Visualisierung der "no-go zones"
 
-### 7.5 Statistiken pro Simulation
+### 8.4 Statistiken pro Simulation
 
 - Geschätzte Bearbeitungszeit
 - Anzahl Werkzeugwechsel
@@ -460,7 +499,169 @@ Das Herzstück gegen Crashes und Ausschuss.
 
 ---
 
-## 8. Claude-Integration (MCP)
+## 9. G-Code Editor
+
+Ein **vollwertiger G-Code Editor** ist integriert — nicht nur ein passiver Viewer.
+
+### 9.1 Basis-Funktionen
+
+- Syntax-Highlighting (G/M-Codes farblich, Parameter, Kommentare)
+- Zeilennummern
+- Suchen & Ersetzen (mit Regex-Option)
+- Undo / Redo
+- Zeilen markieren / Blöcke verschieben
+- Speichern / Speichern als
+- Auto-Format (Spaltenausrichtung)
+- Mehrere Tabs (verschiedene G-Code-Dateien parallel)
+
+### 9.2 Befehlsbibliothek
+
+Klick auf einen G-Code-Befehl → **kontextbezogene Erklärung im Seitenpanel:**
+
+| Befehl | Was er macht |
+|---|---|
+| G0 X100 Y50 | Eilbewegung zu Position X=100, Y=50 (kein Materialabtrag) |
+| G1 X100 Y50 F1000 | Lineare Schnittbewegung mit 1000 mm/min |
+| G2 / G3 | Kreisbogen-Bewegung (im/gegen Uhrzeigersinn) |
+| G17/G18/G19 | Arbeitsebene wählen (XY/XZ/YZ) |
+| G20/G21 | Einheiten setzen (Zoll/mm) |
+| G54-G59 | Werkstück-Koordinatensystem |
+| G90/G91 | Absolute/relative Koordinaten |
+| M3 Sxxx | Spindel ein (im Uhrzeigersinn) mit Drehzahl |
+| M5 | Spindel aus |
+| M30 | Programm-Ende |
+
+**Plus:** Suchfunktion in der Bibliothek — "Wie heißt der Befehl für Spanbrechen?" → G73 / G83.
+
+### 9.3 Zeilenweise Simulation
+
+- Klick in eine Zeile → Markierung in 2D/3D-Vorschau (wo das Werkzeug grade ist)
+- Toggle "Live-Sync" — automatische Aktualisierung beim Bewegen des Cursors
+- **Performance-Schalter** — bei großen G-Code-Dateien Live-Sync deaktivierbar
+- Schritt-für-Schritt durchgehen (wie Debugger)
+
+### 9.4 Massen-Editor (Find & Modify)
+
+Beispiel: "Setze alle Vorschübe von 2000 auf 1500"
+- Such-Pattern: `F2000`
+- Ersetzen mit: `F1500`
+- Vorschau der betroffenen Zeilen vor Anwendung
+- **Operations-spezifisches Editieren:** "In allen Operationen vom Typ Tasche, reduziere Plunge-Rate um 20%"
+
+### 9.5 Strukturansicht (Code-Outline)
+
+Linke Spalte zeigt die G-Code-Struktur:
+- Header (Maschinen-Setup)
+- Werkzeug T1
+  - Operation: Aussenkontur
+  - Operation: Tasche 1
+- Werkzeug T2
+  - Operation: Bohrungen
+- Footer (Spindel aus, zurück zur Park-Position)
+
+Klick auf Eintrag → Springt zur entsprechenden Stelle.
+
+### 9.6 Backplot-Annotation
+
+Im G-Code-Editor werden auf Wunsch Kommentare automatisch ergänzt:
+```
+; Operation: Aussenkontur Stepdown 1/3
+G1 Z-2.0 F300
+...
+; Operation: Aussenkontur Stepdown 2/3
+G1 Z-4.0 F300
+```
+
+So bleibt nachvollziehbar **was wann passiert** — wichtig für späteres Editing.
+
+---
+
+## 10. Projekt-Management
+
+### 10.1 Projekt-Konzept
+
+Ein **CAMWOSA-Projekt** enthält alles was zum Werkstück gehört:
+- Maschinen-Wahl
+- Material + Rohmaterial-Definition
+- Geometrie (Zeichnung / Import)
+- Operationen
+- Werkzeug-Zuordnungen
+- Generierter Toolpath
+- Generierter G-Code
+- Notizen / Metadaten
+
+**Dateiformat:** `.cwp` (CAMWOSA Project) — ein ZIP mit JSON + eingebetteten Geometrie-Dateien.
+
+### 10.2 Speichern
+
+- **Speichern** — bestehende Projektdatei überschreiben
+- **Speichern als …** — neue Projektdatei (für Varianten)
+- **Auto-Save** — alle X Minuten in temporären Snapshot (wiederherstellbar nach Crash)
+
+### 10.3 Varianten / Versionen
+
+Ein Projekt kann **mehrere Varianten** enthalten — z.B.:
+- "Buche, 12mm — Standardversion"
+- "MDF, 18mm — billig zum Testen"
+- "Acryl, 5mm — als Vorlage"
+
+Jede Variante hat eigene Material/Maschinen/Operationen-Einstellungen. **Wechsel zwischen Varianten per Dropdown.**
+
+### 10.4 Projekt-Historie
+
+- Wer hat wann was geändert? (Lokales Log)
+- "Revert to last G-Code generation"
+- Diff zwischen zwei Varianten
+
+### 10.5 Projekt-Export / Import
+
+- Komplettes Projekt als ZIP exportieren (für Backup / Sharing)
+- Projekt importieren (mit Konflikt-Behandlung bei fehlenden Werkzeugen/Materialien)
+
+---
+
+## 11. Plugin-System für CNC-Steuerungen
+
+GRBL ist Start — das System ist aber **offen für andere Controller**.
+
+### 11.1 Post-Prozessor-Architektur
+
+Jeder Controller hat seinen eigenen Post-Prozessor — definiert in einer einzelnen Python-Datei oder JSON-Konfiguration:
+
+```
+postprocessor/
+├── grbl_standard.py       # GRBL 1.1 Standard (Default)
+├── grbl_genmitsu.py       # Genmitsu-Spezialitäten
+├── marlin.py              # 3D-Drucker mit CNC-Erweiterung
+├── linuxcnc.py            # LinuxCNC / Mach3
+├── duet.py                # Duet3D Controller
+└── custom/                # User-eigene Post-Prozessoren
+```
+
+### 11.2 Was ein Post-Prozessor definiert
+
+- Datei-Header (Maschinen-Init, Einheiten, etc.)
+- Wie ein Werkzeugwechsel aussieht
+- Wie Spindel ein/aus geschrieben wird
+- Wie Eilbewegungen aussehen (G0 vs. spezielle Codes)
+- Bohrzyklen (G81/G82/G83 oder simuliert)
+- Datei-Footer
+- Datei-Extension (.nc, .gcode, .ngc)
+
+### 11.3 Endnutzer-Erweiterbarkeit
+
+- Post-Prozessor in **dokumentierter Python-Klasse** definieren
+- Beispiele und Templates mitgeliefert
+- "User Postprocessor"-Verzeichnis das Updates überlebt
+- Validierung beim Laden (Syntax-Check)
+
+### 11.4 Controller-Profile
+
+Über den Post-Prozessor hinaus: Maschinen-Eigenheiten (Soft-Limits, Probing-Befehle, Drehzahl-Mapping) liegen im Maschinen-Profil — separat vom Post-Prozessor.
+
+---
+
+## 12. Claude-Integration (MCP)
 
 Wie PBP — Claude soll als Sparringspartner und Bediener funktionieren.
 
@@ -475,9 +676,16 @@ Maschinen / Werkzeuge / Material:
 
 Projekt:
   - projekt_erstellen(name, maschine, material)
+  - projekt_speichern_als(pfad)
   - dxf_importieren(pfad)
   - rohmaterial_definieren(form, masse, position)
   - nullpunkt_setzen(x, y, z)
+
+Zeichnen:
+  - zeichnen_rechteck(masse, position)
+  - zeichnen_kreis(durchmesser, position)
+  - zeichnen_text(text, font, position)
+  - boolean_operation(typ, objekte)
 
 Operationen:
   - operation_kontur(geometrie, werkzeug, parameter)
@@ -491,15 +699,22 @@ Berechnung & Export:
   - simulation_starten(projekt_id)
   - gcode_exportieren(pfad)
 
+G-Code-Manipulation:
+  - gcode_lesen(pfad)
+  - gcode_suchen_ersetzen(suchen, ersetzen)
+  - gcode_befehl_erklaeren(befehl)
+
 Analyse & Optimierung:
-  - projekt_pruefen(projekt_id)  -- Sanity-Check (Arbeitsraum, Werkzeug, Kollision)
+  - projekt_pruefen(projekt_id)
   - bearbeitungszeit_schaetzen(projekt_id)
   - vorschlaege_optimierung(projekt_id)
 ```
 
-### Beispiel-Dialoge (was Markus sagen koennen soll)
+### Beispiel-Dialoge
 
 > "Importiere die DXF von gestern und mach eine Kontur mit 6mm Tabs."
+> 
+> "Zeichne mir ein Rechteck 100x60 und gravier 'Werkstatt' darauf."
 > 
 > "Ich brauche eine Tasche 80x40mm, 8mm tief, in Buche, mit dem 6mm Einschneider."
 > 
@@ -509,17 +724,25 @@ Analyse & Optimierung:
 > 
 > "Optimiere die Reihenfolge der Operationen damit weniger Werkzeugwechsel noetig sind."
 > 
+> "Setze alle Vorschuebe in der Datei von 2000 auf 1500 mm/min."
+> 
 > "Zeig mir die Simulation in Zeitlupe ab Operation 3."
 
 ---
 
-## 9. Architektur
+## 13. Architektur
 
 ### Technologie-Stack
 
 ```
+Desktop-App (Electron)
+  Renderer: React 19 + Vite + Tailwind CSS
+  Main Process: Node.js (Dateisystem, OS-Integration)
+  Bridge: IPC zwischen Renderer und Main
+
 Backend (Python 3.11+)
-  Flask                  - REST-API
+  Lokal als Subprozess der Electron-App gestartet
+  Flask                  - REST-API (localhost only)
   ezdxf                  - DXF-Parser
   numpy                  - Geometrie & Matrix
   shapely                - 2D-Geometrie-Operationen (Offset, Boolean)
@@ -527,18 +750,24 @@ Backend (Python 3.11+)
   pydantic               - Datenmodelle
   SQLAlchemy + SQLite    - Persistenz
 
-Frontend (React 19 + Vite + Tailwind)
+Frontend-Bibliotheken
   three.js               - 3D-Visualisierung & Simulation
-  konva.js (optional)    - 2D-Canvas-Vorschau
-  zustand / redux        - State Management
+  konva.js               - 2D-Canvas (Zeichnen + Vorschau)
+  monaco-editor          - G-Code Editor (gleiche Engine wie VS Code)
+  zustand                - State Management
+  i18next                - Internationalisierung (DE/EN)
 
 MCP-Server (Python)
   FastMCP                - MCP-Implementation
   HTTP-Bridge zu Flask   - Tool-Aufrufe an Backend
-
-CLI / Installer
-  Cross-Platform (Win/macOS/Linux) - wie PBP
 ```
+
+### Internationalisierung
+
+- **DE-zuerst** — Entwicklung in Deutsch (präziser für technische Begriffe)
+- **i18next** mit Translation-Keys von Anfang an
+- **EN-Übersetzung** als zweite Sprache nach Stabilisierung
+- Weitere Sprachen Community-basiert (wie EstlCAM)
 
 ### Datenmodell (Kern)
 
@@ -546,51 +775,61 @@ CLI / Installer
 Maschine (1) ----< (N) Projekt
 Material (1) ----< (N) Projekt
 Werkzeug (1) ----< (N) Operation
-Projekt (1) ----< (N) Operation
+Projekt (1) ----< (N) Variante
+Variante (1) ----< (N) Operation
 Operation (1) ----< (N) Toolpath-Segment
 Projekt (1) -----  (1) Rohmaterial
-Projekt (1) -----  (1) DXF/STL-Import
+Projekt (1) -----  (N) GeometrieObjekt
 ```
 
 ### Repository-Struktur
 
 ```
 CAMWOSA/
-├── backend/
-│   ├── camwosa/
-│   │   ├── dxf/         # DXF-Parser
-│   │   ├── stl/         # STL-Parser
-│   │   ├── cam/         # Operationen + Toolpath
-│   │   ├── gcode/       # G-Code Generator
-│   │   ├── feeds/       # Feeds & Speeds
-│   │   ├── db/          # SQLAlchemy-Modelle
-│   │   └── api/         # Flask Routes
-│   └── tests/
-├── frontend/
+├── electron/             # Electron Main Process
+│   ├── main.js
+│   ├── preload.js
+│   └── backend_runner.js # startet Python-Backend
+├── frontend/             # React-Renderer
 │   ├── src/
 │   │   ├── viewer2d/
 │   │   ├── viewer3d/
+│   │   ├── editor/       # G-Code Editor (Monaco)
+│   │   ├── drawing/      # Zeichnen-Modul
 │   │   ├── operations/
-│   │   └── settings/
+│   │   ├── settings/
+│   │   └── locales/      # i18n DE/EN
 │   └── public/
+├── backend/
+│   ├── camwosa/
+│   │   ├── dxf/
+│   │   ├── stl/
+│   │   ├── cam/
+│   │   ├── gcode/
+│   │   ├── feeds/
+│   │   ├── postprocessor/
+│   │   ├── db/
+│   │   └── api/
+│   └── tests/
 ├── mcp_server/
 │   └── server.py
-├── installer/
+├── installer/            # Cross-Platform Installer
 ├── docs/
 └── data/
-    ├── machines/        # Vorgefertigte Maschinen-Profile
-    ├── tools/           # Werkzeug-Bibliothek (Defaults)
-    └── materials/       # Material-DB (Defaults)
+    ├── machines/
+    ├── tools/
+    ├── materials/
+    └── postprocessors/
 ```
 
 ---
 
-## 10. Workflow von der Zeichnung zum G-Code
+## 14. Workflow von der Zeichnung zum G-Code
 
 Der typische Ablauf in CAMWOSA:
 
 ```
-1. Projekt anlegen
+1. Projekt anlegen oder öffnen
    └─> Maschine wählen (z.B. ProVerXL 4030 V2)
 
 2. Rohmaterial definieren
@@ -598,10 +837,10 @@ Der typische Ablauf in CAMWOSA:
    ├─> Maße eingeben
    └─> Material auswählen (z.B. Buche)
 
-3. Geometrie laden
+3. Geometrie erstellen
    ├─> DXF importieren (aus Solid Edge)
    ├─> ODER: STL importieren (für Relief)
-   └─> ODER: Direkt in CAMWOSA zeichnen (einfache Formen)
+   └─> ODER: Direkt in CAMWOSA zeichnen (Phase 1!)
 
 4. Nullpunkt setzen
    ├─> Auf Geometrie (z.B. Mittelpunkt)
@@ -614,31 +853,47 @@ Der typische Ablauf in CAMWOSA:
    └─> Reihenfolge festlegen
 
 6. Toolpaths generieren
-   └─> Sofort visueller Preview
+   └─> Sofort visueller Preview + Sicherheits-Checks
 
 7. Simulation
    ├─> 2D-Preview pruefen
-   ├─> 3D-Simulation mit Materialabtrag
+   ├─> 3D-Simulation mit Materialabtrag (Phase 2)
    └─> Statistiken pruefen (Zeit, Verfahrweg)
 
-8. G-Code exportieren
+8. G-Code prüfen und anpassen
+   ├─> Editor öffnen
+   ├─> Auf Wunsch: Vorschübe anpassen, Tiefen ändern
+   └─> Zeilenweise simulieren
+
+9. G-Code exportieren
    ├─> Post-Prozessor wählen (GRBL Standard)
    ├─> Datei speichern (.nc oder .gcode)
-   └─> Optional: Direkt in CNCjs öffnen
+   └─> Manuell in CNCjs laden
+
+10. Projekt speichern
+    ├─> Als Variante speichern (für ähnliche Werkstücke)
+    └─> Backup als ZIP
 ```
 
 ---
 
-## Open Questions
+## Roadmap (überarbeitet)
 
-Diese Fragen sind noch nicht entschieden — werden im Lauf des Projekts geklärt:
+| Phase | Inhalt | Status |
+|-------|--------|--------|
+| **Konzept** | Vision, Architektur, Repository | ✅ |
+| **Phase 1 — MVP** | Electron-Setup, DXF-Import, Zeichnen, Kontur+Tasche+Bohren, Feeds&Speeds, 2D-Preview, GRBL-Output, G-Code-Editor, Projekt-Speichern, DE-UI | 🔜 |
+| **Phase 2 — Tiefe** | STL-Relief, 3D-Simulation Materialabtrag, EN-Übersetzung, Plugin-System Post-Prozessoren | ⏳ |
+| **Phase 3 — Pro** | Werkzeug-Standzeit, Kollisionsanalyse, Adaptive Clearing, Community-Sharing | ⏳ |
 
-1. **Browser-UI oder Desktop-App (Electron)?** — Browser ist leichter, Electron erlaubt mehr OS-Integration.
-2. **Eigenes Zeichnen mit aufnehmen oder nur Import?** — Markus zeichnet in Solid Edge. Eingebaute Zeichnung später, oder vorerst nur Import?
-3. **Wie tief soll die 3D-Simulation gehen?** — Reicht eine optische Simulation oder soll sie auch Kollisions-Warnungen liefern?
-4. **Mehrere Sprachen?** — Erstmal nur Deutsch wie PBP, oder direkt EN/DE?
-5. **Eigener G-Code-Editor integriert?** — Oder nur Export und externes Tool nutzen?
-6. **Wird CNCjs direkt angesprochen?** — Direkter Job-Send wäre möglich, ist aber riskant.
+---
+
+## Offene Themen (zu klären während der Umsetzung)
+
+- Performance-Schwelle für Live-Sync im G-Code Editor (ab wie vielen Zeilen abschalten?)
+- Welche Schriftarten werden für Text-Gravur unterstützt? (System-Fonts? Eigene?)
+- Wie sieht das Update-System aus? (Eigener Updater wie PBP?)
+- Soll Material- und Werkzeug-DB optional Cloud-syncbar sein? (oder nur lokal/JSON-Export)
 
 ---
 
