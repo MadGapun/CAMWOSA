@@ -1,6 +1,6 @@
 # CAMWOSA — Funktionale Spezifikation
 
-> Stand: 15.05.2026 · Status: Konzept (Architektur entschieden)
+> Stand: 15.05.2026 · Status: Konzept (Architektur entschieden, Workflow-Modul ergänzt)
 
 Dieses Dokument beschreibt was CAMWOSA können soll. Es ist die Grundlage für alle weiteren Issues und die Roadmap. Lebendiges Dokument — wird weiter ausgearbeitet.
 
@@ -15,23 +15,27 @@ Dieses Dokument beschreibt was CAMWOSA können soll. Es ist die Grundlage für a
 7. [Feeds & Speeds Rechner](#5-feeds--speeds-rechner)
 8. [Rohmaterial-Definition](#6-rohmaterial-definition)
 9. [Integriertes Zeichnen](#7-integriertes-zeichnen)
-10. [Simulation & Visualisierung](#8-simulation--visualisierung)
-11. [G-Code Editor](#9-g-code-editor)
-12. [Projekt-Management](#10-projekt-management)
-13. [Plugin-System für CNC-Steuerungen](#11-plugin-system-für-cnc-steuerungen)
-14. [Claude-Integration (MCP)](#12-claude-integration-mcp)
-15. [Architektur](#13-architektur)
-16. [Workflow von der Zeichnung zum G-Code](#14-workflow-von-der-zeichnung-zum-g-code)
+10. [Workflow-Modul (Multi-Setup)](#8-workflow-modul-multi-setup)
+11. [Verschnittoptimierung (Nesting)](#9-verschnittoptimierung-nesting)
+12. [Simulation & Visualisierung](#10-simulation--visualisierung)
+13. [G-Code Editor](#11-g-code-editor)
+14. [Projekt-Management](#12-projekt-management)
+15. [Plugin-System für CNC-Steuerungen](#13-plugin-system-für-cnc-steuerungen)
+16. [Claude-Integration (MCP)](#14-claude-integration-mcp)
+17. [Architektur](#15-architektur)
+18. [Workflow von der Zeichnung zum G-Code](#16-workflow-von-der-zeichnung-zum-g-code)
 
 ---
 
 ## Leitprinzipien
 
+**Pure CAM — keine Maschinen-Steuerung.** CAMWOSA erzeugt G-Code, prüft ihn und speichert ihn. Die tatsächliche Ausführung auf der Maschine ist Sache von CNCjs (oder welcher Steuerungs-Software du nutzt). Keine Jog-Steuerung, kein direkter Job-Send, kein Audio-Feedback während der Bearbeitung. Diese Grenze ist bewusst gezogen.
+
+**MCP-First-Prinzip: UI vollwertig, MCP optional.** Die UI ist komplett stand-alone bedienbar — ohne Claude funktioniert alles. Das MCP ist eine **zweite Bedienoberfläche** für die gleiche Backend-API: jede Funktion ist sowohl per Klick als auch per Chat ansprechbar. Wenn Claude eine komplette CAM-Bearbeitung erstellt, sind die einzelnen Schritte ganz normale Operationen in der Liste — du siehst, editierst und ergänzt sie wie selbst angelegt.
+
 **Sicherheit vor Bequemlichkeit.** Jeder Toolpath ist visualisiert und prüfbar bevor er die Maschine erreicht. Lieber eine Frage zu viel als ein Crash.
 
 **Maker statt Konzern.** CAMWOSA ist für 2.5D-Arbeit auf Hobby- und Semi-Pro-Maschinen optimiert. Keine 5-Achs-Komplexität, kein Engineering-Overhead.
-
-**Claude als Sparringspartner.** Jede Funktion ist auch über Sprache/Chat zugänglich. Du kannst eine Operation per Klick anlegen ODER Claude bitten sie zu erzeugen — beide Wege funktionieren.
 
 **Lokal & datenschutzfreundlich.** Wie PBP: läuft auf deinem Rechner, deine Daten bleiben bei dir, keine Cloud-Abhängigkeit.
 
@@ -47,9 +51,14 @@ Die Grundentscheidungen die alle weiteren Themen prägen:
 
 | Entscheidung | Begründung |
 |---|---|
+| **Pure CAM, keine Steuerung** | G-Code erzeugen und speichern. CNCjs übernimmt die Ausführung |
+| **MCP-First-Prinzip** | UI komplett bedienbar ohne Claude. MCP ist zweite Bedienoberfläche zur gleichen Backend-API |
 | **Desktop-App (Electron)** | Native Datei-Integration, Drag&Drop, OS-Tray. Browser-UI später möglich (gleiches Backend) |
 | **Integriertes Zeichnen** | LightBurn-inspiriert — schnelle Formen direkt erzeugen, kein Tool-Wechsel |
-| **Simulation: stufenweise** | Phase 1: 2D + Sicherheits-Checks (Eilbewegung im Material, Bounding-Box). Phase 2: 3D-Materialabtrag. Phase 3: Kollisionsanalyse Werkzeughalter |
+| **Workflow-Modul** | Multi-Setup-Jobs mit Pausen für Umspannen/Werkzeugwechsel + druckbare Checklisten |
+| **Verschnittoptimierung** | Nesting für mehrere Teile auf einer Platte — Standard-Feature, nicht "später" |
+| **Werkzeugwechsel** | Bestätigung durch Nutzer (kein automatisches Durchlaufen) |
+| **Simulation: stufenweise** | Phase 1: 2D + Sicherheits-Checks. Phase 2: 3D-Materialabtrag. Phase 3: Kollisionsanalyse |
 | **Sprachen: DE-zuerst, dann EN** | Entwicklung auf Deutsch (präziser), Übersetzung danach. i18n-fähig von Anfang an |
 | **G-Code Editor: vollintegriert** | Editor + Befehlsbibliothek + zeilenweise Simulation + Such-/Ersetzen-Funktionen |
 | **G-Code speichern, kein Job-Send** | Save-As genügt — CNCjs übernimmt das Ausführen |
@@ -73,7 +82,7 @@ Eine CAM-Software muss wissen welche Maschine den G-Code ausführt. Falsche Anna
 | Eilgang (G0) | 5.000 mm/min |
 | Spindel-Typ | Makita RT0700 (manuell) oder Spindel (PWM) |
 | Spindel-RPM-Range | 10.000 – 30.000 |
-| Achsen-Konfiguration | XYZ (Rotary optional via DeskProto) |
+| Achsen-Konfiguration | XYZ (Rotary-Modus separat siehe ROTARY.md) |
 | Tischtyp | T-Nutenplatte / Wachstisch |
 | Nullpunkt-Konvention | Material Top oder Tisch Top |
 | Sicherheitshöhe (Clearance) | 5 mm über Werkstückoberkante |
@@ -387,17 +396,6 @@ CAMWOSA bringt einen **eingebauten 2D-Zeichner** mit — LightBurn-inspiriert, f
 ### Warum integriert?
 
 Solid Edge ist für komplexe Bauteile super, aber für eine schnelle Tasche, eine Beschriftung oder einen einfachen Ausschnitt ist der Toolwechsel zu langsam.
-**Workflow-Vergleich:**
-
-| Klassisch (4 Tools) | CAMWOSA (1 Tool) |
-|---|---|
-| CAD öffnen | CAMWOSA öffnen |
-| Zeichnen | Zeichnen |
-| Als DXF exportieren | Operation anlegen |
-| CAM öffnen | G-Code speichern |
-| DXF importieren | |
-| Operation anlegen | |
-| G-Code exportieren | |
 
 ### Zeichnen-Funktionen (Phase 1)
 
@@ -431,7 +429,7 @@ Solid Edge ist für komplexe Bauteile super, aber für eine schnelle Tasche, ein
 ### Verbindung Zeichnen → CAM
 
 - Jedes Zeichnungsobjekt kann **direkt einer Operation zugewiesen** werden — Rechtsklick → "als Tasche fräsen"
-- Layer können Operationen zugeordnet werden (alle Objekte auf Layer "Tasche-3mm" werden gemeinsam mit denselben Parametern bearbeitet)
+- Layer können Operationen zugeordnet werden
 - Import von DXF (aus Solid Edge) wird automatisch ins Zeichnen-Modul übernommen und kann dort weiterbearbeitet werden
 
 ### Was NICHT eingebaut wird
@@ -443,11 +441,179 @@ Solid Edge ist für komplexe Bauteile super, aber für eine schnelle Tasche, ein
 
 ---
 
-## 8. Simulation & Visualisierung
+## 8. Workflow-Modul (Multi-Setup)
+
+Echte CNC-Werkstuecke brauchen oft **mehrere Aufspannungen**: 2D-Rohling fraesen, dann umspannen auf Rotary, dann nochmal werkzeugwechseln. CAMWOSA unterstuetzt das nativ.
+
+### 8.1 Setup-Konzept
+
+Ein Projekt besteht aus einer Folge von **Setups**. Jedes Setup ist ein in sich abgeschlossener Job mit eigenem G-Code-File:
+
+```
+Projekt: "Lotus-Schale Variante 3"
+├── Setup 1: Rohling 2D vorbereiten
+├── 🔧 SETUP-PAUSE — Umspannen auf Rotary
+├── Setup 2: Rotary-Schruppen
+├── 🔧 SETUP-PAUSE — Werkzeug wechseln
+└── Setup 3: Rotary-Schlichten
+```
+
+Pro Setup wird **eine separate G-Code-Datei** generiert. Das ist sauberer als ein langer File mit M0-Pausen — und die Maschinen-Steuerung (CNCjs) laedt einfach das naechste File wenn du soweit bist.
+
+### 8.2 Setup-Eigenschaften
+
+Pro Setup wird festgehalten:
+
+| Aspekt | Beschreibung |
+|---|---|
+| Maschinen-Modus | 3-Achs / Rotary |
+| Spannmittel | Schraubzwingen, Schraubstock, Backen, Reitstock |
+| Werkstueck-Position | Wie eingespannt (Foto-Slot fuer Vergleich) |
+| Nullpunkt | X/Y/Z neu setzen oder uebernehmen aus vorherigem Setup |
+| Werkzeug | Aktives Werkzeug (kann mehrfach zwischen Setups gewechselt werden) |
+| Operationen | Welche Bearbeitungen in diesem Setup |
+| Geschaetzte Zeit | Pro Setup |
+
+### 8.3 Setup-Pausen
+
+Zwischen zwei Setups gibt es eine **Pause** mit klaren Aktions-Anweisungen:
+
+**Werkzeugwechsel-Pause:**
+- Welches Werkzeug wechseln (von T1 auf T2)
+- Z-Hoehe neu setzen
+- **Bestaetigung im UI erforderlich:** "Werkzeug T2 eingewechselt? [Ja]"
+
+**Umspann-Pause:**
+- Werkstueck wie umspannen (mit Foto-Anleitung)
+- Maschinen-Modus umstellen (z.B. ROTARY EIN in CNCjs)
+- Nullpunkt neu setzen — X/Y/Z je nach Bedarf
+- Bestaetigung im UI
+
+**Optionale Stop-Pause:**
+- Zwischen-Inspektion ("Tiefe pruefen, dann Continue")
+- Schleifen/Reinigen vor dem naechsten Schritt
+
+### 8.4 Foto-Dokumentation
+
+Pro Setup ein optionaler Foto-Slot:
+- Beim ersten Lauf machst du ein Foto vom Setup
+- Beim Wiederholungs-Lauf hast du Vergleichsbild
+- Hilft besonders bei Jobs ueber mehrere Tage
+
+### 8.5 Arbeitsplan / Checkliste
+
+CAMWOSA generiert aus dem Projekt einen **druckbaren Arbeitsplan**:
+
+```
+─────────────────────────────────────────
+CAMWOSA Arbeitsplan
+Projekt: Lotus-Schale Variante 3
+Datum: 15.05.2026 · Geschaetzt: 2h 45min
+
+[ ] Setup 1: Rohling vorbereiten
+    Maschine: 3-Achs ($101=400 pruefen)
+    Spannmittel: Schraubzwingen x 4
+    Material: Buche-Rundling Ø 130mm, H 30mm
+    Nullpunkt: Ecke vorne links, OK
+    G-Code: lotus_setup1_rohling.nc
+    Werkzeug T1: 6mm Schaftfraeser
+    Geschaetzte Zeit: 25min
+
+[ ] Setup-Pause: Umspannen auf Rotary
+    Rotary-Achse einbauen
+    CNCjs: Macro "ROTARY EIN" ausfuehren
+    Werkstueck: zwischen Backen + Reitstock
+    Nullpunkt neu: X=0 Backen-Mitte, Z=0 Achse
+
+[ ] Setup 2: Rotary-Schruppen
+    Maschine: Rotary-Modus ($101=88.889 pruefen)
+    G-Code: lotus_setup2_schruppen.nc
+    Werkzeug T1: 6mm Schaftfraeser (unveraendert)
+    Geschaetzte Zeit: 45min
+
+[ ] Setup-Pause: Werkzeug wechseln auf T2
+    Werkzeug T2: 3mm Kugelfraeser
+    Z-Hoehe neu setzen mit Z-Probe
+
+[ ] Setup 3: Rotary-Schlichten
+    G-Code: lotus_setup3_finish.nc
+    Geschaetzte Zeit: 95min
+
+[ ] Fertig
+─────────────────────────────────────────
+```
+
+**Zwei Darstellungsformen:**
+- **PDF zum Ausdrucken** — Liste neben CNC liegen lassen, mit Stift abhaken
+- **Im UI als Checkliste** — klickbar abhakbar, Status synchronisiert mit Projekt
+
+### 8.6 Multi-Setup-Sicherheits-Checks
+
+Beim Generieren der G-Code-Dateien wird geprueft:
+
+- Stimmt der Maschinen-Modus zwischen Setups? (3-Achs → Rotary uebergang sichtbar)
+- Wurden Nullpunkte zwischen Setups dokumentiert?
+- Sind die Aktions-Anweisungen klar formuliert?
+- Werkzeuge in der richtigen Reihenfolge (T1, T2, T3 statt durcheinander)?
+
+---
+
+## 9. Verschnittoptimierung (Nesting)
+
+Wenn du mehrere Teile aus einer Platte fraest, ordnet CAMWOSA sie **automatisch verlustarm** an.
+
+### 9.1 Eingaben
+
+- Plattenmaterial: Laenge x Breite x Hoehe (Vorrat-Liste oder Eingabe)
+- Teile: was wird gefertigt, in welcher Stueckzahl
+- Optional: Faserrichtung pro Teil (fuer Holz)
+- Optional: Sperrzonen (Spannfutter, Risse im Material)
+
+### 9.2 Ausgaben
+
+- **Anordnungs-Vorschlag** mit Vorschau (welches Teil wo)
+- **Verschnitt-Statistik** (genutzte Flaeche / Gesamtflaeche)
+- **G-Code mit allen Teilen** in einem Setup (oder verteilt auf mehrere Platten)
+
+### 9.3 Strategie
+
+Mehrere Algorithmen waehlbar:
+
+- **Bin Packing** — schnell, gute Ergebnisse fuer einfache Formen
+- **No-Fit-Polygon** — fuer komplexe Konturen
+- **Manuell-erweiterbar** — du kannst die automatische Anordnung per Drag&Drop anpassen
+
+### 9.4 Faserrichtungs-Beruecksichtigung (Holz)
+
+- Pro Teil definierbar: "Faser parallel zu Y" / "egal"
+- Optimierung respektiert die Vorgabe
+
+### 9.5 Aussparungen / Sperrzonen
+
+- Wenn das Plattenmaterial Astloch oder Riss hat: Bereich als no-go markieren
+- Optimierung weicht aus
+
+### 9.6 Beispiel-Workflow
+
+```
+1. "Ich brauche 4 Rohlinge fuer Lotus-Schalen aus Buche 600x400x18"
+2. Verschnitt-Modul oeffnen
+3. Teile-Vorlage: Rundscheibe Ø 130mm, 4 Stueck
+4. Platte: 600x400x18 mm
+5. Anordnen klicken
+   → Vorschlag: alle 4 nebeneinander mit 5mm Abstand
+   → Verschnitt: 38% (Rest 248x400 nutzbar)
+6. Mit "G-Code generieren" wird ein Setup erzeugt
+   das alle 4 Rohlinge in einem Job fraest
+```
+
+---
+
+## 10. Simulation & Visualisierung
 
 Das Herzstück gegen Crashes und Ausschuss. Stufenweise umgesetzt:
 
-### 8.1 Phase 1 — 2D-Vorschau + Sicherheits-Checks
+### 10.1 Phase 1 — 2D-Vorschau + Sicherheits-Checks
 
 **2D-Vorschau (Top-Down):**
 - Rohmaterial als Rahmen
@@ -471,7 +637,7 @@ Das Herzstück gegen Crashes und Ausschuss. Stufenweise umgesetzt:
 - Werkzeug zu kurz für Schnitttiefe? → Warnung
 - Plunge ohne Rampe bei nicht-Bohrer? → Hinweis
 
-### 8.2 Phase 2 — 3D-Materialabtrag-Simulation
+### 10.2 Phase 2 — 3D-Materialabtrag-Simulation
 
 - Rohmaterial als 3D-Block dargestellt
 - Werkzeug bewegt sich entlang Toolpath
@@ -483,13 +649,13 @@ Das Herzstück gegen Crashes und Ausschuss. Stufenweise umgesetzt:
 
 **Technologie:** Three.js, Voxel-basiert für Performance, optional Mesh-basiert für Genauigkeit.
 
-### 8.3 Phase 3 — Kollisionsanalyse
+### 10.3 Phase 3 — Kollisionsanalyse
 
 - Werkzeughalter + Spindel als 3D-Geometrie
 - Kollisionswarnung wenn Halter ins Material taucht
 - Visualisierung der "no-go zones"
 
-### 8.4 Statistiken pro Simulation
+### 10.4 Statistiken pro Simulation
 
 - Geschätzte Bearbeitungszeit
 - Anzahl Werkzeugwechsel
@@ -499,11 +665,11 @@ Das Herzstück gegen Crashes und Ausschuss. Stufenweise umgesetzt:
 
 ---
 
-## 9. G-Code Editor
+## 11. G-Code Editor
 
 Ein **vollwertiger G-Code Editor** ist integriert — nicht nur ein passiver Viewer.
 
-### 9.1 Basis-Funktionen
+### 11.1 Basis-Funktionen
 
 - Syntax-Highlighting (G/M-Codes farblich, Parameter, Kommentare)
 - Zeilennummern
@@ -514,7 +680,7 @@ Ein **vollwertiger G-Code Editor** ist integriert — nicht nur ein passiver Vie
 - Auto-Format (Spaltenausrichtung)
 - Mehrere Tabs (verschiedene G-Code-Dateien parallel)
 
-### 9.2 Befehlsbibliothek
+### 11.2 Befehlsbibliothek
 
 Klick auf einen G-Code-Befehl → **kontextbezogene Erklärung im Seitenpanel:**
 
@@ -533,14 +699,14 @@ Klick auf einen G-Code-Befehl → **kontextbezogene Erklärung im Seitenpanel:**
 
 **Plus:** Suchfunktion in der Bibliothek — "Wie heißt der Befehl für Spanbrechen?" → G73 / G83.
 
-### 9.3 Zeilenweise Simulation
+### 11.3 Zeilenweise Simulation
 
 - Klick in eine Zeile → Markierung in 2D/3D-Vorschau (wo das Werkzeug grade ist)
 - Toggle "Live-Sync" — automatische Aktualisierung beim Bewegen des Cursors
 - **Performance-Schalter** — bei großen G-Code-Dateien Live-Sync deaktivierbar
 - Schritt-für-Schritt durchgehen (wie Debugger)
 
-### 9.4 Massen-Editor (Find & Modify)
+### 11.4 Massen-Editor (Find & Modify)
 
 Beispiel: "Setze alle Vorschübe von 2000 auf 1500"
 - Such-Pattern: `F2000`
@@ -548,7 +714,7 @@ Beispiel: "Setze alle Vorschübe von 2000 auf 1500"
 - Vorschau der betroffenen Zeilen vor Anwendung
 - **Operations-spezifisches Editieren:** "In allen Operationen vom Typ Tasche, reduziere Plunge-Rate um 20%"
 
-### 9.5 Strukturansicht (Code-Outline)
+### 11.5 Strukturansicht (Code-Outline)
 
 Linke Spalte zeigt die G-Code-Struktur:
 - Header (Maschinen-Setup)
@@ -561,7 +727,7 @@ Linke Spalte zeigt die G-Code-Struktur:
 
 Klick auf Eintrag → Springt zur entsprechenden Stelle.
 
-### 9.6 Backplot-Annotation
+### 11.6 Backplot-Annotation
 
 Im G-Code-Editor werden auf Wunsch Kommentare automatisch ergänzt:
 ```
@@ -576,29 +742,31 @@ So bleibt nachvollziehbar **was wann passiert** — wichtig für späteres Editi
 
 ---
 
-## 10. Projekt-Management
+## 12. Projekt-Management
 
-### 10.1 Projekt-Konzept
+### 12.1 Projekt-Konzept
 
 Ein **CAMWOSA-Projekt** enthält alles was zum Werkstück gehört:
 - Maschinen-Wahl
 - Material + Rohmaterial-Definition
 - Geometrie (Zeichnung / Import)
+- **Setups + Setup-Pausen** (Multi-Setup-Workflow)
 - Operationen
 - Werkzeug-Zuordnungen
 - Generierter Toolpath
-- Generierter G-Code
+- Generierter G-Code (pro Setup eine Datei)
 - Notizen / Metadaten
+- Foto-Slots fuer Setup-Dokumentation
 
 **Dateiformat:** `.cwp` (CAMWOSA Project) — ein ZIP mit JSON + eingebetteten Geometrie-Dateien.
 
-### 10.2 Speichern
+### 12.2 Speichern
 
 - **Speichern** — bestehende Projektdatei überschreiben
 - **Speichern als …** — neue Projektdatei (für Varianten)
 - **Auto-Save** — alle X Minuten in temporären Snapshot (wiederherstellbar nach Crash)
 
-### 10.3 Varianten / Versionen
+### 12.3 Varianten / Versionen
 
 Ein Projekt kann **mehrere Varianten** enthalten — z.B.:
 - "Buche, 12mm — Standardversion"
@@ -607,24 +775,24 @@ Ein Projekt kann **mehrere Varianten** enthalten — z.B.:
 
 Jede Variante hat eigene Material/Maschinen/Operationen-Einstellungen. **Wechsel zwischen Varianten per Dropdown.**
 
-### 10.4 Projekt-Historie
+### 12.4 Projekt-Historie
 
 - Wer hat wann was geändert? (Lokales Log)
 - "Revert to last G-Code generation"
 - Diff zwischen zwei Varianten
 
-### 10.5 Projekt-Export / Import
+### 12.5 Projekt-Export / Import
 
 - Komplettes Projekt als ZIP exportieren (für Backup / Sharing)
 - Projekt importieren (mit Konflikt-Behandlung bei fehlenden Werkzeugen/Materialien)
 
 ---
 
-## 11. Plugin-System für CNC-Steuerungen
+## 13. Plugin-System für CNC-Steuerungen
 
 GRBL ist Start — das System ist aber **offen für andere Controller**.
 
-### 11.1 Post-Prozessor-Architektur
+### 13.1 Post-Prozessor-Architektur
 
 Jeder Controller hat seinen eigenen Post-Prozessor — definiert in einer einzelnen Python-Datei oder JSON-Konfiguration:
 
@@ -632,13 +800,14 @@ Jeder Controller hat seinen eigenen Post-Prozessor — definiert in einer einzel
 postprocessor/
 ├── grbl_standard.py       # GRBL 1.1 Standard (Default)
 ├── grbl_genmitsu.py       # Genmitsu-Spezialitäten
+├── grbl_genmitsu_rotary_y.py  # Genmitsu Rotary (siehe ROTARY.md)
 ├── marlin.py              # 3D-Drucker mit CNC-Erweiterung
 ├── linuxcnc.py            # LinuxCNC / Mach3
 ├── duet.py                # Duet3D Controller
 └── custom/                # User-eigene Post-Prozessoren
 ```
 
-### 11.2 Was ein Post-Prozessor definiert
+### 13.2 Was ein Post-Prozessor definiert
 
 - Datei-Header (Maschinen-Init, Einheiten, etc.)
 - Wie ein Werkzeugwechsel aussieht
@@ -648,22 +817,22 @@ postprocessor/
 - Datei-Footer
 - Datei-Extension (.nc, .gcode, .ngc)
 
-### 11.3 Endnutzer-Erweiterbarkeit
+### 13.3 Endnutzer-Erweiterbarkeit
 
 - Post-Prozessor in **dokumentierter Python-Klasse** definieren
 - Beispiele und Templates mitgeliefert
 - "User Postprocessor"-Verzeichnis das Updates überlebt
 - Validierung beim Laden (Syntax-Check)
 
-### 11.4 Controller-Profile
+### 13.4 Controller-Profile
 
 Über den Post-Prozessor hinaus: Maschinen-Eigenheiten (Soft-Limits, Probing-Befehle, Drehzahl-Mapping) liegen im Maschinen-Profil — separat vom Post-Prozessor.
 
 ---
 
-## 12. Claude-Integration (MCP)
+## 14. Claude-Integration (MCP)
 
-Wie PBP — Claude soll als Sparringspartner und Bediener funktionieren.
+Wie PBP — Claude soll als Sparringspartner und Bediener funktionieren. **WICHTIG:** Die UI ist vollwertig stand-alone bedienbar. Das MCP ist die optionale zweite Bedienoberflaeche, die die gleiche Backend-API anspricht wie die UI.
 
 ### MCP-Tools (Auswahl)
 
@@ -681,6 +850,11 @@ Projekt:
   - rohmaterial_definieren(form, masse, position)
   - nullpunkt_setzen(x, y, z)
 
+Setup-Workflow:
+  - setup_erstellen(name, maschine_modus)
+  - setup_pause_einfuegen(typ, anleitung)
+  - arbeitsplan_generieren(format)
+
 Zeichnen:
   - zeichnen_rechteck(masse, position)
   - zeichnen_kreis(durchmesser, position)
@@ -693,11 +867,15 @@ Operationen:
   - operation_bohren(punkte, werkzeug, parameter)
   - operation_gravur(geometrie, werkzeug, parameter)
 
+Verschnittoptimierung:
+  - nesting_starten(teile_liste, platte)
+
 Berechnung & Export:
   - feeds_speeds_berechnen(material, werkzeug, operation)
   - toolpath_generieren(operation_id)
   - simulation_starten(projekt_id)
   - gcode_exportieren(pfad)
+  - auto_cam_erstellen(geometrie, material, ziel)
 
 G-Code-Manipulation:
   - gcode_lesen(pfad)
@@ -714,23 +892,23 @@ Analyse & Optimierung:
 
 > "Importiere die DXF von gestern und mach eine Kontur mit 6mm Tabs."
 > 
-> "Zeichne mir ein Rechteck 100x60 und gravier 'Werkstatt' darauf."
+> "Leg mir einen 6mm Einschneider aus Hartmetall mit 2 Schneiden an."
 > 
-> "Ich brauche eine Tasche 80x40mm, 8mm tief, in Buche, mit dem 6mm Einschneider."
+> "Ermittle die optimale Bearbeitung für dieses Teil aus diesem Rohmaterial."
+> 
+> "Erstell die komplette CAM-Bearbeitung — ich editier dann manuell nach."
+> 
+> "Ich brauche 4 Rohlinge aus dieser Buche-Platte — ordne die optimal an."
+> 
+> "Bau einen Multi-Setup-Workflow: erst 2D-Rohling, dann auf Rotary."
 > 
 > "Pruef mal den Toolpath — ist der noch im Arbeitsraum?"
 > 
-> "Welcher Fraeser passt besser fuer Acryl?"
-> 
-> "Optimiere die Reihenfolge der Operationen damit weniger Werkzeugwechsel noetig sind."
-> 
 > "Setze alle Vorschuebe in der Datei von 2000 auf 1500 mm/min."
-> 
-> "Zeig mir die Simulation in Zeitlupe ab Operation 3."
 
 ---
 
-## 13. Architektur
+## 15. Architektur
 
 ### Technologie-Stack
 
@@ -749,6 +927,7 @@ Backend (Python 3.11+)
   numpy-stl / trimesh    - STL-Handling (Phase 2)
   pydantic               - Datenmodelle
   SQLAlchemy + SQLite    - Persistenz
+  rectpack / nest2D      - Verschnittoptimierung
 
 Frontend-Bibliotheken
   three.js               - 3D-Visualisierung & Simulation
@@ -759,7 +938,7 @@ Frontend-Bibliotheken
 
 MCP-Server (Python)
   FastMCP                - MCP-Implementation
-  HTTP-Bridge zu Flask   - Tool-Aufrufe an Backend
+  HTTP-Bridge zu Flask   - Tool-Aufrufe an Backend (gleiche API wie UI)
 ```
 
 ### Internationalisierung
@@ -776,10 +955,12 @@ Maschine (1) ----< (N) Projekt
 Material (1) ----< (N) Projekt
 Werkzeug (1) ----< (N) Operation
 Projekt (1) ----< (N) Variante
-Variante (1) ----< (N) Operation
+Variante (1) ----< (N) Setup
+Setup     (1) ----< (N) Operation
+Setup     (1) ----< (N) Setup-Pause (vor diesem Setup)
 Operation (1) ----< (N) Toolpath-Segment
-Projekt (1) -----  (1) Rohmaterial
-Projekt (1) -----  (N) GeometrieObjekt
+Projekt   (1) -----  (1) Rohmaterial
+Projekt   (1) -----  (N) GeometrieObjekt
 ```
 
 ### Repository-Struktur
@@ -797,6 +978,8 @@ CAMWOSA/
 │   │   ├── editor/       # G-Code Editor (Monaco)
 │   │   ├── drawing/      # Zeichnen-Modul
 │   │   ├── operations/
+│   │   ├── workflow/     # Multi-Setup + Arbeitsplan
+│   │   ├── nesting/      # Verschnittoptimierung
 │   │   ├── settings/
 │   │   └── locales/      # i18n DE/EN
 │   └── public/
@@ -807,6 +990,8 @@ CAMWOSA/
 │   │   ├── cam/
 │   │   ├── gcode/
 │   │   ├── feeds/
+│   │   ├── nesting/      # Verschnitt-Algorithmen
+│   │   ├── workflow/     # Setup-Management
 │   │   ├── postprocessor/
 │   │   ├── db/
 │   │   └── api/
@@ -815,6 +1000,8 @@ CAMWOSA/
 │   └── server.py
 ├── installer/            # Cross-Platform Installer
 ├── docs/
+│   ├── SPECIFICATION.md  # dieses Dokument
+│   └── ROTARY.md         # Rotary-Achse Spec
 └── data/
     ├── machines/
     ├── tools/
@@ -824,67 +1011,80 @@ CAMWOSA/
 
 ---
 
-## 14. Workflow von der Zeichnung zum G-Code
+## 16. Workflow von der Zeichnung zum G-Code
 
 Der typische Ablauf in CAMWOSA:
 
 ```
-1. Projekt anlegen oder öffnen
-   └─> Maschine wählen (z.B. ProVerXL 4030 V2)
+1. Projekt anlegen oder oeffnen
+   └─> Maschine waehlen (z.B. ProVerXL 4030 V2)
 
 2. Rohmaterial definieren
    ├─> Form (Quader, Zylinder, Platte, frei)
-   ├─> Maße eingeben
-   └─> Material auswählen (z.B. Buche)
+   ├─> Masse eingeben
+   └─> Material auswaehlen (z.B. Buche)
 
 3. Geometrie erstellen
    ├─> DXF importieren (aus Solid Edge)
-   ├─> ODER: STL importieren (für Relief)
-   └─> ODER: Direkt in CAMWOSA zeichnen (Phase 1!)
+   ├─> ODER: STL importieren (fuer Relief)
+   └─> ODER: Direkt in CAMWOSA zeichnen
 
-4. Nullpunkt setzen
+4. (Optional bei mehreren Teilen) Verschnittoptimierung
+   └─> Teile + Platte → automatische Anordnung
+
+5. Multi-Setup-Workflow (falls noetig)
+   ├─> Setup 1 anlegen
+   ├─> Setup-Pause (Umspannen / Werkzeug)
+   └─> Setup 2 anlegen ...
+
+6. Nullpunkt setzen (pro Setup)
    ├─> Auf Geometrie (z.B. Mittelpunkt)
    └─> Rotation/Spiegelung falls noetig
 
-5. Operationen anlegen
+7. Operationen anlegen (pro Setup)
    ├─> Kontur, Tasche, Bohren, Gravur, Relief
-   ├─> Werkzeug wählen (aus Bibliothek)
+   ├─> Werkzeug waehlen (aus Bibliothek)
    ├─> Feeds & Speeds: auto oder manuell
    └─> Reihenfolge festlegen
 
-6. Toolpaths generieren
+8. Toolpaths generieren
    └─> Sofort visueller Preview + Sicherheits-Checks
 
-7. Simulation
+9. Simulation
    ├─> 2D-Preview pruefen
    ├─> 3D-Simulation mit Materialabtrag (Phase 2)
    └─> Statistiken pruefen (Zeit, Verfahrweg)
 
-8. G-Code prüfen und anpassen
-   ├─> Editor öffnen
-   ├─> Auf Wunsch: Vorschübe anpassen, Tiefen ändern
-   └─> Zeilenweise simulieren
+10. G-Code pruefen und anpassen
+    ├─> Editor oeffnen
+    ├─> Auf Wunsch: Vorschuebe anpassen, Tiefen aendern
+    └─> Zeilenweise simulieren
 
-9. G-Code exportieren
-   ├─> Post-Prozessor wählen (GRBL Standard)
-   ├─> Datei speichern (.nc oder .gcode)
-   └─> Manuell in CNCjs laden
+11. G-Code exportieren
+    ├─> Post-Prozessor waehlen (GRBL Standard)
+    ├─> Eine Datei pro Setup (.nc / .gcode)
+    └─> Manuell in CNCjs laden
 
-10. Projekt speichern
-    ├─> Als Variante speichern (für ähnliche Werkstücke)
+12. Arbeitsplan ausdrucken (bei Multi-Setup)
+    └─> Checkliste neben CNC, Schritt fuer Schritt
+
+13. Projekt speichern
+    ├─> Als Variante speichern (fuer aehnliche Werkstuecke)
     └─> Backup als ZIP
 ```
 
 ---
 
-## Roadmap (überarbeitet)
+## Roadmap (ueberarbeitet)
 
 | Phase | Inhalt | Status |
 |-------|--------|--------|
 | **Konzept** | Vision, Architektur, Repository | ✅ |
-| **Phase 1 — MVP** | Electron-Setup, DXF-Import, Zeichnen, Kontur+Tasche+Bohren, Feeds&Speeds, 2D-Preview, GRBL-Output, G-Code-Editor, Projekt-Speichern, DE-UI | 🔜 |
+| **Phase 1 — MVP** | Electron-Setup, DXF-Import, Zeichnen, Kontur+Tasche+Bohren, Feeds&Speeds, 2D-Preview, Sicherheits-Checks, GRBL-Output, G-Code-Editor, Projekt-Mgmt, **Multi-Setup-Workflow + Arbeitsplan**, **Verschnittoptimierung**, DE-UI | 🔜 |
 | **Phase 2 — Tiefe** | STL-Relief, 3D-Simulation Materialabtrag, EN-Übersetzung, Plugin-System Post-Prozessoren | ⏳ |
-| **Phase 3 — Pro** | Werkzeug-Standzeit, Kollisionsanalyse, Adaptive Clearing, Community-Sharing | ⏳ |
+| **Phase 3 — Rotary** | Rotary-Modus, 4-Achs-Indexing, Wrapping (siehe ROTARY.md) | ⏳ |
+| **Phase 4 — Drechseln** | Drechsel-Operationen, Spirale/Helix (siehe ROTARY.md) | ⏳ |
+| **Phase 5 — Pro** | Werkzeug-Standzeit, Kollisionsanalyse, Adaptive Clearing, Community-Sharing | ⏳ |
 
 ---
 
@@ -894,6 +1094,7 @@ Der typische Ablauf in CAMWOSA:
 - Welche Schriftarten werden für Text-Gravur unterstützt? (System-Fonts? Eigene?)
 - Wie sieht das Update-System aus? (Eigener Updater wie PBP?)
 - Soll Material- und Werkzeug-DB optional Cloud-syncbar sein? (oder nur lokal/JSON-Export)
+- Welche Nesting-Bibliothek? (rectpack reicht für rechteckige Bins, nest2D fuer No-Fit-Polygon)
 
 ---
 
