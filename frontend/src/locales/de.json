@@ -1,0 +1,93 @@
+{
+  "app": {
+    "name": "CAMWOSA",
+    "untertitel": "2.5D CAM fuer Maker"
+  },
+  "navigation": {
+    "projekt": "Projekt",
+    "maschinen": "Maschinen",
+    "werkzeuge": "Werkzeuge",
+    "materialien": "Materialien",
+    "operationen": "Operationen",
+    "preview": "Toolpath-Vorschau",
+    "editor": "G-Code-Editor",
+    "workflow": "Workflow",
+    "nesting": "Nesting",
+    "einstellungen": "Einstellungen"
+  },
+  "projekt": {
+    "titel": "Projekt",
+    "neu": "Neues Projekt",
+    "oeffnen": "Oeffnen",
+    "speichern": "Speichern",
+    "speichern_als": "Speichern als",
+    "name": "Name",
+    "autor": "Autor",
+    "rohmaterial": "Rohmaterial"
+  },
+  "maschine": {
+    "titel": "Maschine",
+    "auswahl": "Maschine auswaehlen",
+    "controller": "Controller",
+    "arbeitsraum": "Arbeitsraum",
+    "spindel": "Spindel",
+    "modus": "Modus"
+  },
+  "werkzeug": {
+    "titel": "Werkzeug",
+    "typ": "Typ",
+    "durchmesser": "Durchmesser",
+    "schneidlaenge": "Schneidlaenge",
+    "schneiden": "Schneiden",
+    "neu": "Neues Werkzeug"
+  },
+  "operation": {
+    "kontur": { "titel": "Kontur", "innen": "Innen", "aussen": "Aussen", "auf_linie": "Auf Linie" },
+    "tasche": { "titel": "Tasche", "strategie": "Strategie" },
+    "bohren": { "titel": "Bohren" },
+    "gravur": { "titel": "Gravur" },
+    "vorschub": "Vorschub",
+    "spindel_rpm": "Spindel-RPM",
+    "max_tiefe": "Max. Tiefe",
+    "stepdown": "Stepdown",
+    "neu": "Neue Operation"
+  },
+  "feeds_speeds": {
+    "titel": "Feeds & Speeds",
+    "berechnen": "Berechnen",
+    "vc": "Schnittgeschwindigkeit Vc",
+    "q": "Spanvolumen Q"
+  },
+  "sicherheit": {
+    "titel": "Sicherheits-Pruefung",
+    "ok": "OK",
+    "warnung": "Warnung",
+    "kritisch": "Kritisch",
+    "blocker": "Export blockiert",
+    "override": "Trotzdem exportieren"
+  },
+  "workflow": {
+    "titel": "Multi-Setup-Workflow",
+    "setup": "Setup",
+    "pause": "Pause",
+    "arbeitsplan_drucken": "Arbeitsplan drucken",
+    "neuer_setup": "Neues Setup"
+  },
+  "nesting": {
+    "titel": "Verschnittoptimierung",
+    "starten": "Anordnen",
+    "verschnitt": "Verschnitt"
+  },
+  "buttons": {
+    "speichern": "Speichern",
+    "abbrechen": "Abbrechen",
+    "loeschen": "Loeschen",
+    "anwenden": "Anwenden",
+    "exportieren": "Exportieren"
+  },
+  "status": {
+    "verbunden": "Backend verbunden",
+    "getrennt": "Backend nicht erreichbar",
+    "lade": "Lade ..."
+  }
+}

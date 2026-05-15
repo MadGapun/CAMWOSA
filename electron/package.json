@@ -1,0 +1,51 @@
+{
+  "name": "camwosa-electron",
+  "version": "0.1.0",
+  "description": "CAMWOSA Desktop-App (Electron-Wrapper)",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "tsc -p tsconfig.json && electron .",
+    "build": "tsc -p tsconfig.json",
+    "build:installer": "electron-builder",
+    "lint": "eslint src --ext .ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.0"
+  },
+  "build": {
+    "appId": "de.elwosa.camwosa",
+    "productName": "CAMWOSA",
+    "files": [
+      "dist/**/*",
+      "../frontend/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": ["camwosa/**", "pyproject.toml"]
+      },
+      {
+        "from": "../data",
+        "to": "data"
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": "cwp",
+        "name": "CAMWOSA Project",
+        "description": "CAMWOSA Project File",
+        "icon": "build/icon.ico"
+      }
+    ],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
+  }
+}
