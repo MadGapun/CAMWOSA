@@ -38,6 +38,11 @@ interface WorkflowState {
   loeschen: (id: string) => void;
   verschieben: (id: string, richtung: -1 | 1) => void;
   pauseSetzen: (setup_id: string, pause: SetupPause | null) => void;
+
+  // Arbeitsplan-Checkliste — Status pro Setup oder Pause
+  erledigt: Record<string, boolean>;
+  toggleErledigt: (key: string) => void;
+  alleZuruecksetzen: () => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>((set) => ({
@@ -65,6 +70,13 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
         s.id === setup_id ? { ...s, pause_vor: pause } : s,
       ),
     })),
+
+  erledigt: {},
+  toggleErledigt: (key) =>
+    set((state) => ({
+      erledigt: { ...state.erledigt, [key]: !state.erledigt[key] },
+    })),
+  alleZuruecksetzen: () => set({ erledigt: {} }),
 }));
 
 export function neueSetup(name: string, werkzeug_id: string): Setup {

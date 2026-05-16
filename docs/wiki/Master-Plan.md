@@ -69,7 +69,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | C1 | Electron-Skelett mit Vite/React/TypeScript | [#6](https://github.com/MadGapun/CAMWOSA/issues/6) | [Electron-App](Electron-App.md) | ✅ |
 | C2 | Backend-Subprozess-Management (Start/Stop/Health-Check) | [#6](https://github.com/MadGapun/CAMWOSA/issues/6) | [Electron-App](Electron-App.md) | ✅ |
 | C3 | Datei-Assoziation `.cwp` + OS-Tray | [#6](https://github.com/MadGapun/CAMWOSA/issues/6) | [Electron-App](Electron-App.md) | ✅ |
-| C4 | Auto-Updater | — | [Auto-Updater](Auto-Updater.md) | ⬜ |
+| C4 | Auto-Updater | — | [Auto-Updater](Auto-Updater.md) | 🟨 |
 | C5 | i18n-Setup (DE/EN, Translation-Keys auf Deutsch) | — | [Frontend](Frontend.md) | ✅ |
 | C6 | State-Management (zustand) | — | [Frontend](Frontend.md) | ✅ |
 | C7 | Tailwind + Komponenten-Bibliothek | — | [Frontend](Frontend.md) | ✅ |
@@ -88,15 +88,15 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | D7 | Integriertes Zeichnen (LightBurn-inspiriert, Konva) | [#7](https://github.com/MadGapun/CAMWOSA/issues/7) | [Zeichnen](Zeichnen.md) | ✅ |
 | D8 | Operations-Editor (alle Operations-Typen) | — | [UI-Operationen](UI-Operationen.md) | ✅ |
 | D9 | 2D-Toolpath-Preview (Konva, Tiefen-Vorschau Seitenansicht) | [#2](https://github.com/MadGapun/CAMWOSA/issues/2) | [Preview-2D](Preview-2D.md) | ✅ |
-| D10 | 3D-Materialabtrag-Simulation (Three.js, Voxel) | — | [Simulation-3D](Simulation-3D.md) | ⬜ |
+| D10 | 3D-Materialabtrag-Simulation (Three.js, Voxel) | — | [Simulation-3D](Simulation-3D.md) | 🟨 |
 | D11 | Sicherheits-Panel (Status, Klick-zur-Stelle, Blocker-Logik) | [#11](https://github.com/MadGapun/CAMWOSA/issues/11) | [UI-Sicherheits-Panel](UI-Sicherheits-Panel.md) | ✅ |
 | D12 | Workflow-/Setup-Editor (Setups anlegen, Pausen einfügen) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [UI-Workflow](UI-Workflow.md) | ✅ |
-| D13 | Arbeitsplan-Ansicht (PDF-Export + In-UI-Checkliste) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [Arbeitsplan](Arbeitsplan.md) | 🟨 |
+| D13 | Arbeitsplan-Ansicht (PDF-Export + In-UI-Checkliste) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [Arbeitsplan](Arbeitsplan.md) | ✅ |
 | D14 | Nesting-Editor (Teile-Liste, Platten, Drag&Drop, Statistik) | [#14](https://github.com/MadGapun/CAMWOSA/issues/14) | [UI-Nesting](UI-Nesting.md) | ✅ |
 | D15 | Feeds & Speeds Panel (live-berechnet beim Operation-Editing) | [#3](https://github.com/MadGapun/CAMWOSA/issues/3) | [UI-Feeds-Speeds](UI-Feeds-Speeds.md) | ✅ |
 | D16 | G-Code-Editor (Monaco, Befehlsbibliothek, Live-Sync, Outline, Mass-Edit) | [#8](https://github.com/MadGapun/CAMWOSA/issues/8) | [GCode-Editor](GCode-Editor.md) | ✅ |
 | D17 | Settings (Theme, Sprache, Pfade, Update-Verhalten, KI-Features) | — | [UI-Settings](UI-Settings.md) | ✅ |
-| D18 | Foto-Slot pro Setup | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [UI-Workflow](UI-Workflow.md) | ⬜ |
+| D18 | Foto-Slot pro Setup | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [UI-Workflow](UI-Workflow.md) | ✅ |
 
 ## Teil E — Polish und Pro-Features
 
@@ -104,7 +104,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 |----|----------|-------|------|--------|
 | E1 | EN-Übersetzung | — | [i18n](i18n.md) | ✅ |
 | E2 | Werkzeug-Standzeit-Tracking | — | [Standzeit-Tracking](Standzeit-Tracking.md) | ✅ |
-| E3 | Kollisionsanalyse Werkzeughalter (3D) | — | [Kollisionsanalyse](Kollisionsanalyse.md) | ⬜ |
+| E3 | Kollisionsanalyse Werkzeughalter (3D) | — | [Kollisionsanalyse](Kollisionsanalyse.md) | ✅ |
 | E4 | Adaptive Clearing (trochoidal) | — | [Adaptive-Clearing](Adaptive-Clearing.md) | 🟨 |
 | E5 | Community-Sharing für Werkzeuge/Materialien (JSON-Austausch + optionaler Cloud-Sync) | — | [Community-Sharing](Community-Sharing.md) | ✅ |
 | E6 | Bohrbild aus DXF-Kreisen automatisch erkennen | — | [Bohrbild-Erkennung](Bohrbild-Erkennung.md) | ✅ |
@@ -116,11 +116,11 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 
 | Nr | Funktion | Issue | Wiki | Status |
 |----|----------|-------|------|--------|
-| F1 | Cross-Platform-Installer (Windows MSI, macOS DMG, Linux AppImage/deb) | — | [Installer](Installer.md) | ⬜ |
-| F2 | Python-Backend gebündelt (PyInstaller / py2app) | — | [Installer](Installer.md) | ⬜ |
+| F1 | Cross-Platform-Installer (Windows MSI, macOS DMG, Linux AppImage/deb) | — | [Installer](Installer.md) | ✅ |
+| F2 | Python-Backend gebündelt (PyInstaller / py2app) | — | [Installer](Installer.md) | ✅ |
 | F3 | Code-Signing (Windows + macOS) | — | [Installer](Installer.md) | ⬜ |
-| F4 | GitHub Actions: Build + Release-Pipeline | — | [CI-CD](CI-CD.md) | ⬜ |
-| F5 | Auto-Updater-Backend | — | [Auto-Updater](Auto-Updater.md) | ⬜ |
+| F4 | GitHub Actions: Build + Release-Pipeline | — | [CI-CD](CI-CD.md) | ✅ |
+| F5 | Auto-Updater-Backend | — | [Auto-Updater](Auto-Updater.md) | 🟨 |
 
 ---
 

@@ -66,12 +66,15 @@ def pruefe_toolpath(
     *,
     z_oberkante_material: float = 0.0,
     spindel: Spindel | None = None,
+    halter_kollision_pruefen: bool = False,
 ) -> CheckBericht:
     """Fuehrt alle Sicherheits-Checks fuer einen Toolpath aus.
 
     Args:
         spindel: Wenn angegeben, wird die RPM-Pruefung gegen die Spindel-Range
             durchgefuehrt. Sonst gegen die (Inline-)Maschinen-RPM-Range.
+        halter_kollision_pruefen: Wenn True, wird zusaetzlich die
+            Werkzeughalter-Kollisionsanalyse durchgefuehrt (Phase E3).
     """
     bericht = CheckBericht()
 
@@ -83,6 +86,14 @@ def pruefe_toolpath(
     _check_spindel_drehzahl(toolpath, bericht)
     _check_plunge_vorschub(toolpath, bericht)
     _check_spindel_kuehlung(toolpath, spindel, bericht)
+
+    if halter_kollision_pruefen:
+        from camwosa.safety.kollision import pruefe_halter_kollision
+        bericht.ergebnisse.extend(
+            pruefe_halter_kollision(
+                toolpath, werkzeug, z_oberkante_material=z_oberkante_material,
+            )
+        )
 
     return bericht
 

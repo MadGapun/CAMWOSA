@@ -10,6 +10,7 @@ const ROUTES = [
   { to: "/zeichnen", key: "zeichnen" },
   { to: "/operationen", key: "operationen" },
   { to: "/preview", key: "preview" },
+  { to: "/simulation", key: "simulation" },
   { to: "/editor", key: "editor" },
   { to: "/workflow", key: "workflow" },
   { to: "/nesting", key: "nesting" },

@@ -8,6 +8,7 @@ import WerkzeugeView from "./views/WerkzeugeView";
 import MaterialienView from "./views/MaterialienView";
 import OperationenView from "./views/OperationenView";
 import PreviewView from "./views/PreviewView";
+import Simulation3DView from "./views/Simulation3DView";
 import ZeichnenView from "./views/ZeichnenView";
 import GCodeEditorView from "./views/GCodeEditorView";
 import WorkflowView from "./views/WorkflowView";
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/zeichnen" element={<ZeichnenView />} />
             <Route path="/operationen" element={<OperationenView />} />
             <Route path="/preview" element={<PreviewView />} />
+            <Route path="/simulation" element={<Simulation3DView />} />
             <Route path="/editor" element={<GCodeEditorView />} />
             <Route path="/workflow" element={<WorkflowView />} />
             <Route path="/nesting" element={<NestingView />} />

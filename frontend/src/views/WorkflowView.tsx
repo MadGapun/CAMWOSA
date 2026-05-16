@@ -10,6 +10,7 @@ import {
   useWorkflowStore,
 } from "../state/workflowStore";
 import { camwosaApi } from "../api/client";
+import FotoSlot from "../components/FotoSlot";
 
 const PAUSE_LABEL: Record<SetupPauseTyp, string> = {
   werkzeugwechsel: "Werkzeugwechsel",
@@ -28,6 +29,9 @@ export default function WorkflowView() {
   const loeschen = useWorkflowStore((s) => s.loeschen);
   const verschieben = useWorkflowStore((s) => s.verschieben);
   const pauseSetzen = useWorkflowStore((s) => s.pauseSetzen);
+  const erledigt = useWorkflowStore((s) => s.erledigt);
+  const toggleErledigt = useWorkflowStore((s) => s.toggleErledigt);
+  const alleZuruecksetzen = useWorkflowStore((s) => s.alleZuruecksetzen);
 
   const [pruefBericht, setPruefBericht] = useState<{
     hat_blocker: boolean;
@@ -124,6 +128,13 @@ export default function WorkflowView() {
           />
           <button
             className="rounded border border-gray-600 px-3 py-1 text-xs"
+            onClick={alleZuruecksetzen}
+            title="Checkliste fuer neuen Lauf zuruecksetzen"
+          >
+            ↺ Checkliste
+          </button>
+          <button
+            className="rounded border border-gray-600 px-3 py-1 text-xs"
             onClick={() => void pruefen()}
           >
             Pruefen
@@ -195,6 +206,8 @@ export default function WorkflowView() {
               {s.pause_vor && (
                 <PauseEditor
                   pause={s.pause_vor}
+                  erledigt={!!erledigt[`${s.id}:pause`]}
+                  onToggleErledigt={() => toggleErledigt(`${s.id}:pause`)}
                   onChange={(p) => pauseSetzen(s.id, p)}
                   onRemove={() => pauseSetzen(s.id, null)}
                 />
@@ -216,6 +229,8 @@ export default function WorkflowView() {
               <SetupEditor
                 setup={s}
                 werkzeuge={werkzeuge}
+                erledigt={!!erledigt[s.id]}
+                onToggleErledigt={() => toggleErledigt(s.id)}
                 onChange={(patch) => aktualisieren(s.id, patch)}
                 onMoveUp={idx > 0 ? () => verschieben(s.id, -1) : undefined}
                 onMoveDown={
@@ -243,6 +258,8 @@ export default function WorkflowView() {
 function SetupEditor({
   setup,
   werkzeuge,
+  erledigt,
+  onToggleErledigt,
   onChange,
   onMoveUp,
   onMoveDown,
@@ -250,19 +267,44 @@ function SetupEditor({
 }: {
   setup: Setup;
   werkzeuge: Array<{ id: string; name: string }>;
+  erledigt: boolean;
+  onToggleErledigt: () => void;
   onChange: (patch: Partial<Setup>) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div className="rounded border border-gray-700 bg-camwosa-bg p-3">
+    <div
+      className={
+        erledigt
+          ? "rounded border border-camwosa-ok bg-green-950/10 p-3 opacity-70"
+          : "rounded border border-gray-700 bg-camwosa-bg p-3"
+      }
+    >
       <div className="mb-2 flex items-center justify-between">
-        <input
-          className="rounded bg-camwosa-surface px-2 py-1 text-sm font-medium"
-          value={setup.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            className={
+              erledigt
+                ? "h-5 w-5 rounded border border-camwosa-ok bg-camwosa-ok text-white"
+                : "h-5 w-5 rounded border border-gray-500 hover:border-camwosa-accent"
+            }
+            onClick={onToggleErledigt}
+            title="Als erledigt markieren"
+          >
+            {erledigt ? "✓" : ""}
+          </button>
+          <input
+            className={
+              erledigt
+                ? "rounded bg-camwosa-surface px-2 py-1 text-sm font-medium line-through"
+                : "rounded bg-camwosa-surface px-2 py-1 text-sm font-medium"
+            }
+            value={setup.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+          />
+        </div>
         <div className="flex gap-1">
           <button
             className="rounded border border-gray-600 px-2 py-0.5 text-xs disabled:opacity-30"
@@ -347,23 +389,49 @@ function SetupEditor({
           />
         </label>
       </div>
+      <div className="mt-2">
+        <FotoSlot
+          fotoPfad={setup.foto_pfad}
+          onChange={(p) => onChange({ foto_pfad: p })}
+        />
+      </div>
     </div>
   );
 }
 
 function PauseEditor({
   pause,
+  erledigt,
+  onToggleErledigt,
   onChange,
   onRemove,
 }: {
   pause: SetupPause;
+  erledigt: boolean;
+  onToggleErledigt: () => void;
   onChange: (p: SetupPause) => void;
   onRemove: () => void;
 }) {
   return (
-    <div className="mb-2 rounded border border-camwosa-warn bg-yellow-950/20 p-3">
+    <div
+      className={
+        erledigt
+          ? "mb-2 rounded border border-camwosa-ok bg-green-950/10 p-3 opacity-70"
+          : "mb-2 rounded border border-camwosa-warn bg-yellow-950/20 p-3"
+      }
+    >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-semibold text-camwosa-warn">
+          <button
+            className={
+              erledigt
+                ? "h-4 w-4 rounded border border-camwosa-ok bg-camwosa-ok text-white"
+                : "h-4 w-4 rounded border border-gray-500 hover:border-camwosa-accent"
+            }
+            onClick={onToggleErledigt}
+          >
+            {erledigt ? "✓" : ""}
+          </button>
           🔧 PAUSE
           <select
             className="rounded bg-camwosa-bg px-2 py-0.5"

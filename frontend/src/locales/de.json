@@ -11,6 +11,7 @@
     "zeichnen": "Zeichnen",
     "operationen": "Operationen",
     "preview": "Toolpath-Vorschau",
+    "simulation": "3D-Simulation",
     "editor": "G-Code-Editor",
     "workflow": "Workflow",
     "nesting": "Nesting",
