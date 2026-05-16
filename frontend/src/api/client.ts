@@ -1,64 +1,164 @@
 import axios from "axios";
-
-const baseURL = "/api";
+import type {
+  BohrParameter,
+  CheckBericht,
+  DXFImportErgebnis,
+  FeedsSpeedsErgebnis,
+  GeometrieObjekt,
+  GravurParameter,
+  KonturParameter,
+  MaschinenProfil,
+  Material,
+  PostprozessorInfo,
+  TaschenParameter,
+  Toolpath,
+  Werkzeug,
+} from "./types";
 
 export const api = axios.create({
-  baseURL,
+  baseURL: "/api",
   headers: { "Content-Type": "application/json" },
 });
 
-export interface MaschinenProfil {
-  id: string;
-  name: string;
-  hersteller: string;
-  modell: string;
-  controller: string;
-  arbeitsraum: { x: number; y: number; z: number };
-  max_vorschub: number;
-  sicherer_vorschub: number;
-  eilgang: number;
-  spindel_typ: string;
-  spindel_rpm_min: number;
-  spindel_rpm_max: number;
-  postprozessor: string;
-  modi: string[];
-  aktiver_modus: string;
-}
-
-export interface Werkzeug {
-  id: string;
-  name: string;
-  typ: string;
-  durchmesser: number;
-  schneiden: number;
-  schneidlaenge: number;
-  gesamtlaenge: number;
-}
-
-export interface Material {
-  id: string;
-  name: string;
-  kategorie: string;
-  unter_kategorie?: string;
-  janka_haerte?: number;
-  presets: Array<{
-    werkzeug_id: string;
-    rpm: number;
-    vorschub: number;
-    plunge: number;
-    stepdown: number;
-    stepover_prozent: number;
-  }>;
-}
+const health = axios.create({ baseURL: "/" });
 
 export const camwosaApi = {
-  health: () => api.get("/../health").then((r) => r.data),
+  // Health & Stammdaten
+  health: () => health.get("health").then((r) => r.data),
   maschinen: () => api.get<MaschinenProfil[]>("/machines/").then((r) => r.data),
+  maschine: (id: string) =>
+    api.get<MaschinenProfil>(`/machines/${id}`).then((r) => r.data),
   werkzeuge: () => api.get<Werkzeug[]>("/tools/").then((r) => r.data),
+  werkzeug: (id: string) => api.get<Werkzeug>(`/tools/${id}`).then((r) => r.data),
   materialien: () => api.get<Material[]>("/materials/").then((r) => r.data),
-  postprozessoren: () => api.get("/postprocessors/").then((r) => r.data),
-  feedsBerechnen: (maschine_id: string, werkzeug_id: string, material_id: string, rpm_wunsch?: number) =>
-    api.post("/feeds/berechnen", { maschine_id, werkzeug_id, material_id, rpm_wunsch }).then((r) => r.data),
-  nestingRun: (teile: unknown[], platten: unknown[], abstand_zwischen_teilen = 5) =>
-    api.post("/nesting/run", { teile, platten, abstand_zwischen_teilen }).then((r) => r.data),
+  material: (id: string) => api.get<Material>(`/materials/${id}`).then((r) => r.data),
+  postprozessoren: () =>
+    api.get<PostprozessorInfo[]>("/postprocessors/").then((r) => r.data),
+
+  // Feeds & Speeds
+  feedsBerechnen: (
+    maschine_id: string,
+    werkzeug_id: string,
+    material_id: string,
+    rpm_wunsch?: number,
+  ): Promise<FeedsSpeedsErgebnis> =>
+    api
+      .post("/feeds/berechnen", { maschine_id, werkzeug_id, material_id, rpm_wunsch })
+      .then((r) => r.data),
+
+  // DXF
+  dxfImport: (datei: File): Promise<DXFImportErgebnis> => {
+    const fd = new FormData();
+    fd.append("datei", datei);
+    return api
+      .post("/dxf/import", fd, { headers: { "Content-Type": "multipart/form-data" } })
+      .then((r) => r.data);
+  },
+
+  // Operations
+  opKontur: (
+    werkzeug_id: string,
+    geometrie: GeometrieObjekt,
+    parameter: KonturParameter,
+  ): Promise<Toolpath> =>
+    api
+      .post("/operations/kontur", { werkzeug_id, geometrie, parameter })
+      .then((r) => r.data),
+
+  opTasche: (
+    werkzeug_id: string,
+    geometrie: GeometrieObjekt,
+    parameter: TaschenParameter,
+  ): Promise<Toolpath> =>
+    api
+      .post("/operations/tasche", { werkzeug_id, geometrie, parameter })
+      .then((r) => r.data),
+
+  opBohren: (
+    werkzeug_id: string,
+    punkte: Array<[number, number]>,
+    parameter: BohrParameter,
+  ): Promise<Toolpath> =>
+    api
+      .post("/operations/bohren", { werkzeug_id, punkte, parameter })
+      .then((r) => r.data),
+
+  opGravur: (
+    werkzeug_id: string,
+    geometrie: GeometrieObjekt,
+    parameter: GravurParameter,
+  ): Promise<Toolpath> =>
+    api
+      .post("/operations/gravur", { werkzeug_id, geometrie, parameter })
+      .then((r) => r.data),
+
+  postprocess: (
+    maschine_id: string,
+    werkzeug_id: string,
+    toolpaths: Toolpath[],
+    postprozessor_id?: string,
+  ): Promise<{ gcode: string; zeilen: number }> =>
+    api
+      .post("/operations/postprocess", {
+        maschine_id,
+        werkzeug_id,
+        toolpaths,
+        postprozessor_id,
+      })
+      .then((r) => r.data),
+
+  // Sicherheit
+  safetyCheck: (
+    maschine_id: string,
+    werkzeug_id: string,
+    toolpath: Toolpath,
+    z_oberkante_material = 0.0,
+  ): Promise<CheckBericht> =>
+    api
+      .post("/safety/check", {
+        maschine_id,
+        werkzeug_id,
+        toolpath,
+        z_oberkante_material,
+      })
+      .then((r) => r.data),
+
+  // Nesting
+  nestingRun: (
+    teile: unknown[],
+    platten: unknown[],
+    abstand_zwischen_teilen = 5,
+  ) =>
+    api
+      .post("/nesting/run", { teile, platten, abstand_zwischen_teilen })
+      .then((r) => r.data),
+
+  // Workflow
+  workflowPruefen: (variante: unknown): Promise<{
+    hat_blocker: boolean;
+    probleme: Array<{ setup_id: string | null; stufe: string; text: string }>;
+  }> => api.post("/workflow/pruefen", { variante }).then((r) => r.data),
+
+  workflowArbeitsplanMd: (
+    variante: unknown,
+    projekt_name: string,
+    maschine_id: string,
+  ): Promise<{ markdown: string }> =>
+    api.post("/workflow/arbeitsplan", {
+      variante, projekt_name, maschine_id, format: "markdown",
+    }).then((r) => r.data),
+
+  workflowArbeitsplanPdf: async (
+    variante: unknown,
+    projekt_name: string,
+    maschine_id: string,
+  ): Promise<Blob> => {
+    const r = await api.post("/workflow/arbeitsplan", {
+      variante, projekt_name, maschine_id, format: "pdf",
+    }, { responseType: "blob" });
+    return r.data as Blob;
+  },
 };
+
+// Re-export der wichtigsten Typen für bequemen Import
+export type { MaschinenProfil, Werkzeug, Material } from "./types";

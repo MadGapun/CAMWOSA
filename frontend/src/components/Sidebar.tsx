@@ -7,6 +7,7 @@ const ROUTES = [
   { to: "/maschinen", key: "maschinen" },
   { to: "/werkzeuge", key: "werkzeuge" },
   { to: "/materialien", key: "materialien" },
+  { to: "/zeichnen", key: "zeichnen" },
   { to: "/operationen", key: "operationen" },
   { to: "/preview", key: "preview" },
   { to: "/editor", key: "editor" },

@@ -1,11 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { useAppStore } from "../state/store";
+import { useAktiveMaschine } from "../state/store";
 
 export default function Topbar() {
   const { t } = useTranslation();
-  const aktiveMaschine = useAppStore((s) =>
-    s.maschinen.find((m) => m.id === s.aktiveMaschineId),
-  );
+  const aktiveMaschine = useAktiveMaschine();
   return (
     <header className="flex h-12 items-center justify-between border-b border-gray-700 bg-camwosa-surface px-4">
       <div className="flex items-center gap-3">

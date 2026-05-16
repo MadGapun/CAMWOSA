@@ -1,0 +1,453 @@
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Stage, Layer, Line, Rect, Circle as KCircle, Group } from "react-konva";
+import type Konva from "konva";
+import clsx from "clsx";
+import {
+  neuesObjekt,
+  snap,
+  useDrawingStore,
+  type ZeichenWerkzeug,
+} from "../state/drawingStore";
+import { useAppStore } from "../state/store";
+
+const WERKZEUGE: { id: ZeichenWerkzeug; label: string; tooltip: string }[] = [
+  { id: "auswahl", label: "✋", tooltip: "Auswahl / Pan" },
+  { id: "linie", label: "／", tooltip: "Linie" },
+  { id: "rechteck", label: "▭", tooltip: "Rechteck" },
+  { id: "kreis", label: "◯", tooltip: "Kreis" },
+  { id: "polygon", label: "⬠", tooltip: "Polygon (Klicks, Doppelklick beendet)" },
+  { id: "punkt", label: "•", tooltip: "Punkt (Bohrposition)" },
+];
+
+export default function ZeichnenView() {
+  const { t } = useTranslation();
+  const setGeometrien = useAppStore((s) => s.setGeometrien);
+
+  const werkzeug = useDrawingStore((s) => s.werkzeug);
+  const setWerkzeug = useDrawingStore((s) => s.setWerkzeug);
+  const objekte = useDrawingStore((s) => s.objekte);
+  const hinzufuegen = useDrawingStore((s) => s.hinzufuegen);
+  const ausgewaehlteId = useDrawingStore((s) => s.ausgewaehlteId);
+  const setAusgewaehlt = useDrawingStore((s) => s.setAusgewaehlt);
+  const loeschen = useDrawingStore((s) => s.loeschen);
+  const alleLoeschen = useDrawingStore((s) => s.alle_loeschen);
+  const snapGrid = useDrawingStore((s) => s.snap_grid);
+  const setSnapGrid = useDrawingStore((s) => s.setSnapGrid);
+
+  // Konva: Welt-Koordinaten anhand Stage-Transform aus Maus-Position rechnen
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<Konva.Stage>(null);
+  const [size, setSize] = useState({ w: 800, h: 600 });
+  const [scale, setScale] = useState(2);
+  const [pos, setPos] = useState({ x: 100, y: 500 });
+  const [vorlaeufig, setVorlaeufig] = useState<{
+    start: [number, number];
+    aktuell: [number, number];
+  } | null>(null);
+  // Polygon: Liste der bisherigen Punkte
+  const [polygonPunkte, setPolygonPunkte] = useState<Array<[number, number]>>([]);
+
+  useEffect(() => {
+    function fit() {
+      if (!containerRef.current) return;
+      const r = containerRef.current.getBoundingClientRect();
+      setSize({ w: Math.floor(r.width), h: Math.max(500, window.innerHeight - 200) });
+    }
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+
+  function weltAusMaus(): [number, number] | null {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const p = stage.getPointerPosition();
+    if (!p) return null;
+    // Achtung: scaleY ist negativ (Y nach oben).
+    const wx = (p.x - pos.x) / scale;
+    const wy = -(p.y - pos.y) / scale;
+    return [snap(wx, snapGrid), snap(wy, snapGrid)];
+  }
+
+  function onMouseDown() {
+    const w = weltAusMaus();
+    if (!w) return;
+
+    if (werkzeug === "auswahl") {
+      setAusgewaehlt(null);
+      return;
+    }
+
+    if (werkzeug === "punkt") {
+      const o = neuesObjekt("punkt");
+      o.punkte = [w];
+      hinzufuegen(o);
+      return;
+    }
+
+    if (werkzeug === "polygon") {
+      setPolygonPunkte((pts) => [...pts, w]);
+      return;
+    }
+
+    setVorlaeufig({ start: w, aktuell: w });
+  }
+
+  function onMouseMove() {
+    if (!vorlaeufig) return;
+    const w = weltAusMaus();
+    if (!w) return;
+    setVorlaeufig({ ...vorlaeufig, aktuell: w });
+  }
+
+  function onMouseUp() {
+    if (!vorlaeufig) return;
+    const { start, aktuell } = vorlaeufig;
+    setVorlaeufig(null);
+    if (werkzeug === "linie") {
+      const o = neuesObjekt("linie");
+      o.punkte = [start, aktuell];
+      hinzufuegen(o);
+    } else if (werkzeug === "rechteck") {
+      const [x1, y1] = start;
+      const [x2, y2] = aktuell;
+      const o = neuesObjekt("polylinie");
+      o.punkte = [
+        [x1, y1],
+        [x2, y1],
+        [x2, y2],
+        [x1, y2],
+      ];
+      o.geschlossen = true;
+      hinzufuegen(o);
+    } else if (werkzeug === "kreis") {
+      const dx = aktuell[0] - start[0];
+      const dy = aktuell[1] - start[1];
+      const r = Math.hypot(dx, dy);
+      if (r < 0.001) return;
+      const o = neuesObjekt("kreis");
+      o.punkte = [start];
+      o.geschlossen = true;
+      o.attribute = { radius: r };
+      hinzufuegen(o);
+    }
+  }
+
+  function onDoubleClick() {
+    if (werkzeug === "polygon" && polygonPunkte.length >= 3) {
+      const o = neuesObjekt("polylinie");
+      o.punkte = polygonPunkte;
+      o.geschlossen = true;
+      hinzufuegen(o);
+      setPolygonPunkte([]);
+    }
+  }
+
+  function uebernehmenAlsGeometrie() {
+    setGeometrien(objekte.map(({ id, ...rest }) => rest));
+  }
+
+  function onWheel(e: Konva.KonvaEventObject<WheelEvent>) {
+    e.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+    const oldScale = scale;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    const mousePointTo = {
+      x: (pointer.x - pos.x) / oldScale,
+      y: -(pointer.y - pos.y) / oldScale,
+    };
+    const direction = e.evt.deltaY > 0 ? -1 : 1;
+    const newScale = Math.max(0.1, Math.min(50, oldScale * (1 + direction * 0.1)));
+    setScale(newScale);
+    setPos({
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y + mousePointTo.y * newScale,
+    });
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">Integriertes Zeichnen</h1>
+        <div className="flex items-center gap-2 text-xs">
+          <label>
+            Snap-Grid:
+            <input
+              type="number"
+              className="ml-1 w-16 rounded bg-camwosa-bg px-2 py-1"
+              value={snapGrid}
+              step={0.5}
+              min={0}
+              onChange={(e) => setSnapGrid(parseFloat(e.target.value) || 0)}
+            />{" "}
+            mm
+          </label>
+          <button
+            className="rounded border border-gray-600 px-3 py-1 text-xs hover:bg-gray-700"
+            onClick={alleLoeschen}
+            disabled={objekte.length === 0}
+          >
+            Alle loeschen
+          </button>
+          <button
+            className="rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+            onClick={uebernehmenAlsGeometrie}
+            disabled={objekte.length === 0}
+          >
+            Als Geometrie uebernehmen
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-3">
+        {/* Werkzeug-Palette */}
+        <aside className="col-span-1 space-y-1 rounded border border-gray-700 bg-camwosa-surface p-2">
+          {WERKZEUGE.map((w) => (
+            <button
+              key={w.id}
+              title={w.tooltip}
+              className={clsx(
+                "block w-full rounded px-2 py-2 text-center text-lg",
+                werkzeug === w.id
+                  ? "bg-camwosa-accent text-white"
+                  : "hover:bg-gray-700",
+              )}
+              onClick={() => setWerkzeug(w.id)}
+            >
+              {w.label}
+            </button>
+          ))}
+        </aside>
+
+        {/* Stage */}
+        <div
+          className="col-span-9 overflow-hidden rounded border border-gray-700 bg-camwosa-surface"
+          ref={containerRef}
+        >
+          <Stage
+            ref={stageRef}
+            width={size.w}
+            height={size.h}
+            x={pos.x}
+            y={pos.y}
+            scaleX={scale}
+            scaleY={-scale}
+            draggable={werkzeug === "auswahl"}
+            onDragEnd={(e) => setPos({ x: e.target.x(), y: e.target.y() })}
+            onWheel={onWheel}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onDblClick={onDoubleClick}
+            style={{ background: "#0e0e0e", cursor: werkzeug === "auswahl" ? "grab" : "crosshair" }}
+          >
+            <Layer listening={false}>
+              {/* Achsen */}
+              <Line points={[-10000, 0, 10000, 0]} stroke="#333" strokeWidth={1 / scale} />
+              <Line points={[0, -10000, 0, 10000]} stroke="#333" strokeWidth={1 / scale} />
+
+              {/* Snap-Grid (nur in Naehe Origin sichtbar) */}
+              {snapGrid > 0 && scale > 5 && (
+                <GridLayer grid={snapGrid} scale={scale} pos={pos} size={size} />
+              )}
+
+              {/* Vorhandene Objekte */}
+              {objekte.map((o) => (
+                <ObjektShape
+                  key={o.id}
+                  obj={o}
+                  scale={scale}
+                  highlight={ausgewaehlteId === o.id}
+                  onClick={
+                    werkzeug === "auswahl" ? () => setAusgewaehlt(o.id) : undefined
+                  }
+                />
+              ))}
+
+              {/* Vorlaeufige Linie / Rechteck / Kreis */}
+              {vorlaeufig && werkzeug === "linie" && (
+                <Line
+                  points={[
+                    vorlaeufig.start[0], vorlaeufig.start[1],
+                    vorlaeufig.aktuell[0], vorlaeufig.aktuell[1],
+                  ]}
+                  stroke="#ff6b00"
+                  strokeWidth={1.2 / scale}
+                  dash={[3 / scale, 3 / scale]}
+                />
+              )}
+              {vorlaeufig && werkzeug === "rechteck" && (
+                <Rect
+                  x={Math.min(vorlaeufig.start[0], vorlaeufig.aktuell[0])}
+                  y={Math.min(vorlaeufig.start[1], vorlaeufig.aktuell[1])}
+                  width={Math.abs(vorlaeufig.aktuell[0] - vorlaeufig.start[0])}
+                  height={Math.abs(vorlaeufig.aktuell[1] - vorlaeufig.start[1])}
+                  stroke="#ff6b00"
+                  strokeWidth={1.2 / scale}
+                  dash={[3 / scale, 3 / scale]}
+                />
+              )}
+              {vorlaeufig && werkzeug === "kreis" && (
+                <KCircle
+                  x={vorlaeufig.start[0]}
+                  y={vorlaeufig.start[1]}
+                  radius={Math.hypot(
+                    vorlaeufig.aktuell[0] - vorlaeufig.start[0],
+                    vorlaeufig.aktuell[1] - vorlaeufig.start[1],
+                  )}
+                  stroke="#ff6b00"
+                  strokeWidth={1.2 / scale}
+                  dash={[3 / scale, 3 / scale]}
+                />
+              )}
+
+              {/* Polygon im Bau */}
+              {werkzeug === "polygon" && polygonPunkte.length > 0 && (
+                <Group>
+                  <Line
+                    points={polygonPunkte.flat()}
+                    stroke="#ff6b00"
+                    strokeWidth={1.2 / scale}
+                  />
+                  {polygonPunkte.map((p, i) => (
+                    <KCircle
+                      key={i}
+                      x={p[0]}
+                      y={p[1]}
+                      radius={2 / scale}
+                      fill="#ff6b00"
+                    />
+                  ))}
+                </Group>
+              )}
+
+              {/* Origin */}
+              <KCircle x={0} y={0} radius={2 / scale} fill="#dc3545" />
+            </Layer>
+          </Stage>
+        </div>
+
+        {/* Liste rechts */}
+        <aside className="col-span-2 space-y-3">
+          <section className="rounded border border-gray-700 bg-camwosa-surface p-3">
+            <h2 className="mb-2 text-sm font-semibold">
+              Objekte ({objekte.length})
+            </h2>
+            <ul className="space-y-1 text-xs">
+              {objekte.map((o) => (
+                <li
+                  key={o.id}
+                  className={clsx(
+                    "flex items-center justify-between rounded px-2 py-1",
+                    ausgewaehlteId === o.id
+                      ? "bg-camwosa-accent/20"
+                      : "hover:bg-camwosa-bg",
+                  )}
+                  onClick={() => setAusgewaehlt(o.id)}
+                >
+                  <span>
+                    {o.typ}
+                    {o.geschlossen ? " (geschlossen)" : ""}
+                  </span>
+                  <button
+                    className="text-camwosa-muted hover:text-camwosa-danger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      loeschen(o.id);
+                    }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+              {objekte.length === 0 && (
+                <li className="text-camwosa-muted">Noch nichts gezeichnet</li>
+              )}
+            </ul>
+          </section>
+          <section className="rounded border border-gray-700 bg-camwosa-surface p-3 text-xs text-camwosa-muted">
+            <strong>Werkzeug:</strong>{" "}
+            {WERKZEUGE.find((w) => w.id === werkzeug)?.tooltip}
+            <br />
+            <span>Polygon: Doppelklick beendet</span>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function ObjektShape({
+  obj,
+  scale,
+  highlight,
+  onClick,
+}: {
+  obj: ReturnType<typeof useDrawingStore.getState>["objekte"][number];
+  scale: number;
+  highlight: boolean;
+  onClick?: () => void;
+}) {
+  const stroke = highlight ? "#ff6b00" : "#a8d2ff";
+  const sw = (highlight ? 2 : 1) / scale;
+  if (obj.typ === "linie" || obj.typ === "polylinie") {
+    const flat = obj.punkte.flat();
+    if (obj.geschlossen && obj.punkte.length > 0) {
+      flat.push(obj.punkte[0][0], obj.punkte[0][1]);
+    }
+    return <Line points={flat} stroke={stroke} strokeWidth={sw} onClick={onClick}
+                 onTap={onClick} listening={!!onClick} />;
+  }
+  if (obj.typ === "kreis") {
+    const r = (obj.attribute.radius as number) ?? 0;
+    return (
+      <KCircle
+        x={obj.punkte[0][0]}
+        y={obj.punkte[0][1]}
+        radius={r}
+        stroke={stroke}
+        strokeWidth={sw}
+        onClick={onClick}
+        onTap={onClick}
+        listening={!!onClick}
+      />
+    );
+  }
+  if (obj.typ === "punkt") {
+    return (
+      <KCircle
+        x={obj.punkte[0][0]}
+        y={obj.punkte[0][1]}
+        radius={2 / scale}
+        fill={stroke}
+        onClick={onClick}
+        onTap={onClick}
+        listening={!!onClick}
+      />
+    );
+  }
+  return null;
+}
+
+function GridLayer({
+  grid, scale, pos, size,
+}: { grid: number; scale: number; pos: { x: number; y: number }; size: { w: number; h: number } }) {
+  // Welt-Bereich des sichtbaren Stage-Fensters
+  const wx0 = -pos.x / scale;
+  const wx1 = (size.w - pos.x) / scale;
+  const wy0 = (pos.y - size.h) / scale;
+  const wy1 = pos.y / scale;
+  const startX = Math.floor(wx0 / grid) * grid;
+  const startY = Math.floor(wy0 / grid) * grid;
+  const lines: JSX.Element[] = [];
+  for (let x = startX; x <= wx1; x += grid) {
+    lines.push(<Line key={`vx${x}`} points={[x, wy0, x, wy1]} stroke="#222" strokeWidth={0.3 / scale} />);
+  }
+  for (let y = startY; y <= wy1; y += grid) {
+    lines.push(<Line key={`hy${y}`} points={[wx0, y, wx1, y]} stroke="#222" strokeWidth={0.3 / scale} />);
+  }
+  return <Group>{lines}</Group>;
+}

@@ -88,3 +88,49 @@ class TestNesting:
         assert rv.status_code == 200
         data = rv.get_json()
         assert len(data["platzierungen"]) == 4
+
+
+class TestWorkflow:
+    def test_pruefen_blocker_bei_modus_wechsel(self, client) -> None:
+        variante = {
+            "id": "v1",
+            "name": "Default",
+            "rohmaterial": {
+                "form": "platte",
+                "laenge": 300, "breite": 200, "hoehe": 18,
+                "material_id": "buche_massiv",
+            },
+            "setups": [
+                {"id": "s1", "name": "A", "werkzeug_id": "schaft_6mm_2s_hm"},
+                {"id": "s2", "name": "B", "werkzeug_id": "schaft_6mm_2s_hm",
+                 "maschinen_modus": "rotary_y"},
+            ],
+        }
+        rv = client.post("/api/workflow/pruefen", json={"variante": variante})
+        assert rv.status_code == 200
+        data = rv.get_json()
+        assert data["hat_blocker"] is True
+
+    def test_arbeitsplan_markdown(self, client) -> None:
+        variante = {
+            "id": "v1",
+            "name": "Default",
+            "rohmaterial": {
+                "form": "platte",
+                "laenge": 300, "breite": 200, "hoehe": 18,
+                "material_id": "buche_massiv",
+            },
+            "setups": [
+                {"id": "s1", "name": "Rohling", "werkzeug_id": "schaft_6mm_2s_hm"},
+            ],
+        }
+        rv = client.post("/api/workflow/arbeitsplan", json={
+            "variante": variante,
+            "projekt_name": "Test",
+            "maschine_id": "genmitsu_proverxl_4030_v2",
+            "format": "markdown",
+        })
+        assert rv.status_code == 200
+        data = rv.get_json()
+        assert "Test" in data["markdown"]
+        assert "Rohling" in data["markdown"]

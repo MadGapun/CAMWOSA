@@ -1,6 +1,6 @@
 # Master-Implementierungsplan
 
-> **Stand:** 15.05.2026 · Lebendiges Dokument · Wird mit jedem Schritt aktualisiert.
+> **Stand:** 16.05.2026 · Lebendiges Dokument · Wird mit jedem Schritt aktualisiert.
 
 Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge der Umsetzung. Jede Position verlinkt auf ihren Wiki-Eintrag (Stub solange nicht umgesetzt). Die Reihenfolge ist nach Abhängigkeit sortiert: was unten steht, baut auf dem auf was oben steht.
 

@@ -35,6 +35,7 @@ def create_app(*, debug: bool = False) -> Flask:
         dxf as dxf_ep,
         feeds as feeds_ep,
         postprocessors,
+        workflow as workflow_ep,
     )
 
     app.register_blueprint(machines.bp)
@@ -47,6 +48,7 @@ def create_app(*, debug: bool = False) -> Flask:
     app.register_blueprint(dxf_ep.bp)
     app.register_blueprint(feeds_ep.bp)
     app.register_blueprint(postprocessors.bp)
+    app.register_blueprint(workflow_ep.bp)
 
     @app.route("/health")
     def health():
