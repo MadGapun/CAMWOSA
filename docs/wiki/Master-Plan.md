@@ -29,6 +29,8 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | A12 | Material-Datenbank (Holz, Holzwerkstoffe, Kunststoffe, NE-Metalle) | [#3](https://github.com/MadGapun/CAMWOSA/issues/3) | [Material-Datenbank](Material-Datenbank.md) | ⬜ |
 | A13 | Werkzeug-Bibliothek (alle 10 Werkzeug-Typen) | — | [Werkzeug-Bibliothek](Werkzeug-Bibliothek.md) | ⬜ |
 | A14 | Feeds & Speeds Rechner | [#3](https://github.com/MadGapun/CAMWOSA/issues/3) | [Feeds-Speeds](Feeds-Speeds.md) | ⬜ |
+| A14b | Per-Feature-Override (pro Operation einzelne Parameter ueberschreiben + zuruecksetzen) | — | [Per-Feature-Override](Per-Feature-Override.md) | ✅ |
+| A14c | CAD-Format-System: DXF/SVG/STL/STEP + Plugin-Architektur fuer Maker-CAD (FreeCAD/Fusion/OpenSCAD…) | — | [CAD-Import](CAD-Import.md) | ✅ |
 | A15 | Sicherheits-Checks (alle 6 + Erweiterungen) | [#11](https://github.com/MadGapun/CAMWOSA/issues/11) | [Sicherheits-Checks](Sicherheits-Checks.md) | ⬜ |
 | A16 | Maschinen-Profil-Modul + 5 Default-Profile | — | [Maschinenprofil-Format](Maschinenprofil-Format.md) | ⬜ |
 | A17 | Rohmaterial-Definition (Quader/Zylinder/Platte/frei) | — | [Rohmaterial](Rohmaterial.md) | ⬜ |
@@ -43,7 +45,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | A26 | Postprozessor: GRBL Rotary Y | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Postprozessor-GRBL-Rotary](Postprozessor-GRBL-Rotary.md) | ⬜ |
 | A27 | Rotary-Wrapping (2D-Geometrie auf Zylinder) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Rotary-Wrapping](Rotary-Wrapping.md) | ⬜ |
 | A28 | Rotary-Vorschub-Korrektur (linear → Grad/min am Radius) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Rotary-Vorschub](Rotary-Vorschub.md) | ⬜ |
-| A29 | 4-Achs-Indexing | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Rotary-Indexing](Rotary-Indexing.md) | ⬜ |
+| A29 | 3,5-Achs-Indexing (Y wird durch Drehung ersetzt) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Rotary-Indexing](Rotary-Indexing.md) | ⬜ |
 | A30 | Drechsel-Operationen (Plandrehen, Längsdrehen, Spirale, Helix) | — | [Drechseln](Drechseln.md) | ⬜ |
 | A31 | Backplot-Annotation im G-Code (Operations-Kommentare) | [#8](https://github.com/MadGapun/CAMWOSA/issues/8) | [Backplot-Annotation](Backplot-Annotation.md) | ⬜ |
 

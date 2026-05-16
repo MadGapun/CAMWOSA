@@ -14,8 +14,7 @@ import type {
   Toolpath,
 } from "../api/types";
 import { useAktiveMaschine, useAppStore } from "../state/store";
-import OperationForm from "../components/OperationForm";
-import { defaultsFuer } from "../components/OperationDefaults";
+import OverrideOperationForm from "../components/OverrideOperationForm";
 
 const OP_LABELS: Record<OperationsTyp, string> = {
   kontur: "Kontur",
@@ -33,6 +32,7 @@ function uniqId(prefix: string): string {
 export default function OperationenView() {
   const { t } = useTranslation();
   const maschine = useAktiveMaschine();
+  const aktivesMaterialId = useAppStore((s) => s.aktivesMaterialId);
   const werkzeuge = useAppStore((s) => s.werkzeuge);
   const geometrien = useAppStore((s) => s.geometrien);
   const operationen = useAppStore((s) => s.operationen);
@@ -56,7 +56,8 @@ export default function OperationenView() {
       typ,
       werkzeug_id: wid,
       geometrie_id: null,
-      parameter: defaultsFuer(typ, wid) as KonturParameter,
+      // Parameter = Overrides: nur werkzeug_id ist gesetzt, alles andere aus Material-Preset
+      parameter: { werkzeug_id: wid } as unknown as KonturParameter,
       aktiviert: true,
     };
     opHinzufuegen(op);
@@ -68,28 +69,47 @@ export default function OperationenView() {
       setBerechneFehler("Bitte zuerst eine Maschine im Projekt waehlen.");
       return;
     }
+    if (!aktivesMaterialId) {
+      setBerechneFehler("Bitte zuerst ein Material im Projekt waehlen.");
+      return;
+    }
     setBerechneLaeuft(true);
     setBerechneFehler(null);
     try {
+      // 1) Overrides auflosen -> volle Parameter
+      const overrides = {
+        ...(op.parameter as unknown as Record<string, unknown>),
+        werkzeug_id: op.werkzeug_id,
+      };
+      const aufgeloest = await camwosaApi.opAufloesen(
+        op.typ as "kontur" | "tasche" | "bohren" | "gravur",
+        aktivesMaterialId,
+        overrides,
+      );
+      const param = aufgeloest.parameter;
+
+      // 2) Toolpath berechnen
       let tp: Toolpath | null = null;
       if (op.typ === "kontur") {
         const geo = waehleGeometrie(op, geometrien);
         if (!geo) throw new Error("Keine Geometrie zugewiesen.");
-        tp = await camwosaApi.opKontur(op.werkzeug_id, geo, op.parameter as KonturParameter);
+        tp = await camwosaApi.opKontur(op.werkzeug_id, geo, param as unknown as KonturParameter);
       } else if (op.typ === "tasche") {
         const geo = waehleGeometrie(op, geometrien);
         if (!geo) throw new Error("Keine geschlossene Geometrie zugewiesen.");
-        tp = await camwosaApi.opTasche(op.werkzeug_id, geo, op.parameter as TaschenParameter);
+        tp = await camwosaApi.opTasche(op.werkzeug_id, geo, param as unknown as TaschenParameter);
       } else if (op.typ === "bohren") {
         const punkte = bohrpunkte(geometrien);
         if (punkte.length === 0) throw new Error("Keine Bohrpunkte gefunden (KREIS/PUNKT).");
-        tp = await camwosaApi.opBohren(op.werkzeug_id, punkte, op.parameter as BohrParameter);
+        tp = await camwosaApi.opBohren(op.werkzeug_id, punkte, param as unknown as BohrParameter);
       } else if (op.typ === "gravur") {
         const geo = waehleGeometrie(op, geometrien);
         if (!geo) throw new Error("Keine Geometrie zugewiesen.");
-        tp = await camwosaApi.opGravur(op.werkzeug_id, geo, op.parameter as GravurParameter);
+        tp = await camwosaApi.opGravur(op.werkzeug_id, geo, param as unknown as GravurParameter);
       }
       if (!tp) return;
+
+      // 3) Sicherheits-Check
       const bericht: CheckBericht = await camwosaApi.safetyCheck(
         maschine.id,
         op.werkzeug_id,
@@ -103,6 +123,13 @@ export default function OperationenView() {
     } finally {
       setBerechneLaeuft(false);
     }
+  }
+
+  function alleAufStandard(op: OperationEintrag) {
+    // Alle Overrides leeren ausser werkzeug_id
+    opAktualisieren(op.id, {
+      parameter: { werkzeug_id: op.werkzeug_id } as unknown as KonturParameter,
+    });
   }
 
   return (
@@ -156,6 +183,11 @@ export default function OperationenView() {
                     ⚠ {op.sicherheits_bericht.anzahl_kritisch} kritisch
                   </span>
                 )}
+                {anzahlOverrides(op) > 0 && (
+                  <span className="text-camwosa-accent">
+                    {anzahlOverrides(op)} Override
+                  </span>
+                )}
               </div>
             </li>
           ))}
@@ -189,9 +221,9 @@ export default function OperationenView() {
                       opAktualisieren(aktiveOp.id, {
                         werkzeug_id: e.target.value,
                         parameter: {
-                          ...aktiveOp.parameter,
+                          ...(aktiveOp.parameter as unknown as Record<string, unknown>),
                           werkzeug_id: e.target.value,
-                        },
+                        } as unknown as KonturParameter,
                       });
                     }}
                   >
@@ -203,6 +235,13 @@ export default function OperationenView() {
                   </select>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    className="rounded border border-gray-600 px-3 py-1 text-xs text-camwosa-muted hover:text-white"
+                    onClick={() => alleAufStandard(aktiveOp)}
+                    title="Alle Overrides loeschen, Standardwerte verwenden"
+                  >
+                    ↺ Alle auf Standard
+                  </button>
                   <button
                     className="rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
                     onClick={() => void berechnen(aktiveOp)}
@@ -226,10 +265,17 @@ export default function OperationenView() {
             </section>
 
             <section className="rounded border border-gray-700 bg-camwosa-surface p-3">
-              <h3 className="mb-2 text-sm font-semibold">Parameter</h3>
-              <OperationForm
+              <h3 className="mb-2 text-sm font-semibold">
+                Parameter
+                <span className="ml-2 text-xs font-normal text-camwosa-muted">
+                  Standardwerte aus Material-Preset · pro Feld ueberschreibbar
+                </span>
+              </h3>
+              <OverrideOperationForm
                 typ={aktiveOp.typ}
-                parameter={aktiveOp.parameter as unknown as Record<string, unknown>}
+                werkzeugId={aktiveOp.werkzeug_id}
+                materialId={aktivesMaterialId}
+                overrides={aktiveOp.parameter as unknown as Record<string, unknown>}
                 onChange={(p) =>
                   opAktualisieren(aktiveOp.id, {
                     parameter: p as unknown as KonturParameter,
@@ -242,14 +288,20 @@ export default function OperationenView() {
               <SicherheitsZusammenfassung bericht={aktiveOp.sicherheits_bericht} />
             )}
 
-            {aktiveOp.toolpath && (
-              <ToolpathStats toolpath={aktiveOp.toolpath} />
-            )}
+            {aktiveOp.toolpath && <ToolpathStats toolpath={aktiveOp.toolpath} />}
           </>
         )}
       </main>
     </div>
   );
+}
+
+function anzahlOverrides(op: OperationEintrag): number {
+  const p = op.parameter as unknown as Record<string, unknown>;
+  // werkzeug_id ist Pflicht, zaehlt nicht als Override
+  return Object.entries(p).filter(
+    ([k, v]) => k !== "werkzeug_id" && v !== null && v !== undefined,
+  ).length;
 }
 
 function ToolpathStats({ toolpath }: { toolpath: Toolpath }) {

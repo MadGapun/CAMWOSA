@@ -46,12 +46,27 @@ export const camwosaApi = {
       .post("/feeds/berechnen", { maschine_id, werkzeug_id, material_id, rpm_wunsch })
       .then((r) => r.data),
 
-  // DXF
+  // DXF (Legacy-Endpoint, weiter unterstuetzt)
   dxfImport: (datei: File): Promise<DXFImportErgebnis> => {
     const fd = new FormData();
     fd.append("datei", datei);
     return api
       .post("/dxf/import", fd, { headers: { "Content-Type": "multipart/form-data" } })
+      .then((r) => r.data);
+  },
+
+  // Generischer CAD-Import (DXF, SVG, STL, STEP, ...)
+  cadFormate: (): Promise<Array<{
+    id: string; name: string; extensions: string[]; beschreibung: string;
+  }>> => api.get("/cad/formate").then((r) => r.data),
+
+  cadImport: (datei: File): Promise<DXFImportErgebnis & {
+    format_id: string; metadaten?: Record<string, unknown>;
+  }> => {
+    const fd = new FormData();
+    fd.append("datei", datei);
+    return api
+      .post("/cad/import", fd, { headers: { "Content-Type": "multipart/form-data" } })
       .then((r) => r.data);
   },
 
@@ -91,6 +106,17 @@ export const camwosaApi = {
     api
       .post("/operations/gravur", { werkzeug_id, geometrie, parameter })
       .then((r) => r.data),
+
+  /** Loest Overrides + Material-Preset + Projekt-Defaults zu effektiven Parametern + Quellen auf. */
+  opAufloesen: (
+    typ: "kontur" | "tasche" | "bohren" | "gravur",
+    material_id: string,
+    overrides: Record<string, unknown>,
+    projekt_defaults?: Record<string, unknown>,
+  ): Promise<{ parameter: Record<string, unknown>; quellen: Record<string, string> }> =>
+    api.post("/operations/aufloesen", {
+      typ, material_id, overrides, projekt_defaults,
+    }).then((r) => r.data),
 
   postprocess: (
     maschine_id: string,

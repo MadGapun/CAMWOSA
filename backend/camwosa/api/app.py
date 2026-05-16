@@ -33,6 +33,7 @@ def create_app(*, debug: bool = False) -> Flask:
         safety as safety_ep,
         nesting as nesting_ep,
         dxf as dxf_ep,
+        cad as cad_ep,
         feeds as feeds_ep,
         postprocessors,
         workflow as workflow_ep,
@@ -46,6 +47,7 @@ def create_app(*, debug: bool = False) -> Flask:
     app.register_blueprint(safety_ep.bp)
     app.register_blueprint(nesting_ep.bp)
     app.register_blueprint(dxf_ep.bp)
+    app.register_blueprint(cad_ep.bp)
     app.register_blueprint(feeds_ep.bp)
     app.register_blueprint(postprocessors.bp)
     app.register_blueprint(workflow_ep.bp)

@@ -2,7 +2,7 @@
 
 <sup>An <b>ELWOSA</b> Project</sup>
 
-> CAMWOSA ist eine 2.5D CAM-Desktop-App, die direkt mit Claude zusammenarbeitet. Du importierst dein DXF, definierst was gefräst werden soll — und bekommst fertigen G-Code für deine Maschine. Läuft lokal als Electron-App, kostet nichts, deine Daten bleiben bei dir.
+> CAMWOSA ist eine 2.5D CAM-Desktop-App, die direkt mit Claude zusammenarbeitet. Du importierst dein CAD-Modell (DXF, STL, STEP, SVG, …), definierst was gefräst werden soll — und bekommst fertigen G-Code für deine Maschine. Läuft lokal als Electron-App, kostet nichts, deine Daten bleiben bei dir.
 
 [![Status](https://img.shields.io/badge/Status-Konzeptphase-orange.svg)](#roadmap)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
@@ -16,57 +16,53 @@
 
 Professionelle CAM-Software ist entweder zu teuer, zu komplex oder beides. Hobbyisten und kleine Werkstätten brauchen etwas anderes: ein Tool, das den Workflow kennt, die Werte rechnet und G-Code erzeugt — ohne Lernkurve von Wochen.
 
-**CAMWOSA ist dieser fehlende Baustein.**
+**CAMWOSA ist dieser fehlende Baustein.** Claude-nativ — Parameter setzen, Toolpaths erzeugen, G-Code prüfen, alles in einem Gespräch.
 
 | Du hast | Du bekommst |
 |---------|-------------|
-| DXF aus Solid Edge / Inkscape / LibreCAD | Fertiger G-Code für deine Maschine |
-| STL für 2.5D-Relief | Toolpath mit Tiefensteuerung |
+| 2D-Zeichnung (DXF / SVG) oder direkt im Tool gezeichnet | Fertiger G-Code für deine Maschine |
+| 3D-Modell (STL / STEP) | Toolpath mit Tiefensteuerung, Reliefs |
 | Material + Fräser | Berechnete Feeds & Speeds |
+| Mehrere Aufspannungen | Druckbarer Arbeitsplan, ein G-Code pro Setup |
 | Fragen | Claude als Sparringspartner |
-
----
-
-## Warum nicht einfach EstlCAM / DeskProto nutzen?
-
-EstlCAM und DeskProto sind gute Tools — sie bleiben für spezifische Use Cases (z.B. Rotationsachse) weiter im Einsatz. CAMWOSA ergänzt sie, ersetzt sie nicht.
-
-Der Unterschied: **CAMWOSA ist Claude-nativ.** Claude kann nicht nur helfen — Claude kann die CAM-Arbeit direkt erledigen. Parameter setzen, Toolpaths erzeugen, G-Code prüfen — alles in einem Gespräch, ohne Klickorgien durch verschachtelte Dialoge.
 
 ---
 
 ## Geplante Features
 
 ### Phase 1 — 2.5D Kern
-- **DXF-Import** (Solid Edge, Inkscape, LibreCAD, …)
-- **Integriertes Zeichnen** (LightBurn-inspiriert) — schnelle Formen ohne CAD-Wechsel
+- **CAD-Import** — DXF, SVG für 2D; STL, STEP für 3D; native Maker-CAD-Formate (FreeCAD, Fusion, …) als Plugin-System
+- **Integriertes Zeichnen** — schnelle Formen ohne CAD-Wechsel
 - **Visueller Toolpath-Preview** (2D-Ansicht im Desktop-Fenster)
 - **Nullpunkt setzen** — Ecke, Mitte, beliebiger Punkt per Klick
 - **Rotation & Ausrichtung** — Modell drehen bis es stimmt
 - **Operationen:** Kontur (innen/außen), Tasche, Bohren, Gravur (V-Carving)
 - **Tabs** — für Konturfräsungen ohne Ausbrechen
 - **G-Code Export** — GRBL-kompatibel, direkt für ProVerXL und ähnliche Maschinen
-- **G-Code-Editor** (Monaco) mit Befehlsbibliothek und Live-Sync
+- **G-Code-Editor** mit Befehlsbibliothek und Live-Sync zur Vorschau
 - **Feeds & Speeds Rechner** — Material + Fräser → optimale Werte
+- **Per-Feature-Override** — jede Operation kann projekt- oder werkstoffweite Standards individuell überschreiben und zurücksetzen
 - **Sicherheits-Checks** — Crash-Erkennung vor Export
 - **Multi-Setup-Workflow** — mehrere Aufspannungen + druckbarer Arbeitsplan
 - **Verschnittoptimierung (Nesting)** — mehrere Teile auf einer Platte
 
 ### Phase 2 — STL, 3D-Simulation, Plugins
 - **STL-Import** für 2.5D-Reliefs mit Heatmap-Vorschau
-- **3D-Materialabtrag-Simulation** (Three.js)
+- **STEP-Import** für solide 3D-Modelle (neutrales Format)
+- **3D-Materialabtrag-Simulation**
 - **Plugin-System für Postprozessoren** — eigene Controller nachrüsten
+- **Plugin-System für CAD-Formate** — native Maker-CAD nachrüstbar (Fusion .f3d, FreeCAD .FCStd, OpenSCAD …)
 - **Englische Übersetzung**
 
-### Phase 3 — Rotary
+### Phase 3 — Rotary (3,5-Achse)
+Die Genmitsu-Rotary-Lösung ist eine **3,5-Achse**: die Y-Linearachse wird im Rotary-Modus durch eine Drehachse (A) ersetzt. Es laufen also weiter X, Z und A — aber Y und A sind dieselbe Hardware und können nicht gleichzeitig genutzt werden.
 - **Maschinen-Modi-Konzept** (Standard XYZ vs. Rotary)
 - **Rotary-Postprozessor** — Y-Achse als Rotationsachse
 - **Wrapping** (2D-Geometrie auf Zylinder)
-- **4-Achs-Indexing**
+- **3,5-Achs-Indexing**
 
 ### Phase 4 — Drechseln
 - **Drechsel-Operationen** (Plandrehen, Längsdrehen, Spirale, Helix)
-- DeskProto-Ablösung Teil 2
 
 ### Phase 5 — Pro
 - **Werkzeug-Standzeit-Tracking**
@@ -78,16 +74,37 @@ Vollständiger Plan: siehe [Master-Plan im Wiki](docs/wiki/Master-Plan.md).
 
 ---
 
+## CAD-Format-Unterstützung
+
+CAMWOSA setzt auf **neutrale Formate** als Pflicht — und unterstützt **native Maker-CAD-Formate** wo möglich.
+
+| Format | Status | Anmerkung |
+|--------|--------|-----------|
+| **DXF** | ✅ | LINE, POLYLINE, CIRCLE, ARC, ELLIPSE, SPLINE, POINT |
+| **STL** | ✅ | ASCII + binary, Heightmap-Berechnung |
+| **SVG** | 🟨 in Arbeit | Inkscape-Export, paths/rect/circle/polygon |
+| **STEP** | 🟨 in Arbeit | Industriestandard für 3D-CAD-Austausch |
+| **IGES** | ⏳ | Geplant |
+| **G-Code** | ⏳ | Re-Import zur Bearbeitung im Editor |
+| **FreeCAD .FCStd** | ⏳ Plugin | OSS-CAD, kostenlos |
+| **Fusion .f3d / .f3z** | ⏳ Plugin | Hobby-Lizenz kostenlos |
+| **OpenSCAD .scad** | ⏳ Plugin | Skript-CAD |
+| **SolidWorks / Solid Edge / Inventor** | ⏳ Plugin | Wenn deren Hersteller-API nutzbar ist |
+
+Details: siehe [CAD-Import im Wiki](docs/wiki/CAD-Import.md).
+
+---
+
 ## Architektur
 
-CAMWOSA ist eine **Electron-Desktop-App** mit Python-Backend als Subprozess. **Pure CAM** — keine Maschinen-Steuerung (das übernimmt CNCjs o.ä.).
+CAMWOSA ist eine **Electron-Desktop-App** mit Python-Backend als Subprozess. **Pure CAM** — keine Maschinen-Steuerung (das übernimmt deine vorhandene Steuerungs-Software wie CNCjs).
 
 ```
 CAMWOSA
 ├── backend/          # Python (Flask) — Geometrie, CAM-Logik, G-Code
 │   └── camwosa/
-│       ├── dxf/          # DXF-Parser (ezdxf)
-│       ├── stl/          # STL-Parser für Relief
+│       ├── cad/          # CAD-Importer (DXF, SVG, STEP, STL + Plugin-System)
+│       ├── stl/          # STL-Heightmap für 2.5D-Relief
 │       ├── cam/          # Toolpath-Berechnung (shapely)
 │       ├── gcode/        # G-Code Builder
 │       ├── postprocessor/# GRBL, Genmitsu, Rotary, Plugins
@@ -126,7 +143,11 @@ CAMWOSA wird von Anfang an auf realen Maschinen entwickelt und getestet:
 | Maschine | Controller | Status |
 |----------|-----------|--------|
 | Genmitsu ProVerXL 4030 V2 | GRBL | Primäres Testgerät |
-| ProVerXL 4030 V2 + Rotary | GRBL (Y-Achse) | Rotary via DeskProto |
+| Genmitsu ProVerXL 4030 V2 + Rotary | GRBL (3,5-Achs, Y→A) | Wrapping + Indexing |
+| Genmitsu PROVer 3018 | GRBL | Profil mitgeliefert |
+| Generisch GRBL 3-Achs | GRBL | Profil mitgeliefert |
+
+Eigene Maschinenprofile lassen sich als JSON importieren — siehe [Maschinenprofil-Format](docs/wiki/Maschinenprofil-Format.md).
 
 ---
 
@@ -142,9 +163,9 @@ CAMWOSA wird von Anfang an auf realen Maschinen entwickelt und getestet:
 | Phase | Inhalt | Status |
 |-------|--------|--------|
 | **Konzept** | Vision, Architektur, Repository, Wiki | ✅ |
-| **Phase 1 — MVP** | Backend-Kern, Electron+UI, DXF, Operations, Editor, Feeds&Speeds, Safety, Workflow, Nesting, GRBL-Output | 🟨 in Arbeit |
-| **Phase 2 — Tiefe** | STL-Relief, 3D-Simulation, Plugin-System Postprozessoren, EN | ⏳ |
-| **Phase 3 — Rotary** | Rotary-Modus, Wrapping, 4-Achs-Indexing | ⏳ |
+| **Phase 1 — MVP** | Backend-Kern, Electron+UI, CAD-Import (DXF/SVG), Operations, Editor, Feeds&Speeds, Safety, Workflow, Nesting, GRBL-Output | 🟨 in Arbeit |
+| **Phase 2 — Tiefe** | STL-Relief, STEP-Import, 3D-Simulation, Plugin-System, EN | ⏳ |
+| **Phase 3 — Rotary (3,5-Achs)** | Rotary-Modus, Wrapping, 3,5-Achs-Indexing | ⏳ |
 | **Phase 4 — Drechseln** | Drechsel-Operationen | ⏳ |
 | **Phase 5 — Pro** | Standzeit, Kollisionsanalyse, Adaptive Clearing, Community-Sharing | ⏳ |
 

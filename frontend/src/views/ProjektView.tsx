@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../state/store";
-import DXFImportDialog from "../components/DXFImportDialog";
+import CADImportDialog from "../components/CADImportDialog";
 
 export default function ProjektView() {
   const { t } = useTranslation();
@@ -66,7 +66,7 @@ export default function ProjektView() {
             className="rounded bg-camwosa-accent px-4 py-2 text-sm font-semibold text-white"
             onClick={() => setDxfOffen(true)}
           >
-            DXF importieren
+            CAD importieren
           </button>
           {geometrien.length > 0 && (
             <>
@@ -119,7 +119,7 @@ export default function ProjektView() {
         </div>
       </section>
 
-      <DXFImportDialog open={dxfOffen} onClose={() => setDxfOffen(false)} />
+      <CADImportDialog open={dxfOffen} onClose={() => setDxfOffen(false)} />
     </div>
   );
 }

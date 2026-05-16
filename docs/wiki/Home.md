@@ -19,6 +19,7 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 
 #### Kern (Backend)
 - [Datenmodell](Datenmodell.md) — Maschinen, Werkzeuge, Material, Projekt
+- [CAD-Import](CAD-Import.md) — DXF, SVG, STL, STEP + Plugin-System fuer Maker-CAD
 - [DXF-Import](DXF-Import.md) — DXF-Parsing mit ezdxf
 - [STL-Import](STL-Import.md) — STL für 2.5D-Relief
 - [GRBL-Postprozessor](Postprozessor-GRBL.md) — G-Code für GRBL-Maschinen
@@ -31,6 +32,7 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [CAM-Operation: Gravur](Operation-Gravur.md) — Einfache Gravur und V-Carving
 - [CAM-Operation: Relief](Operation-Relief.md) — 2.5D-Relief aus STL
 - [Feeds & Speeds Rechner](Feeds-Speeds.md) — Berechnung optimaler Schnittparameter
+- [Per-Feature-Override](Per-Feature-Override.md) — pro Operation einzelne Parameter ueberschreiben/zuruecksetzen
 - [Sicherheits-Checks](Sicherheits-Checks.md) — Crash-Vermeidung
 - [Multi-Setup Workflow](Workflow-Modul.md) — Mehrere Aufspannungen + Arbeitsplan
 - [Nesting / Verschnittoptimierung](Nesting.md) — Mehrere Teile auf einer Platte

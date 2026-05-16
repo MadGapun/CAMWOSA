@@ -1,20 +1,30 @@
-# GRBL Genmitsu Rotary Y
+# GRBL Genmitsu Rotary Y (3,5-Achs-Setup)
 
 > **Status:** ✅ Postprozessor + Wrapping + Vorschub-Korrektur + Indexing implementiert.
 > **Issue:** [#12](https://github.com/MadGapun/CAMWOSA/issues/12)
 > **Code:** [backend/camwosa/postprocessor/grbl_genmitsu_rotary_y.py](../../backend/camwosa/postprocessor/grbl_genmitsu_rotary_y.py), [backend/camwosa/cam/rotary.py](../../backend/camwosa/cam/rotary.py)
 
-Rotary-Setup fuer Genmitsu ProVerXL 4030 V2: Y-Achse als Rotationsachse.
+## Was ist „3,5-Achs"?
+
+Bei diesem Setup hat die Maschine **kein** echtes 4-Achs-System, sondern einen
+**Achs-Tausch**: waehrend des Rotary-Modus wird die **Y-Linearachse durch eine
+Drehachse (A) ersetzt**. Die Maschine kann gleichzeitig X, Z und A bewegen — aber
+ein gleichzeitiges X/Y/Z/A ist nicht moeglich, weil Y und A dieselbe Hardware
+sind.
+
+Daher die Bezeichnung **3,5-Achs**:
+- 3 echte Achsen aktiv (X, Z, A)
+- die „halbe" steht fuer den Achs-Tausch (Y kann nicht parallel laufen)
 
 ## Maschinen-Voraussetzungen
 
 | GRBL-Setting | Wert | Bedeutung |
 |--------------|------|-----------|
-| `$101` | 88.889 | steps/mm fuer Y -> wird steps/grad |
-| `$131` | 9999 | Y-Soft-Limit raus (sonst kein endloses Drehen) |
+| `$101` | 88.889 | steps/mm fuer Y → wirkt jetzt als steps/Grad |
+| `$131` | 9999 | Y-Soft-Limit deaktivieren (sonst kein endloses Drehen) |
 | CNCjs-Macro | `ROTARY EIN` / `ROTARY AUS` | Settings-Wechsel |
 
-CAMWOSA prueft diese **nicht** technisch — der Postprozessor schreibt aber einen Hinweis in den G-Code-Header:
+CAMWOSA prueft diese Werte **nicht** technisch — der Postprozessor schreibt aber einen Hinweis in den G-Code-Header:
 
 ```
 ; ROTARY-MODUS aktiv (Y in Grad)
@@ -50,9 +60,11 @@ omega = vorschub_korrektur_grad(linearer_vorschub_mm_min=1500, radius=25)
 
 In der Praxis schreibt der Postprozessor diese Werte selbstaendig — das Wrapping liefert (X, Winkel)-Punkte, der Postprozessor die korrekten F-Werte.
 
-## 4-Achs-Indexing
+## Indexing (3,5-Achs-Positionierung)
 
-Diskrete Winkel-Positionen rundum (z.B. 4 Bohrungen alle 90°):
+Diskrete Winkel-Positionen rundum (z.B. 4 Bohrungen alle 90°). Da die Y-Achse
+durch die Drehung ersetzt ist, wird **rotiert + danach in X/Z gefraest**, nicht
+gleichzeitig:
 
 ```python
 from camwosa.cam.rotary import erzeuge_indexing_toolpath
@@ -68,8 +80,9 @@ tp = erzeuge_indexing_toolpath(
 
 ## Bekannte Einschraenkungen
 
-- Boegen (G2/G3) im Wrapping werden noch nicht aufgeloest — werden als Linien-Approximation gewickelt. Phase 1+.
+- Boegen (G2/G3) im Wrapping werden noch nicht aufgeloest — werden als Linien-Approximation gewickelt.
 - Drechsel-Operationen (Plandrehen, Laengsdrehen, Spirale) sind separat (Phase 4).
+- Kein gleichzeitiges Y- + A-Verfahren — siehe „Was ist 3,5-Achs?" oben.
 
 ## Verwandt
 

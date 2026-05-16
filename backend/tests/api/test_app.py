@@ -90,6 +90,39 @@ class TestNesting:
         assert len(data["platzierungen"]) == 4
 
 
+class TestAufloesen:
+    def test_kontur_preset_quelle(self, client) -> None:
+        rv = client.post("/api/operations/aufloesen", json={
+            "typ": "kontur",
+            "material_id": "buche_massiv",
+            "overrides": {"werkzeug_id": "schaft_6mm_2s_hm"},
+        })
+        assert rv.status_code == 200
+        data = rv.get_json()
+        assert data["quellen"]["vorschub"] == "material_preset"
+
+    def test_kontur_override(self, client) -> None:
+        rv = client.post("/api/operations/aufloesen", json={
+            "typ": "kontur",
+            "material_id": "buche_massiv",
+            "overrides": {
+                "werkzeug_id": "schaft_6mm_2s_hm",
+                "vorschub": 999,
+            },
+        })
+        data = rv.get_json()
+        assert data["parameter"]["vorschub"] == 999
+        assert data["quellen"]["vorschub"] == "override"
+
+    def test_unbekanntes_material(self, client) -> None:
+        rv = client.post("/api/operations/aufloesen", json={
+            "typ": "kontur",
+            "material_id": "exotisches_unobtainium",
+            "overrides": {"werkzeug_id": "schaft_6mm_2s_hm"},
+        })
+        assert rv.status_code == 404
+
+
 class TestWorkflow:
     def test_pruefen_blocker_bei_modus_wechsel(self, client) -> None:
         variante = {

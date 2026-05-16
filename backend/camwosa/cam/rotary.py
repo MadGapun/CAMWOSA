@@ -1,16 +1,21 @@
-"""Rotary-Achse Funktionen.
+"""Rotary-Achse Funktionen (3,5-Achs-Setup).
 
-CAMWOSA-Rotary fuer Genmitsu-Setup:
-- Y-Achse umgemappt auf Rotation
-- $101 = 88.889 steps/deg
-- Y-Werte werden im G-Code als Grad interpretiert
+WICHTIG: Beim Genmitsu-Rotary handelt es sich um eine **3,5-Achse**, nicht um
+echtes 4-Achs. Eine bestehende Linearachse (Y) wird waehrend des Rotary-Modus
+durch eine Drehachse ersetzt. Die Maschine hat also weiter X, Z und die
+ehemalige-Y-jetzt-A — gleichzeitig sind X+Y+Z+A nicht moeglich.
+
+Konkret im Genmitsu-Setup:
+- Y-Achse umgemappt auf Rotation (Y wird zu A)
+- $101 = 88.889 steps/deg (statt steps/mm)
+- Y-Werte im G-Code werden als Grad interpretiert
 
 Hauptfunktionen:
 - wrap_2d_auf_zylinder: Mappt 2D-Geometrie auf einen Zylinder mit Radius r
 - vorschub_korrektur_grad: rechnet linearen Vorschub auf Winkel-Vorschub um
 - erzeuge_indexing_toolpath: Bohrungen/Operationen rundum bei diskreten Winkeln
 
-Siehe Wiki: docs/wiki/Postprozessor-GRBL-Rotary.md, docs/wiki/Rotary-Wrapping.md
+Siehe Wiki: docs/wiki/Postprozessor-GRBL-Rotary.md
 """
 
 from __future__ import annotations
