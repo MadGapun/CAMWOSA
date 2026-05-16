@@ -15,6 +15,7 @@ import type {
 } from "../api/types";
 import { useAktiveMaschine, useAppStore } from "../state/store";
 import OverrideOperationForm from "../components/OverrideOperationForm";
+import FeedsSpeedsPanel from "../components/FeedsSpeedsPanel";
 
 const OP_LABELS: Record<OperationsTyp, string> = {
   kontur: "Kontur",
@@ -283,6 +284,12 @@ export default function OperationenView() {
                 }
               />
             </section>
+
+            <FeedsSpeedsPanel
+              maschineId={maschine?.id ?? null}
+              werkzeugId={aktiveOp.werkzeug_id}
+              materialId={aktivesMaterialId}
+            />
 
             {aktiveOp.sicherheits_bericht && (
               <SicherheitsZusammenfassung bericht={aktiveOp.sicherheits_bericht} />

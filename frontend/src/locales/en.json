@@ -1,0 +1,94 @@
+{
+  "app": {
+    "name": "CAMWOSA",
+    "untertitel": "2.5D CAM for Makers"
+  },
+  "navigation": {
+    "projekt": "Project",
+    "maschinen": "Machines",
+    "werkzeuge": "Tools",
+    "materialien": "Materials",
+    "zeichnen": "Drawing",
+    "operationen": "Operations",
+    "preview": "Toolpath Preview",
+    "editor": "G-Code Editor",
+    "workflow": "Workflow",
+    "nesting": "Nesting",
+    "einstellungen": "Settings"
+  },
+  "projekt": {
+    "titel": "Project",
+    "neu": "New Project",
+    "oeffnen": "Open",
+    "speichern": "Save",
+    "speichern_als": "Save As",
+    "name": "Name",
+    "autor": "Author",
+    "rohmaterial": "Stock"
+  },
+  "maschine": {
+    "titel": "Machine",
+    "auswahl": "Select Machine",
+    "controller": "Controller",
+    "arbeitsraum": "Work Envelope",
+    "spindel": "Spindle",
+    "modus": "Mode"
+  },
+  "werkzeug": {
+    "titel": "Tool",
+    "typ": "Type",
+    "durchmesser": "Diameter",
+    "schneidlaenge": "Cutting Length",
+    "schneiden": "Flutes",
+    "neu": "New Tool"
+  },
+  "operation": {
+    "kontur": { "titel": "Contour", "innen": "Inside", "aussen": "Outside", "auf_linie": "On Line" },
+    "tasche": { "titel": "Pocket", "strategie": "Strategy" },
+    "bohren": { "titel": "Drill" },
+    "gravur": { "titel": "Engrave" },
+    "vorschub": "Feed Rate",
+    "spindel_rpm": "Spindle RPM",
+    "max_tiefe": "Max Depth",
+    "stepdown": "Stepdown",
+    "neu": "New Operation"
+  },
+  "feeds_speeds": {
+    "titel": "Feeds & Speeds",
+    "berechnen": "Calculate",
+    "vc": "Cutting Speed Vc",
+    "q": "Material Removal Rate Q"
+  },
+  "sicherheit": {
+    "titel": "Safety Check",
+    "ok": "OK",
+    "warnung": "Warning",
+    "kritisch": "Critical",
+    "blocker": "Export blocked",
+    "override": "Export anyway"
+  },
+  "workflow": {
+    "titel": "Multi-Setup Workflow",
+    "setup": "Setup",
+    "pause": "Pause",
+    "arbeitsplan_drucken": "Print Work Plan",
+    "neuer_setup": "New Setup"
+  },
+  "nesting": {
+    "titel": "Nesting",
+    "starten": "Arrange",
+    "verschnitt": "Waste"
+  },
+  "buttons": {
+    "speichern": "Save",
+    "abbrechen": "Cancel",
+    "loeschen": "Delete",
+    "anwenden": "Apply",
+    "exportieren": "Export"
+  },
+  "status": {
+    "verbunden": "Backend connected",
+    "getrennt": "Backend disconnected",
+    "lade": "Loading ..."
+  }
+}

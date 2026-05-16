@@ -17,6 +17,8 @@ Siehe Wiki: docs/wiki/Operation-Bohren.md
 
 from __future__ import annotations
 
+import math
+
 from camwosa.cam.parameter import BohrParameter, BohrStrategie
 from camwosa.db.models import Werkzeug
 from camwosa.dxf.parser import GeometrieObjekt, GeometrieTyp, Punkt2D
@@ -115,6 +117,88 @@ def _bohrung_bewegungen(
                 bewegungen.append(
                     Bewegung(BewegungsTyp.EILGANG, x, y, z_aktuell + 0.5)
                 )
+    elif parameter.strategie == BohrStrategie.HELIX:
+        # Helix-Bohren: Werkzeug fraest schraubig nach unten auf einer Kreisbahn.
+        # Loch-Durchmesser muss >= Werkzeug-Durchmesser sein.
+        loch_d = parameter.loch_durchmesser or werkzeug.durchmesser
+        if loch_d < werkzeug.durchmesser:
+            raise ValueError(
+                f"Loch-Durchmesser {loch_d} < Werkzeug-Durchmesser {werkzeug.durchmesser}"
+            )
+        bahn_radius = (loch_d - werkzeug.durchmesser) / 2.0
+        if bahn_radius < 0.05:
+            # praktisch wie Standard-Plunge, weil Loch = Werkzeug
+            bewegungen.append(Bewegung(
+                BewegungsTyp.PLUNGE, x, y, z_unten,
+                feed=parameter.eintauch_vorschub,
+            ))
+        else:
+            # Anfahrt zur Helix-Startposition (Aussenkante)
+            bewegungen.append(Bewegung(
+                BewegungsTyp.EILGANG, x + bahn_radius, y, parameter.sicherheitshoehe,
+                kommentar="Helix-Anfahrt",
+            ))
+            bewegungen.append(Bewegung(
+                BewegungsTyp.PLUNGE, x + bahn_radius, y, 0,
+                feed=parameter.eintauch_vorschub,
+            ))
+            # Anzahl Umdrehungen
+            tiefe = abs(z_unten)
+            n_umdrehungen = max(1, int(math.ceil(tiefe / parameter.helix_steigung)))
+            segmente_pro_umdrehung = 24
+            n_segmente = n_umdrehungen * segmente_pro_umdrehung
+            for i in range(1, n_segmente + 1):
+                t = i / n_segmente
+                winkel = 2 * math.pi * n_umdrehungen * t
+                z = -tiefe * t
+                px = x + bahn_radius * math.cos(winkel)
+                py = y + bahn_radius * math.sin(winkel)
+                bewegungen.append(Bewegung(
+                    BewegungsTyp.LINEAR, px, py, z, feed=parameter.vorschub,
+                ))
+            # Boden-Kreis (Schlichtgang auf z_unten)
+            for i in range(1, segmente_pro_umdrehung + 1):
+                winkel = 2 * math.pi * i / segmente_pro_umdrehung
+                px = x + bahn_radius * math.cos(winkel)
+                py = y + bahn_radius * math.sin(winkel)
+                bewegungen.append(Bewegung(
+                    BewegungsTyp.LINEAR, px, py, z_unten, feed=parameter.vorschub,
+                    kommentar="Helix-Bodenschlicht" if i == 1 else "",
+                ))
+    elif parameter.strategie == BohrStrategie.REIB:
+        # Reib-Bohren: Werkzeug fraest Kreis-Kontur in der Tiefe (Loch > Werkzeug).
+        loch_d = parameter.loch_durchmesser or (werkzeug.durchmesser * 1.5)
+        if loch_d <= werkzeug.durchmesser:
+            raise ValueError(
+                f"REIB braucht Loch-Durchmesser > Werkzeug-Durchmesser "
+                f"({loch_d} <= {werkzeug.durchmesser})"
+            )
+        bahn_radius = (loch_d - werkzeug.durchmesser) / 2.0
+        # Vor-Plunge in der Mitte (klassischer Bohrschritt — Werkzeug muss stirnschneidend sein)
+        bewegungen.append(Bewegung(
+            BewegungsTyp.PLUNGE, x, y, z_unten,
+            feed=parameter.eintauch_vorschub, kommentar="Reib Vor-Plunge",
+        ))
+        # Spiralbewegung nach aussen auf Bahn-Radius
+        n = 32
+        for i in range(1, n + 1):
+            t = i / n
+            r = bahn_radius * t
+            winkel = 2 * math.pi * t * 2  # 2 Umdrehungen waehrend Expansion
+            px = x + r * math.cos(winkel)
+            py = y + r * math.sin(winkel)
+            bewegungen.append(Bewegung(
+                BewegungsTyp.LINEAR, px, py, z_unten, feed=parameter.vorschub,
+            ))
+        # Kreis-Kontur auf dem Endradius (Schlichtgang)
+        for i in range(1, n + 1):
+            winkel = 2 * math.pi * i / n
+            px = x + bahn_radius * math.cos(winkel)
+            py = y + bahn_radius * math.sin(winkel)
+            bewegungen.append(Bewegung(
+                BewegungsTyp.LINEAR, px, py, z_unten, feed=parameter.vorschub,
+                kommentar="Reib-Schlicht" if i == 1 else "",
+            ))
     else:
         raise NotImplementedError(
             f"Bohr-Strategie {parameter.strategie} noch nicht implementiert"

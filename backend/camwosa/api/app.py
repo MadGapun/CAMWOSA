@@ -30,6 +30,7 @@ def create_app(*, debug: bool = False) -> Flask:
         operations,
         projects,
         spindles,
+        standzeit as standzeit_ep,
         tools,
         safety as safety_ep,
         nesting as nesting_ep,
@@ -53,6 +54,7 @@ def create_app(*, debug: bool = False) -> Flask:
     app.register_blueprint(feeds_ep.bp)
     app.register_blueprint(postprocessors.bp)
     app.register_blueprint(workflow_ep.bp)
+    app.register_blueprint(standzeit_ep.bp)
 
     @app.route("/health")
     def health():

@@ -263,6 +263,11 @@ class Werkzeug(BaseModel):
     )
     drehrichtung: WerkzeugDrehrichtung = WerkzeugDrehrichtung.CW
     steigung: WerkzeugSteigung = WerkzeugSteigung.UPCUT
+    # Standzeit-Tracking (Phase E2)
+    standzeit_max_minuten: float | None = Field(
+        default=None, ge=0,
+        description="Erwartete Standzeit in Schnitt-Minuten (Erfahrungswert)",
+    )
     notizen: str = ""
 
     @model_validator(mode="after")

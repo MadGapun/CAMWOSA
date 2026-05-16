@@ -116,6 +116,15 @@ class BohrParameter(OperationParameter):
     peck_tiefe: float = Field(default=2.0, gt=0)
     dwell_sekunden: float = Field(default=0.0, ge=0)
     rueckzugs_hoehe: float = Field(default=2.0, ge=0)
+    # Fuer HELIX + REIB: Soll-Durchmesser des Loches (groesser als Werkzeug)
+    loch_durchmesser: float | None = Field(
+        default=None, gt=0,
+        description="Bei HELIX/REIB: Loch-Soll-Durchmesser (muss >= Werkzeug-Durchmesser sein)",
+    )
+    helix_steigung: float = Field(
+        default=0.5, gt=0,
+        description="Steigung pro Helix-Umdrehung in mm (HELIX-Strategie)",
+    )
 
 
 class GravurParameter(OperationParameter):

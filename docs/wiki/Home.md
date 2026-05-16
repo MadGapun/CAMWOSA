@@ -36,6 +36,12 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [CAM-Operation: Relief](Operation-Relief.md) — 2.5D-Relief aus STL
 - [Feeds & Speeds Rechner](Feeds-Speeds.md) — Berechnung optimaler Schnittparameter
 - [Per-Feature-Override](Per-Feature-Override.md) — pro Operation einzelne Parameter ueberschreiben/zuruecksetzen
+- [Bohrbild-Erkennung](Bohrbild-Erkennung.md) — Raster/Polar aus DXF-Kreisen
+- [Spezial-Operationen](Spezial-Operationen.md) — T-Nut, Schwalbenschwanz, Fase
+- [PCB-Fraesen](PCB-Fraesen.md) — Isolationsfraesen
+- [Adaptive-Clearing](Adaptive-Clearing.md) — Trochoidales Fraesen
+- [Standzeit-Tracking](Standzeit-Tracking.md) — Werkzeug-Standzeit
+- [Operations-Plugins](Operations-Plugins.md) — eigene Operations-Typen
 - [Sicherheits-Checks](Sicherheits-Checks.md) — Crash-Vermeidung
 - [Multi-Setup Workflow](Workflow-Modul.md) — Mehrere Aufspannungen + Arbeitsplan
 - [Nesting / Verschnittoptimierung](Nesting.md) — Mehrere Teile auf einer Platte

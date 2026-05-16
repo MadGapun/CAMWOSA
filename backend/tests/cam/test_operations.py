@@ -151,6 +151,28 @@ class TestKontur:
         with pytest.raises(ValueError, match="Werkzeug zu gross"):
             erzeuge_kontur_toolpath(klein, schaftfraeser_6mm, kontur_param)
 
+    def test_backplot_annotation_in_bewegungen(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, kontur_param
+    ) -> None:
+        tp = erzeuge_kontur_toolpath(quadrat_50x50_polygon, schaftfraeser_6mm, kontur_param)
+        # Erste Bewegung sollte einen Backplot-Kommentar haben
+        assert "---" in tp.bewegungen[0].kommentar
+        assert "Kontur" in tp.bewegungen[0].kommentar
+
+    def test_tabs_setzen_z_in_letztem_pass_hoch(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, kontur_param
+    ) -> None:
+        kontur_param.tabs_anzahl = 4
+        kontur_param.tabs_hoehe = 1.5
+        kontur_param.tabs_breite = 4
+        tp = erzeuge_kontur_toolpath(quadrat_50x50_polygon, schaftfraeser_6mm, kontur_param)
+        # Es muessen Bewegungen mit Kommentar "Tab" da sein
+        tab_bewegungen = [b for b in tp.bewegungen if b.kommentar == "Tab"]
+        assert len(tab_bewegungen) > 0
+        # Tab-Bewegungen sollten Z auf z_unten + tabs_hoehe = -6 + 1.5 = -4.5 setzen
+        for b in tab_bewegungen:
+            assert b.z == pytest.approx(-4.5, abs=0.01)
+
 
 # ---------------------------------------------------------------------------
 # Tasche
@@ -172,6 +194,21 @@ class TestTasche:
         self, quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param
     ) -> None:
         tasche_param.strategie = TaschenStrategie.OFFSET_KONTUR
+        tp = erzeuge_tasche_toolpath(quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        assert len(tp.bewegungen) > 0
+
+    def test_spiral_aussen_strategie(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param
+    ) -> None:
+        tasche_param.strategie = TaschenStrategie.SPIRAL_AUSSEN
+        tp = erzeuge_tasche_toolpath(quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        assert len(tp.bewegungen) > 0
+        assert tp.metadaten["strategie"] == "spiral_aussen"
+
+    def test_spiral_innen_strategie(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param
+    ) -> None:
+        tasche_param.strategie = TaschenStrategie.SPIRAL_INNEN
         tp = erzeuge_tasche_toolpath(quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
         assert len(tp.bewegungen) > 0
 
@@ -222,9 +259,34 @@ class TestBohren:
             attribute={"radius": 3},
         )
         tp = erzeuge_bohren_toolpath([kreis], schaftfraeser_6mm, bohr_param)
-        # erste Bewegung = Eilgang zur Bohrposition
         assert tp.bewegungen[0].x == 25
         assert tp.bewegungen[0].y == 25
+
+    def test_helix_loch_groesser_werkzeug(self, schaftfraeser_6mm, bohr_param) -> None:
+        bohr_param.strategie = BohrStrategie.HELIX
+        bohr_param.loch_durchmesser = 12.0  # 6mm Werkzeug, 12mm Loch
+        bohr_param.helix_steigung = 1.0
+        tp = erzeuge_bohren_toolpath([Punkt2D(0, 0)], schaftfraeser_6mm, bohr_param)
+        # Sollte viele Bewegungen erzeugen (Helix-Spirale)
+        assert len(tp.bewegungen) > 50
+
+    def test_helix_loch_zu_klein_fehler(self, schaftfraeser_6mm, bohr_param) -> None:
+        bohr_param.strategie = BohrStrategie.HELIX
+        bohr_param.loch_durchmesser = 3.0  # kleiner als Werkzeug (6mm)
+        with pytest.raises(ValueError, match="Loch-Durchmesser"):
+            erzeuge_bohren_toolpath([Punkt2D(0, 0)], schaftfraeser_6mm, bohr_param)
+
+    def test_reib_erzeugt_kreisbahn(self, schaftfraeser_6mm, bohr_param) -> None:
+        bohr_param.strategie = BohrStrategie.REIB
+        bohr_param.loch_durchmesser = 10.0
+        tp = erzeuge_bohren_toolpath([Punkt2D(0, 0)], schaftfraeser_6mm, bohr_param)
+        # Pruefe dass Bewegungen auf Bahnradius liegen (2mm vom Mittelpunkt)
+        bahn_r = (10 - 6) / 2  # = 2 mm
+        am_radius = [
+            b for b in tp.bewegungen
+            if abs(((b.x ** 2 + b.y ** 2) ** 0.5) - bahn_r) < 0.1
+        ]
+        assert len(am_radius) > 10
 
 
 # ---------------------------------------------------------------------------
@@ -247,8 +309,19 @@ class TestGravur:
         tp = erzeuge_gravur_toolpath(polygon, vbit_60grad, gravur_param)
         assert len(tp.bewegungen) > 0
 
-    def test_v_carving_noch_nicht_implementiert(self, vbit_60grad, gravur_param) -> None:
+    def test_v_carving_auf_polygon(self, vbit_60grad, gravur_param) -> None:
         from camwosa.cam.parameter import GravurStrategie
         gravur_param.strategie = GravurStrategie.V_CARVING
-        with pytest.raises(NotImplementedError):
+        gravur_param.max_tiefe = 3.0
+        polygon = Polygon([(0, 0), (20, 0), (20, 20), (0, 20)])
+        tp = erzeuge_gravur_toolpath(polygon, vbit_60grad, gravur_param)
+        assert tp.metadaten["strategie"] == "v_carving"
+        # Sollte mehrere Tiefen-Ebenen haben
+        z_werte = {round(b.z, 1) for b in tp.bewegungen if b.typ.value == "linear"}
+        assert len(z_werte) > 2  # mehrere Tiefen
+
+    def test_v_carving_auf_linestring_fehler(self, vbit_60grad, gravur_param) -> None:
+        from camwosa.cam.parameter import GravurStrategie
+        gravur_param.strategie = GravurStrategie.V_CARVING
+        with pytest.raises(ValueError, match="geschlossene Polygon"):
             erzeuge_gravur_toolpath(LineString([(0, 0), (10, 0)]), vbit_60grad, gravur_param)

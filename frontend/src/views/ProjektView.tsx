@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../state/store";
 import CADImportDialog from "../components/CADImportDialog";
+import RohmaterialEditor from "../components/RohmaterialEditor";
 
 export default function ProjektView() {
   const { t } = useTranslation();
@@ -101,6 +102,11 @@ export default function ProjektView() {
             </select>
           </div>
         </div>
+      </section>
+
+      <section className="rounded border border-gray-700 bg-camwosa-surface p-4">
+        <h2 className="mb-2 font-semibold">Rohmaterial</h2>
+        <RohmaterialEditor />
       </section>
 
       <section className="rounded border border-gray-700 bg-camwosa-surface p-4">
