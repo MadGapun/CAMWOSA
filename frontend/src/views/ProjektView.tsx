@@ -14,6 +14,16 @@ export default function ProjektView() {
   const geometrien = useAppStore((s) => s.geometrien);
   const operationen = useAppStore((s) => s.operationen);
   const geometrienLeeren = useAppStore((s) => s.geometrienLeeren);
+  const spindeln = useAppStore((s) => s.spindeln);
+  const aktiveSpindelId = useAppStore((s) => s.aktiveSpindelId);
+  const setAktiveSpindelId = useAppStore((s) => s.setAktiveSpindelId);
+
+  const aktiveMaschine = maschinen.find((m) => m.id === aktiveMaschineId);
+  const verfuegbareSpindeln = aktiveMaschine
+    ? spindeln.filter((sp) => aktiveMaschine.spindel_ids.includes(sp.id))
+    : [];
+  const effektiveSpindelId =
+    aktiveSpindelId ?? aktiveMaschine?.aktive_spindel_id ?? null;
 
   const [dxfOffen, setDxfOffen] = useState(false);
 
@@ -23,7 +33,7 @@ export default function ProjektView() {
 
       <section className="rounded border border-gray-700 bg-camwosa-surface p-4">
         <h2 className="mb-2 font-semibold">{t("maschine.auswahl")}</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="mb-1 block text-xs text-camwosa-muted">
               {t("maschine.titel")}
@@ -31,7 +41,10 @@ export default function ProjektView() {
             <select
               className="w-full rounded bg-camwosa-bg px-3 py-2 text-sm"
               value={aktiveMaschineId ?? ""}
-              onChange={(e) => setAktiveMaschine(e.target.value || null)}
+              onChange={(e) => {
+                setAktiveMaschine(e.target.value || null);
+                setAktiveSpindelId(null);  // Override loeschen, Maschinen-Default greift
+              }}
             >
               <option value="">— bitte waehlen —</option>
               {maschinen.map((m) => (
@@ -40,6 +53,37 @@ export default function ProjektView() {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-camwosa-muted">
+              Spindel
+              {aktiveSpindelId === null && aktiveMaschine?.aktive_spindel_id && (
+                <span className="ml-1 text-[10px]">(Default aus Maschine)</span>
+              )}
+            </label>
+            <select
+              className="w-full rounded bg-camwosa-bg px-3 py-2 text-sm disabled:opacity-50"
+              value={effektiveSpindelId ?? ""}
+              disabled={!aktiveMaschine || verfuegbareSpindeln.length === 0}
+              onChange={(e) => setAktiveSpindelId(e.target.value || null)}
+            >
+              {verfuegbareSpindeln.length === 0 && (
+                <option value="">— keine Spindeln zugeordnet —</option>
+              )}
+              {verfuegbareSpindeln.map((sp) => (
+                <option key={sp.id} value={sp.id}>
+                  {sp.name} ({sp.rpm_min}–{sp.rpm_max} RPM)
+                </option>
+              ))}
+            </select>
+            {aktiveSpindelId !== null && (
+              <button
+                className="mt-1 text-[10px] text-camwosa-muted hover:text-camwosa-accent"
+                onClick={() => setAktiveSpindelId(null)}
+              >
+                ↺ auf Maschinen-Default zuruecksetzen
+              </button>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-xs text-camwosa-muted">Material</label>

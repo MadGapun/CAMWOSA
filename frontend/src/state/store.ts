@@ -5,6 +5,7 @@ import type {
   MaschinenProfil,
   Material,
   OperationEintrag,
+  Spindel,
   Werkzeug,
 } from "../api/types";
 
@@ -17,11 +18,18 @@ interface AppState {
   maschinen: MaschinenProfil[];
   werkzeuge: Werkzeug[];
   materialien: Material[];
-  setStammdaten: (m: MaschinenProfil[], w: Werkzeug[], mat: Material[]) => void;
+  spindeln: Spindel[];
+  setStammdaten: (
+    m: MaschinenProfil[], w: Werkzeug[], mat: Material[], sp: Spindel[],
+  ) => void;
 
   // Aktive Auswahl
   aktiveMaschineId: string | null;
   setAktiveMaschine: (id: string | null) => void;
+
+  /** Override fuer aktive Spindel — sonst Default aus Maschine. */
+  aktiveSpindelId: string | null;
+  setAktiveSpindelId: (id: string | null) => void;
 
   aktivesMaterialId: string | null;
   setAktivesMaterial: (id: string | null) => void;
@@ -57,7 +65,12 @@ export const useAppStore = create<AppState>((set) => ({
   maschinen: [],
   werkzeuge: [],
   materialien: [],
-  setStammdaten: (m, w, mat) => set({ maschinen: m, werkzeuge: w, materialien: mat }),
+  spindeln: [],
+  setStammdaten: (m, w, mat, sp) =>
+    set({ maschinen: m, werkzeuge: w, materialien: mat, spindeln: sp }),
+
+  aktiveSpindelId: null,
+  setAktiveSpindelId: (id) => set({ aktiveSpindelId: id }),
 
   aktiveMaschineId: null,
   setAktiveMaschine: (id) => set({ aktiveMaschineId: id }),
@@ -99,6 +112,19 @@ export const useAppStore = create<AppState>((set) => ({
 // Selektoren fuer abgeleitete Werte
 export const useAktiveMaschine = () =>
   useAppStore((s) => s.maschinen.find((m) => m.id === s.aktiveMaschineId) ?? null);
+
+/**
+ * Effektive aktive Spindel:
+ * 1. Wenn explizit per `aktiveSpindelId` gesetzt -> diese
+ * 2. Sonst: aktive_spindel_id der aktiven Maschine
+ * 3. Sonst: null
+ */
+export const useAktiveSpindel = () =>
+  useAppStore((s) => {
+    const maschine = s.maschinen.find((m) => m.id === s.aktiveMaschineId);
+    const id = s.aktiveSpindelId ?? maschine?.aktive_spindel_id ?? null;
+    return s.spindeln.find((sp) => sp.id === id) ?? null;
+  });
 
 export const useAktivesMaterial = () =>
   useAppStore((s) => s.materialien.find((m) => m.id === s.aktivesMaterialId) ?? null);

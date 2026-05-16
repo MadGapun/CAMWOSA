@@ -21,7 +21,7 @@ import math
 from dataclasses import dataclass, field
 from enum import Enum
 
-from camwosa.db.models import Maschine, Material, Werkzeug, WerkzeugTyp
+from camwosa.db.models import Maschine, Material, Spindel, Werkzeug, WerkzeugTyp
 
 
 class WarnungsStufe(str, Enum):
@@ -88,16 +88,25 @@ def berechne_feeds_speeds(
     material: Material,
     *,
     rpm_wunsch: float | None = None,
+    spindel: Spindel | None = None,
 ) -> FeedsSpeedsErgebnis:
     """Berechnet Feeds & Speeds fuer eine Werkzeug/Material/Maschine-Kombination.
 
     Args:
         rpm_wunsch: Gewuenschte Spindel-RPM. Wenn None -> aus Material/Werkzeug-Default.
+        spindel: Aktive Spindel — bestimmt RPM-Range. Wenn None: Maschinen-Inline-RPM.
 
     Returns:
         FeedsSpeedsErgebnis mit Werten + Warnungen.
     """
     warnungen: list[FeedsSpeedsWarnung] = []
+    # RPM-Range entweder aus Spindel oder aus Maschinen-Inline
+    if spindel:
+        rpm_min, rpm_max = spindel.rpm_min, spindel.rpm_max
+        rpm_quelle = f"Spindel '{spindel.name}'"
+    else:
+        rpm_min, rpm_max = maschine.spindel_rpm_min, maschine.spindel_rpm_max
+        rpm_quelle = "Maschine"
 
     # 1. Preset suchen
     preset = next((p for p in material.presets if p.werkzeug_id == werkzeug.id), None)
@@ -125,21 +134,21 @@ def berechne_feeds_speeds(
         stepover = 40.0
         quelle = "berechnet"
 
-    # 3. Maschinen-Limits durchsetzen
-    if rpm < maschine.spindel_rpm_min:
+    # 3. RPM-Limits durchsetzen (Spindel-Range)
+    if rpm < rpm_min:
         warnungen.append(FeedsSpeedsWarnung(
             WarnungsStufe.WARNUNG,
-            f"RPM {rpm:.0f} unter Maschinen-Min ({maschine.spindel_rpm_min:.0f}). "
+            f"RPM {rpm:.0f} unter Min von {rpm_quelle} ({rpm_min:.0f}). "
             "Auf Min angehoben."
         ))
-        rpm = maschine.spindel_rpm_min
-    if rpm > maschine.spindel_rpm_max:
+        rpm = rpm_min
+    if rpm > rpm_max:
         warnungen.append(FeedsSpeedsWarnung(
             WarnungsStufe.WARNUNG,
-            f"RPM {rpm:.0f} ueber Maschinen-Max ({maschine.spindel_rpm_max:.0f}). "
+            f"RPM {rpm:.0f} ueber Max von {rpm_quelle} ({rpm_max:.0f}). "
             "Auf Max begrenzt."
         ))
-        rpm = maschine.spindel_rpm_max
+        rpm = rpm_max
 
     if vorschub > maschine.max_vorschub:
         warnungen.append(FeedsSpeedsWarnung(

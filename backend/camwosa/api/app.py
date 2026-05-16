@@ -29,6 +29,7 @@ def create_app(*, debug: bool = False) -> Flask:
         materials,
         operations,
         projects,
+        spindles,
         tools,
         safety as safety_ep,
         nesting as nesting_ep,
@@ -40,6 +41,7 @@ def create_app(*, debug: bool = False) -> Flask:
     )
 
     app.register_blueprint(machines.bp)
+    app.register_blueprint(spindles.bp)
     app.register_blueprint(tools.bp)
     app.register_blueprint(materials.bp)
     app.register_blueprint(projects.bp)

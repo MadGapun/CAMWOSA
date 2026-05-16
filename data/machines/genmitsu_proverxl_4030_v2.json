@@ -8,6 +8,8 @@
   "max_vorschub": 3000,
   "sicherer_vorschub": 2000,
   "eilgang": 5000,
+  "spindel_ids": ["genmitsu_router_710w", "makita_rt0700"],
+  "aktive_spindel_id": "makita_rt0700",
   "spindel_typ": "manuell",
   "spindel_rpm_min": 10000,
   "spindel_rpm_max": 30000,
@@ -16,5 +18,5 @@
   "postprozessor": "grbl_genmitsu",
   "modi": ["standard_xyz", "rotary_y"],
   "aktiver_modus": "standard_xyz",
-  "notizen": "Markus' Test-Maschine. Spindel: Makita RT0700 (manuell). Rotary-Setup: Y-Achse umgemappt, $101=88.889 steps/deg."
+  "notizen": "Markus' Test-Maschine. Aktive Spindel: Makita RT0700 (Upgrade). OEM-Genmitsu-Router weiterhin verfuegbar. Rotary-Setup: Y-Achse umgemappt, $101=88.889 steps/deg (3,5-Achs-Tausch)."
 }

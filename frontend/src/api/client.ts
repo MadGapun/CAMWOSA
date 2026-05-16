@@ -7,9 +7,11 @@ import type {
   GeometrieObjekt,
   GravurParameter,
   KonturParameter,
+  MachineBundle,
   MaschinenProfil,
   Material,
   PostprozessorInfo,
+  Spindel,
   TaschenParameter,
   Toolpath,
   Werkzeug,
@@ -32,8 +34,17 @@ export const camwosaApi = {
   werkzeug: (id: string) => api.get<Werkzeug>(`/tools/${id}`).then((r) => r.data),
   materialien: () => api.get<Material[]>("/materials/").then((r) => r.data),
   material: (id: string) => api.get<Material>(`/materials/${id}`).then((r) => r.data),
+  spindeln: () => api.get<Spindel[]>("/spindles/").then((r) => r.data),
+  spindel: (id: string) => api.get<Spindel>(`/spindles/${id}`).then((r) => r.data),
   postprozessoren: () =>
     api.get<PostprozessorInfo[]>("/postprocessors/").then((r) => r.data),
+
+  // Maschinen-Sharing (Bundle inkl. Spindeln)
+  machineExport: (id: string): Promise<MachineBundle> =>
+    api.get(`/machines/${id}/export`).then((r) => r.data),
+  machineImport: (bundle: MachineBundle): Promise<{
+    gueltig: boolean; maschine: MaschinenProfil; spindeln: Spindel[]; fehler?: string;
+  }> => api.post("/machines/import", bundle).then((r) => r.data),
 
   // Feeds & Speeds
   feedsBerechnen: (

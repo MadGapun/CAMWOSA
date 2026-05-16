@@ -19,6 +19,9 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 
 #### Kern (Backend)
 - [Datenmodell](Datenmodell.md) — Maschinen, Werkzeuge, Material, Projekt
+- [Spindel](Spindel.md) — Spindel-System mit Multi-Spindel + Sharing
+- [Maschinenprofil-Format](Maschinenprofil-Format.md) — JSON-Schema + Sharing
+- [Maschine-ProVerXL-4030-V2](Maschine-ProVerXL-4030-V2.md) — Test-Maschine
 - [CAD-Import](CAD-Import.md) — DXF, SVG, STL, STEP + Plugin-System fuer Maker-CAD
 - [DXF-Import](DXF-Import.md) — DXF-Parsing mit ezdxf
 - [STL-Import](STL-Import.md) — STL für 2.5D-Relief

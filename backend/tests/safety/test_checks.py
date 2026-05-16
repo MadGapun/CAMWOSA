@@ -83,6 +83,36 @@ class TestRPM:
         bericht = pruefe_toolpath(tp, proverxl_maschine, schaftfraeser_6mm)
         assert any(e.check_id == "rpm_zu_hoch" for e in bericht.ergebnisse)
 
+    def test_rpm_gegen_spindel_range(
+        self, proverxl_maschine, schaftfraeser_6mm
+    ) -> None:
+        from camwosa.db.models import Spindel, SpindelTyp
+        kleinspindel = Spindel(
+            id="x", name="X", hersteller="X", modell="X",
+            typ=SpindelTyp.PWM, rpm_min=5000, rpm_max=12000,
+        )
+        # Toolpath mit 18000 RPM ueber Spindel-Max (12000) -> Warnung
+        tp = _toolpath([Bewegung(BewegungsTyp.LINEAR, 50, 50, -2, feed=1000)], rpm=18000)
+        bericht = pruefe_toolpath(tp, proverxl_maschine, schaftfraeser_6mm,
+                                   spindel=kleinspindel)
+        zu_hoch = next((e for e in bericht.ergebnisse if e.check_id == "rpm_zu_hoch"), None)
+        assert zu_hoch is not None
+        assert "Spindel" in zu_hoch.beschreibung
+
+    def test_wasserkuehlung_hinweis(
+        self, proverxl_maschine, schaftfraeser_6mm
+    ) -> None:
+        from camwosa.db.models import Spindel, SpindelTyp
+        sp = Spindel(
+            id="w", name="Wasserspindel", hersteller="X", modell="X",
+            typ=SpindelTyp.ANALOG, rpm_min=6000, rpm_max=24000,
+            kuehlung="wasser",
+        )
+        tp = _toolpath([Bewegung(BewegungsTyp.LINEAR, 50, 50, -2, feed=1000)], rpm=15000)
+        bericht = pruefe_toolpath(tp, proverxl_maschine, schaftfraeser_6mm,
+                                   spindel=sp)
+        assert any(e.check_id == "wasserkuehlung_hinweis" for e in bericht.ergebnisse)
+
     def test_rpm_null_ist_kritisch(self, proverxl_maschine, schaftfraeser_6mm) -> None:
         tp = _toolpath([Bewegung(BewegungsTyp.LINEAR, 50, 50, -2, feed=1000)], rpm=0)
         bericht = pruefe_toolpath(tp, proverxl_maschine, schaftfraeser_6mm)

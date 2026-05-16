@@ -31,6 +31,8 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | A14 | Feeds & Speeds Rechner | [#3](https://github.com/MadGapun/CAMWOSA/issues/3) | [Feeds-Speeds](Feeds-Speeds.md) | ⬜ |
 | A14b | Per-Feature-Override (pro Operation einzelne Parameter ueberschreiben + zuruecksetzen) | — | [Per-Feature-Override](Per-Feature-Override.md) | ✅ |
 | A14c | CAD-Format-System: DXF/SVG/STL/STEP + Plugin-Architektur fuer Maker-CAD (FreeCAD/Fusion/OpenSCAD…) | — | [CAD-Import](CAD-Import.md) | ✅ |
+| A14d | Spindel-System (Multi-Spindel pro Maschine, Safety + Feeds&Speeds Spindel-aware) | — | [Spindel](Spindel.md) | ✅ |
+| A14e | Maschinen-Profil-Sharing (Bundle-Export/Import inkl. Spindeln) | — | [Maschinenprofil-Format](Maschinenprofil-Format.md) | ✅ |
 | A15 | Sicherheits-Checks (alle 6 + Erweiterungen) | [#11](https://github.com/MadGapun/CAMWOSA/issues/11) | [Sicherheits-Checks](Sicherheits-Checks.md) | ⬜ |
 | A16 | Maschinen-Profil-Modul + 5 Default-Profile | — | [Maschinenprofil-Format](Maschinenprofil-Format.md) | ⬜ |
 | A17 | Rohmaterial-Definition (Quader/Zylinder/Platte/frei) | — | [Rohmaterial](Rohmaterial.md) | ⬜ |

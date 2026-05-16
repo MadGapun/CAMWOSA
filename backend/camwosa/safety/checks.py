@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
-from camwosa.db.models import Maschine, Werkzeug
+from camwosa.db.models import Maschine, Spindel, Werkzeug
 from camwosa.gcode.toolpath import BewegungsTyp, OperationsTyp, Toolpath
 
 
@@ -65,17 +65,24 @@ def pruefe_toolpath(
     werkzeug: Werkzeug,
     *,
     z_oberkante_material: float = 0.0,
+    spindel: Spindel | None = None,
 ) -> CheckBericht:
-    """Fuehrt alle Sicherheits-Checks fuer einen Toolpath aus."""
+    """Fuehrt alle Sicherheits-Checks fuer einen Toolpath aus.
+
+    Args:
+        spindel: Wenn angegeben, wird die RPM-Pruefung gegen die Spindel-Range
+            durchgefuehrt. Sonst gegen die (Inline-)Maschinen-RPM-Range.
+    """
     bericht = CheckBericht()
 
     _check_g0_im_material(toolpath, z_oberkante_material, bericht)
     _check_arbeitsraum(toolpath, maschine, bericht)
     _check_werkzeug_schneidlaenge(toolpath, werkzeug, bericht)
     _check_plunge_ohne_rampe(toolpath, werkzeug, bericht)
-    _check_rpm_im_bereich(toolpath, maschine, bericht)
+    _check_rpm_im_bereich(toolpath, maschine, bericht, spindel=spindel)
     _check_spindel_drehzahl(toolpath, bericht)
     _check_plunge_vorschub(toolpath, bericht)
+    _check_spindel_kuehlung(toolpath, spindel, bericht)
 
     return bericht
 
@@ -86,11 +93,14 @@ def pruefe_alle(
     werkzeug: Werkzeug,
     *,
     z_oberkante_material: float = 0.0,
+    spindel: Spindel | None = None,
 ) -> CheckBericht:
     bericht = CheckBericht()
     for tp in toolpaths:
         teilbericht = pruefe_toolpath(
-            tp, maschine, werkzeug, z_oberkante_material=z_oberkante_material
+            tp, maschine, werkzeug,
+            z_oberkante_material=z_oberkante_material,
+            spindel=spindel,
         )
         bericht.ergebnisse.extend(teilbericht.ergebnisse)
     return bericht
@@ -193,25 +203,55 @@ def _check_plunge_ohne_rampe(
 
 
 def _check_rpm_im_bereich(
-    toolpath: Toolpath, maschine: Maschine, bericht: CheckBericht
+    toolpath: Toolpath,
+    maschine: Maschine,
+    bericht: CheckBericht,
+    *,
+    spindel: Spindel | None = None,
 ) -> None:
-    if toolpath.spindel_rpm < maschine.spindel_rpm_min:
+    """RPM-Range pruefen — bevorzugt gegen aktive Spindel, sonst Maschinen-Inline."""
+    if spindel is not None:
+        rpm_min, rpm_max = spindel.rpm_min, spindel.rpm_max
+        quelle = f"Spindel '{spindel.name}'"
+    else:
+        rpm_min, rpm_max = maschine.spindel_rpm_min, maschine.spindel_rpm_max
+        quelle = "Maschine"
+
+    if toolpath.spindel_rpm < rpm_min:
         bericht.ergebnisse.append(CheckErgebnis(
             check_id="rpm_zu_niedrig",
             stufe=CheckStufe.WARNUNG,
-            titel="Spindel-RPM unter Maschinen-Min",
+            titel="Spindel-RPM unter Min",
             beschreibung=(
-                f"RPM {toolpath.spindel_rpm:.0f} < {maschine.spindel_rpm_min:.0f}. "
-                "Ggf. wird Spindel beim Anschalten nicht hochlaufen."
+                f"RPM {toolpath.spindel_rpm:.0f} < {rpm_min:.0f} ({quelle}). "
+                "Spindel laeuft ggf. nicht stabil."
             ),
         ))
-    if toolpath.spindel_rpm > maschine.spindel_rpm_max:
+    if toolpath.spindel_rpm > rpm_max:
         bericht.ergebnisse.append(CheckErgebnis(
             check_id="rpm_zu_hoch",
             stufe=CheckStufe.WARNUNG,
-            titel="Spindel-RPM ueber Maschinen-Max",
+            titel="Spindel-RPM ueber Max",
             beschreibung=(
-                f"RPM {toolpath.spindel_rpm:.0f} > {maschine.spindel_rpm_max:.0f}."
+                f"RPM {toolpath.spindel_rpm:.0f} > {rpm_max:.0f} ({quelle})."
+            ),
+        ))
+
+
+def _check_spindel_kuehlung(
+    toolpath: Toolpath, spindel: Spindel | None, bericht: CheckBericht
+) -> None:
+    """Bei wassergekuehlten Spindeln: Hinweis dass Pumpe an sein muss."""
+    if spindel is None:
+        return
+    if spindel.kuehlung == "wasser" and toolpath.spindel_rpm > 0:
+        bericht.ergebnisse.append(CheckErgebnis(
+            check_id="wasserkuehlung_hinweis",
+            stufe=CheckStufe.INFO,
+            titel="Wassergekuehlte Spindel",
+            beschreibung=(
+                f"Spindel '{spindel.name}' ist wassergekuehlt. "
+                "Pumpe vor dem Start einschalten und Durchfluss pruefen."
             ),
         ))
 

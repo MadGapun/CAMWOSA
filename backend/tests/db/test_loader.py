@@ -6,8 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from camwosa.db.loader import lade_maschinen, lade_materialien, lade_werkzeuge
-from camwosa.db.models import ControllerTyp, MaterialKategorie, WerkzeugTyp
+from camwosa.db.loader import (
+    lade_maschinen, lade_materialien, lade_spindeln, lade_werkzeuge,
+    spindel_index,
+)
+from camwosa.db.models import ControllerTyp, MaterialKategorie, SpindelHerkunft, WerkzeugTyp
 
 
 @pytest.fixture
@@ -68,6 +71,33 @@ class TestMaterialien:
         materialien = lade_materialien(default_data_dir)
         buche = next(m for m in materialien if m.id == "buche_massiv")
         assert len(buche.presets) >= 3
+
+
+class TestSpindeln:
+    def test_default_spindeln_geladen(self, default_data_dir: Path) -> None:
+        spindeln = lade_spindeln(default_data_dir)
+        ids = {s.id for s in spindeln}
+        assert "makita_rt0700" in ids
+        assert "genmitsu_router_710w" in ids
+        assert "generic_pwm_24k" in ids
+
+    def test_spindel_index(self, default_data_dir: Path) -> None:
+        idx = spindel_index(default_data_dir)
+        assert idx["makita_rt0700"].rpm_max == 30000
+        assert idx["makita_rt0700"].herkunft == SpindelHerkunft.UPGRADE
+        assert idx["genmitsu_router_710w"].herkunft == SpindelHerkunft.OEM
+
+    def test_proverxl_referenziert_spindeln(self, default_data_dir: Path) -> None:
+        maschinen = lade_maschinen(default_data_dir)
+        idx = spindel_index(default_data_dir)
+        proverxl = next(m for m in maschinen if m.id == "genmitsu_proverxl_4030_v2")
+        assert "makita_rt0700" in proverxl.spindel_ids
+        assert "genmitsu_router_710w" in proverxl.spindel_ids
+        sp = proverxl.aktive_spindel(idx)
+        assert sp is not None
+        assert sp.id == "makita_rt0700"
+        # Effektive RPM-Range sollte aus aktiver Spindel kommen
+        assert proverxl.effektive_rpm_range(idx) == (10000, 30000)
 
 
 class TestLeeresVerzeichnis:

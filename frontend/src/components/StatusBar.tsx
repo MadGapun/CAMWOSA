@@ -16,13 +16,14 @@ export default function StatusBar() {
         await camwosaApi.health();
         if (cancel) return;
         setBackendOk(true);
-        const [m, w, mat] = await Promise.all([
+        const [m, w, mat, sp] = await Promise.all([
           camwosaApi.maschinen(),
           camwosaApi.werkzeuge(),
           camwosaApi.materialien(),
+          camwosaApi.spindeln(),
         ]);
         if (cancel) return;
-        setStammdaten(m, w, mat);
+        setStammdaten(m, w, mat, sp);
       } catch {
         if (!cancel) setBackendOk(false);
       }

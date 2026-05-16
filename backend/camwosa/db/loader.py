@@ -15,7 +15,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from camwosa.db.models import Maschine, Material, Werkzeug
+from camwosa.db.models import Maschine, Material, Spindel, Werkzeug
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -72,6 +72,17 @@ def lade_materialien(data_dir: Path | None = None) -> list[Material]:
     return _parse_alle(_load_json_files(root / "materials"), Material)
 
 
+def lade_spindeln(data_dir: Path | None = None) -> list[Spindel]:
+    """Laedt alle Spindeln aus data/spindles/."""
+    root = data_dir or _data_root()
+    return _parse_alle(_load_json_files(root / "spindles"), Spindel)
+
+
+def spindel_index(data_dir: Path | None = None) -> dict[str, Spindel]:
+    """Liefert {id: Spindel} fuer schnellen Lookup."""
+    return {s.id: s for s in lade_spindeln(data_dir)}
+
+
 def speichere_maschine(maschine: Maschine, data_dir: Path | None = None) -> Path:
     """Schreibt eine einzelne Maschine als JSON-Profil zurueck."""
     root = data_dir or _data_root()
@@ -85,6 +96,8 @@ def speichere_maschine(maschine: Maschine, data_dir: Path | None = None) -> Path
 __all__ = [
     "lade_maschinen",
     "lade_materialien",
+    "lade_spindeln",
     "lade_werkzeuge",
+    "spindel_index",
     "speichere_maschine",
 ]

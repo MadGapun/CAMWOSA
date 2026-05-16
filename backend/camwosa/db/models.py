@@ -49,6 +49,56 @@ class MaschinenModus(str, Enum):
     DRAG_KNIFE = "drag_knife"
 
 
+class SpindelHerkunft(str, Enum):
+    """Standard / Upgrade / Eigenbau (fuer Community-Sharing)."""
+
+    OEM = "oem"  # vom Maschinen-Hersteller mitgeliefert
+    UPGRADE = "upgrade"  # vom User nachgeruestet
+    EIGENBAU = "eigenbau"
+
+
+class Spindel(BaseModel):
+    """Spindel-Profil.
+
+    Eine Maschine kann mehrere Spindeln haben (z.B. Original-Router + Makita-Upgrade).
+    Die aktive Spindel wird im Projekt gewaehlt und ist Grundlage fuer
+    RPM-Range, Drehzahl-Steuerung und Sicherheits-Checks.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(description="z.B. 'makita_rt0700' oder 'genmitsu_router_710w'")
+    name: str
+    hersteller: str
+    modell: str
+    typ: SpindelTyp = Field(description="manuell / PWM / analog")
+    rpm_min: float = Field(ge=0)
+    rpm_max: float = Field(gt=0)
+    leistung_watt: float | None = Field(default=None, ge=0)
+    drehmoment_ncm: float | None = Field(default=None, ge=0, description="Drehmoment in Ncm")
+    gewicht_g: float | None = Field(default=None, ge=0)
+    schaft_durchmesser_mm: float | None = Field(
+        default=None, ge=0, description="Spannzangen-Standard, z.B. 6.0 / 6.35 / 8.0"
+    )
+    kuehlung: str = Field(default="luft", description="luft / wasser / sonstige")
+    pwm_min_promille: float | None = Field(
+        default=None, ge=0, le=1000,
+        description="PWM-Wert (0-1000) der rpm_min entspricht (nur PWM-Spindeln)",
+    )
+    pwm_max_promille: float | None = Field(default=None, ge=0, le=1000)
+    rampen_zeit_s: float | None = Field(
+        default=None, ge=0, description="Zeit bis Spindel auf Solldrehzahl (Sicherheits-Pause)"
+    )
+    herkunft: SpindelHerkunft = SpindelHerkunft.OEM
+    notizen: str = ""
+
+    @model_validator(mode="after")
+    def _check_rpm(self) -> "Spindel":
+        if self.rpm_max < self.rpm_min:
+            raise ValueError("rpm_max muss >= rpm_min sein")
+        return self
+
+
 class Arbeitsraum(BaseModel):
     """Maximaler Verfahrweg in mm."""
 
@@ -58,7 +108,16 @@ class Arbeitsraum(BaseModel):
 
 
 class Maschine(BaseModel):
-    """Maschinen-Profil."""
+    """Maschinen-Profil.
+
+    Eine Maschine hat ein oder mehrere Spindeln (siehe Spindel-Klasse). Die
+    bisherigen Inline-Felder ``spindel_typ`` + ``spindel_rpm_*`` sind weiterhin
+    vorhanden — sie werden automatisch aus der aktiven Spindel abgeleitet
+    falls eine ``aktive_spindel_id`` gesetzt ist (siehe ``aktive_spindel()``).
+
+    So bleiben aeltere Maschinenprofile (Schema-Version 1) ohne Spindel-Refs
+    weiterhin ladbar.
+    """
 
     model_config = ConfigDict(extra="ignore")
 
@@ -71,9 +130,19 @@ class Maschine(BaseModel):
     max_vorschub: float = Field(gt=0, description="Max. Vorschub in mm/min")
     sicherer_vorschub: float = Field(gt=0, description="Empfohlener Max-Vorschub fuer sichere Operationen")
     eilgang: float = Field(gt=0, description="G0-Geschwindigkeit in mm/min")
-    spindel_typ: SpindelTyp
-    spindel_rpm_min: float = Field(ge=0)
-    spindel_rpm_max: float = Field(gt=0)
+    # --- Spindel-System ---
+    spindel_ids: list[str] = Field(
+        default_factory=list,
+        description="IDs der Spindeln die fuer diese Maschine verfuegbar sind",
+    )
+    aktive_spindel_id: str | None = Field(
+        default=None, description="Welche Spindel ist aktuell montiert"
+    )
+    # --- Inline-Fallback (Schema v1, weiter unterstuetzt) ---
+    spindel_typ: SpindelTyp = SpindelTyp.MANUELL
+    spindel_rpm_min: float = Field(default=0, ge=0)
+    spindel_rpm_max: float = Field(default=1, gt=0)
+    # --- Sonstiges ---
     sicherheitshoehe: float = Field(default=5.0, description="Z-Hoehe ueber Werkstueck-OK in mm")
     werkzeugwechsel_position: tuple[float, float, float] | None = Field(
         default=None, description="X,Y,Z fuer Werkzeugwechsel-Park-Position"
@@ -83,21 +152,43 @@ class Maschine(BaseModel):
     aktiver_modus: MaschinenModus = MaschinenModus.STANDARD_XYZ
     notizen: str = ""
 
-    @field_validator("sicherer_vorschub")
-    @classmethod
-    def _check_sicherer_vorschub(cls, v: float, info) -> float:
-        max_vf = info.data.get("max_vorschub")
-        if max_vf is not None and v > max_vf:
+    @model_validator(mode="after")
+    def _check_konsistenz(self) -> "Maschine":
+        if self.sicherer_vorschub > self.max_vorschub:
             raise ValueError("sicherer_vorschub darf nicht groesser als max_vorschub sein")
-        return v
-
-    @field_validator("spindel_rpm_max")
-    @classmethod
-    def _check_rpm(cls, v: float, info) -> float:
-        rpm_min = info.data.get("spindel_rpm_min", 0)
-        if v < rpm_min:
+        if self.spindel_rpm_max < self.spindel_rpm_min:
             raise ValueError("spindel_rpm_max muss >= spindel_rpm_min sein")
-        return v
+        if self.aktive_spindel_id and self.aktive_spindel_id not in self.spindel_ids:
+            raise ValueError(
+                f"aktive_spindel_id '{self.aktive_spindel_id}' "
+                f"nicht in spindel_ids {self.spindel_ids}"
+            )
+        return self
+
+    def aktive_spindel(self, spindel_index: dict[str, "Spindel"]) -> "Spindel | None":
+        """Liefert die aktive Spindel aus dem uebergebenen Spindel-Index, oder None."""
+        if self.aktive_spindel_id and self.aktive_spindel_id in spindel_index:
+            return spindel_index[self.aktive_spindel_id]
+        return None
+
+    def effektive_rpm_range(
+        self, spindel_index: dict[str, "Spindel"] | None = None
+    ) -> tuple[float, float]:
+        """Liefert (rpm_min, rpm_max) der aktiven Spindel, sonst Inline-Werte."""
+        if spindel_index:
+            sp = self.aktive_spindel(spindel_index)
+            if sp:
+                return (sp.rpm_min, sp.rpm_max)
+        return (self.spindel_rpm_min, self.spindel_rpm_max)
+
+    def effektiver_spindel_typ(
+        self, spindel_index: dict[str, "Spindel"] | None = None
+    ) -> SpindelTyp:
+        if spindel_index:
+            sp = self.aktive_spindel(spindel_index)
+            if sp:
+                return sp.typ
+        return self.spindel_typ
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +388,8 @@ __all__ = [
     "Rohmaterial",
     "RohmaterialForm",
     "SchnittParameterPreset",
+    "Spindel",
+    "SpindelHerkunft",
     "SpindelTyp",
     "Werkzeug",
     "WerkzeugBeschichtung",

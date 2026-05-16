@@ -8,6 +8,8 @@
   "max_vorschub": 2000,
   "sicherer_vorschub": 1500,
   "eilgang": 3000,
+  "spindel_ids": ["generic_pwm_24k"],
+  "aktive_spindel_id": "generic_pwm_24k",
   "spindel_typ": "PWM",
   "spindel_rpm_min": 8000,
   "spindel_rpm_max": 24000,

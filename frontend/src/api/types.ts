@@ -11,6 +11,28 @@ export type MaschinenModus = "standard_xyz" | "rotary_y" | "rotary_x" | "laser" 
 
 export interface Arbeitsraum { x: number; y: number; z: number }
 
+export type SpindelHerkunft = "oem" | "upgrade" | "eigenbau";
+
+export interface Spindel {
+  id: string;
+  name: string;
+  hersteller: string;
+  modell: string;
+  typ: SpindelTyp;
+  rpm_min: number;
+  rpm_max: number;
+  leistung_watt?: number | null;
+  drehmoment_ncm?: number | null;
+  gewicht_g?: number | null;
+  schaft_durchmesser_mm?: number | null;
+  kuehlung: string;
+  pwm_min_promille?: number | null;
+  pwm_max_promille?: number | null;
+  rampen_zeit_s?: number | null;
+  herkunft: SpindelHerkunft;
+  notizen?: string;
+}
+
 export interface MaschinenProfil {
   id: string;
   name: string;
@@ -21,6 +43,8 @@ export interface MaschinenProfil {
   max_vorschub: number;
   sicherer_vorschub: number;
   eilgang: number;
+  spindel_ids: string[];
+  aktive_spindel_id?: string | null;
   spindel_typ: SpindelTyp;
   spindel_rpm_min: number;
   spindel_rpm_max: number;
@@ -30,6 +54,18 @@ export interface MaschinenProfil {
   modi: MaschinenModus[];
   aktiver_modus: MaschinenModus;
   notizen?: string;
+  /** Server-Anreicherung */
+  _aktive_spindel?: Spindel | null;
+  _verfuegbare_spindeln?: Spindel[];
+  _effektive_rpm_min?: number;
+  _effektive_rpm_max?: number;
+}
+
+export interface MachineBundle {
+  schema_version: number;
+  typ: "camwosa.machine_bundle";
+  maschine: MaschinenProfil;
+  spindeln: Spindel[];
 }
 
 export type WerkzeugTyp =
