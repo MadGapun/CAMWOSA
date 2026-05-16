@@ -10,6 +10,8 @@
   "eilgang": 5000,
   "spindel_ids": ["genmitsu_router_710w", "makita_rt0700"],
   "aktive_spindel_id": "makita_rt0700",
+  "rotary_profile_ids": ["generic_4achs_3backen_50mm", "generic_4achs_3backen_50mm_fliegend"],
+  "aktive_rotary_profil_id": null,
   "spindel_typ": "manuell",
   "spindel_rpm_min": 10000,
   "spindel_rpm_max": 30000,

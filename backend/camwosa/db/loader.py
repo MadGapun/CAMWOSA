@@ -16,6 +16,7 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from camwosa.db.models import Maschine, Material, Spindel, Werkzeug
+from camwosa.db.rotary import RotaryProfil
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -83,6 +84,16 @@ def spindel_index(data_dir: Path | None = None) -> dict[str, Spindel]:
     return {s.id: s for s in lade_spindeln(data_dir)}
 
 
+def lade_rotary_profile(data_dir: Path | None = None) -> list[RotaryProfil]:
+    """Laedt alle Rotary-Profile aus data/rotary/."""
+    root = data_dir or _data_root()
+    return _parse_alle(_load_json_files(root / "rotary"), RotaryProfil)
+
+
+def rotary_index(data_dir: Path | None = None) -> dict[str, RotaryProfil]:
+    return {r.id: r for r in lade_rotary_profile(data_dir)}
+
+
 def speichere_maschine(maschine: Maschine, data_dir: Path | None = None) -> Path:
     """Schreibt eine einzelne Maschine als JSON-Profil zurueck."""
     root = data_dir or _data_root()
@@ -96,8 +107,10 @@ def speichere_maschine(maschine: Maschine, data_dir: Path | None = None) -> Path
 __all__ = [
     "lade_maschinen",
     "lade_materialien",
+    "lade_rotary_profile",
     "lade_spindeln",
     "lade_werkzeuge",
+    "rotary_index",
     "spindel_index",
     "speichere_maschine",
 ]

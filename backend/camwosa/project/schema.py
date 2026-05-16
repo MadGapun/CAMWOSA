@@ -69,6 +69,8 @@ class OperationsKonfig(BaseModel):
 class SetupPauseTyp(str, Enum):
     WERKZEUGWECHSEL = "werkzeugwechsel"
     UMSPANN = "umspann"
+    WERKSTUECK_VERSCHIEBEN = "werkstueck_verschieben"  # lange Werkstuecke
+    SPINDEL_WECHSEL = "spindel_wechsel"  # z.B. OEM-Router -> Makita
     OPTIONALER_STOP = "optionaler_stop"
 
 

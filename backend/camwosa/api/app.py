@@ -29,6 +29,7 @@ def create_app(*, debug: bool = False) -> Flask:
         materials,
         operations,
         projects,
+        rotary as rotary_ep,
         spindles,
         standzeit as standzeit_ep,
         tools,
@@ -55,6 +56,7 @@ def create_app(*, debug: bool = False) -> Flask:
     app.register_blueprint(postprocessors.bp)
     app.register_blueprint(workflow_ep.bp)
     app.register_blueprint(standzeit_ep.bp)
+    app.register_blueprint(rotary_ep.bp)
 
     @app.route("/health")
     def health():

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "generic_4achs_3backen_50mm",
+    "name": "Generic 4. Achse 3-Backen Ø50 (mit Reitstock)",
+    "hersteller": "Generisch",
+    "modell": "4th Axis 3-Jaw Ø50",
+    "quelle_url": "https://www.amazon.de/dp/B0DQY1GZ3M/",
+    "spannfutter_backen_anzahl": 3,
+    "spannfutter_max_durchmesser_mm": 50,
+    "spannfutter_min_durchmesser_mm": 3,
+    "hat_reitstock": true,
+    "reitstock_verstellbar_mm": 30,
+    "max_werkstueck_laenge_mm": 300,
+    "durchschiebbar": true,
+    "grbl_y_steps_pro_grad": 88.889,
+    "grbl_y_limit_aufheben": true,
+    "cncjs_macro_ein": "ROTARY EIN",
+    "cncjs_macro_aus": "ROTARY AUS",
+    "notizen": "Typische Drittanbieter-4.-Achse fuer Genmitsu ProVerXL/Shapeoko. 3-Backen-Spannfutter, Backen umkehrbar fuer Innen-/Aussenspannung. Mit Reitstock fuer lange Werkstuecke. Y-Achse wird umgemappt, GRBL-Settings $101=88.889 / $131=9999."
+  },
+  {
+    "id": "generic_4achs_3backen_50mm_fliegend",
+    "name": "Generic 4. Achse 3-Backen Ø50 (fliegend, ohne Reitstock)",
+    "hersteller": "Generisch",
+    "modell": "4th Axis 3-Jaw Ø50",
+    "spannfutter_backen_anzahl": 3,
+    "spannfutter_max_durchmesser_mm": 50,
+    "spannfutter_min_durchmesser_mm": 3,
+    "hat_reitstock": false,
+    "max_werkstueck_laenge_mm": 100,
+    "durchschiebbar": true,
+    "grbl_y_steps_pro_grad": 88.889,
+    "grbl_y_limit_aufheben": true,
+    "cncjs_macro_ein": "ROTARY EIN",
+    "cncjs_macro_aus": "ROTARY AUS",
+    "notizen": "Selbe Hardware ohne Reitstock — kurze Werkstuecke. Bei laengeren: durch das Spannfutter schieben + Setup-Pause 'werkstueck_verschieben' nutzen."
+  }
+]

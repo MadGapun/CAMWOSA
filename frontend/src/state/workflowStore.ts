@@ -2,7 +2,12 @@ import { create } from "zustand";
 
 // Spiegel zu backend/camwosa/project/schema.py (Setup, SetupPause, Variante).
 
-export type SetupPauseTyp = "werkzeugwechsel" | "umspann" | "optionaler_stop";
+export type SetupPauseTyp =
+  | "werkzeugwechsel"
+  | "umspann"
+  | "werkstueck_verschieben"
+  | "spindel_wechsel"
+  | "optionaler_stop";
 
 export interface SetupPause {
   typ: SetupPauseTyp;

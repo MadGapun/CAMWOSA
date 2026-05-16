@@ -138,6 +138,15 @@ class Maschine(BaseModel):
     aktive_spindel_id: str | None = Field(
         default=None, description="Welche Spindel ist aktuell montiert"
     )
+    # --- Rotary-Konfigurationen (Phase 3) ---
+    rotary_profile_ids: list[str] = Field(
+        default_factory=list,
+        description="IDs der Rotary-Konfigurationen (aus data/rotary/) die fuer diese Maschine verfuegbar sind",
+    )
+    aktive_rotary_profil_id: str | None = Field(
+        default=None,
+        description="Aktuell montierte Rotary-Konfiguration (None wenn ohne Rotary)",
+    )
     # --- Inline-Fallback (Schema v1, weiter unterstuetzt) ---
     spindel_typ: SpindelTyp = SpindelTyp.MANUELL
     spindel_rpm_min: float = Field(default=0, ge=0)
@@ -162,6 +171,11 @@ class Maschine(BaseModel):
             raise ValueError(
                 f"aktive_spindel_id '{self.aktive_spindel_id}' "
                 f"nicht in spindel_ids {self.spindel_ids}"
+            )
+        if self.aktive_rotary_profil_id and self.aktive_rotary_profil_id not in self.rotary_profile_ids:
+            raise ValueError(
+                f"aktive_rotary_profil_id '{self.aktive_rotary_profil_id}' "
+                f"nicht in rotary_profile_ids {self.rotary_profile_ids}"
             )
         return self
 

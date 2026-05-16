@@ -15,6 +15,8 @@ import FotoSlot from "../components/FotoSlot";
 const PAUSE_LABEL: Record<SetupPauseTyp, string> = {
   werkzeugwechsel: "Werkzeugwechsel",
   umspann: "Umspannen",
+  werkstueck_verschieben: "Werkstueck verschieben",
+  spindel_wechsel: "Spindel wechseln",
   optionaler_stop: "Optionaler Stop",
 };
 
@@ -442,6 +444,8 @@ function PauseEditor({
           >
             <option value="werkzeugwechsel">{PAUSE_LABEL.werkzeugwechsel}</option>
             <option value="umspann">{PAUSE_LABEL.umspann}</option>
+            <option value="werkstueck_verschieben">{PAUSE_LABEL.werkstueck_verschieben}</option>
+            <option value="spindel_wechsel">{PAUSE_LABEL.spindel_wechsel}</option>
             <option value="optionaler_stop">{PAUSE_LABEL.optionaler_stop}</option>
           </select>
         </div>
