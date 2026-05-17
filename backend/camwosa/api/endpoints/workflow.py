@@ -13,14 +13,48 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request, send_file
 
 from camwosa.db.loader import lade_maschinen
-from camwosa.project.schema import Variante
+from camwosa.project.schema import CWPProjekt, Variante
 from camwosa.workflow import (
     erzeuge_arbeitsplan_markdown,
     erzeuge_arbeitsplan_pdf,
     pruefe_workflow,
 )
+from camwosa.workflow.run_lock import darf_gcode_generieren, pruefe_projekt
 
 bp = Blueprint("workflow", __name__, url_prefix="/api/workflow")
+
+
+@bp.post("/run-lock")
+def run_lock():
+    """Pre-Check vor G-Code-Generation (Master-Plan A48 Run-Lock).
+
+    Body: ``{\"projekt\": {...komplettes CWPProjekt...}, \"variante_id\": ..., \"setup_id\": ...}``
+
+    Antwort: ``{\"ok\": bool, \"blocker\": [text, ...], \"status_pro_op\": {id: status}}``.
+    Wenn ``ok=false``, ist G-Code-Generierung blockiert — Markus' Regel:
+    „Im Zweifel laeuft das Programm nicht."
+    """
+    data = request.get_json() or {}
+    if "projekt" not in data:
+        return jsonify({"fehler": "projekt erforderlich"}), 400
+    try:
+        projekt = CWPProjekt.model_validate(data["projekt"])
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": f"projekt ungueltig: {e}"}), 422
+    ok, blocker = darf_gcode_generieren(
+        projekt,
+        variante_id=data.get("variante_id"),
+        setup_id=data.get("setup_id"),
+    )
+    status_map = pruefe_projekt(projekt)
+    return jsonify({
+        "ok": ok,
+        "blocker": blocker,
+        "status_pro_op": {
+            op_id: {"status": s.value, "fehler": f}
+            for op_id, (s, f) in status_map.items()
+        },
+    })
 
 
 @bp.post("/pruefen")

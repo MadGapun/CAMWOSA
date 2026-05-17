@@ -37,8 +37,11 @@ from camwosa.db.models import (
 from camwosa.project.schritte import ArbeitsSchritt
 
 
-CWP_SCHEMA_VERSION = 1
-"""Schema-Version. Aenderungen erfordern Migration."""
+CWP_SCHEMA_VERSION = 2
+"""Schema-Version. Aenderungen erfordern Migration.
+
+v2 (A48): OperationStatus + input_hash fuer Dirty-Tracking + Run-Lock.
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -46,11 +49,28 @@ CWP_SCHEMA_VERSION = 1
 # ---------------------------------------------------------------------------
 
 
+class OperationStatus(str, Enum):
+    """Status einer Operation (A48 Dependency-Graph / Run-Lock).
+
+    - NEU: noch nie berechnet
+    - OK: Toolpath aktuell, alle Inputs gueltig
+    - DIRTY: Quelle hat sich geaendert, Recalc noetig (orange Markierung)
+    - BROKEN: Quelle fehlt oder ungueltig — G-Code-Export blockiert (rot)
+    """
+
+    NEU = "neu"
+    OK = "ok"
+    DIRTY = "dirty"
+    BROKEN = "broken"
+
+
 class OperationsKonfig(BaseModel):
     """Eine Operation in einem Setup.
 
     ``parameter`` ist je nach ``typ`` ein KonturParameter, TaschenParameter,
     BohrParameter oder GravurParameter.
+
+    Ab v2: ``status`` + ``input_hash`` fuer Dirty-Tracking (A48).
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -61,6 +81,15 @@ class OperationsKonfig(BaseModel):
     geometrie_ids: list[str] = Field(default_factory=list)
     parameter: dict[str, Any]
     aktiviert: bool = True
+
+    # A48: Status + Dirty-Tracking
+    status: OperationStatus = OperationStatus.NEU
+    input_hash: str = ""
+    """SHA1-Hash der Inputs (geometrie + werkzeug + parameter + material).
+    Aenderung -> Status -> DIRTY."""
+    letzte_berechnung: datetime | None = None
+    fehler_text: str = ""
+    """Bei status=BROKEN: Erklaerung warum (z.B. 'Geometrie X gibt es nicht mehr')."""
 
 
 # ---------------------------------------------------------------------------

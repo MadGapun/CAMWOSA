@@ -217,12 +217,14 @@ class WerkzeugTyp(str, Enum):
     KUGELFRAESER = "kugelfraeser"
     TORUSFRAESER = "torusfraeser"
     V_BIT = "v_bit"
+    BALLNOSE_V_BIT = "ballnose_v_bit"  # A39: V-Bit mit Mini-Kugel-Spitze (robuster)
     GRAVIERSTICHEL = "gravierstichel"
     BOHRER = "bohrer"
     EINSCHNEIDER = "einschneider"
     FISCHSCHWANZ = "fischschwanz"
     SCHRUPPFRAESER = "schruppfraeser"
     DIAMANTGRAVIERER = "diamantgravierer"
+    DRAG_GRAVIERER = "drag_gravierer"  # E6: Diamant ohne Spindel-Drehung (M5)
 
 
 class WerkzeugMaterial(str, Enum):
@@ -323,7 +325,9 @@ class Werkzeug(BaseModel):
 
     # --- Charakteristik ---
     spitzenwinkel: float | None = Field(
-        default=None, ge=10, le=180, description="V-Bit/Bohrer-Spitzenwinkel in Grad"
+        default=None, ge=1, le=179,
+        description="V-Bit/Bohrer-Spitzenwinkel in Grad. "
+                    "Erweitert auf 1-179° fuer Relief-V-Bits (4°/8°/10°/15°/20°...)."
     )
     spitzenradius: float | None = Field(
         default=None, ge=0, description="Eckenradius bei Bull-Nose oder Ball-End-Radius"
@@ -347,15 +351,47 @@ class Werkzeug(BaseModel):
         default=None, ge=0,
         description="Erwartete Standzeit in Schnitt-Minuten (Erfahrungswert)",
     )
+
+    # A46: Collet-Modell + Auto-Set-Speeds
+    free_length_mm: float | None = Field(
+        default=None, gt=0,
+        description="Freie Werkzeug-Laenge vom Collet bis Spitze. "
+                    "Genutzt fuer Collet-Collision-Check. Default = gesamtlaenge wenn None.",
+    )
+    auto_set_speeds: bool = Field(
+        default=False,
+        description="Wenn True: auto_feedrate + auto_spindel_rpm werden bei Werkzeug-Wahl "
+                    "in Operationen uebernommen.",
+    )
+    auto_feedrate: float | None = Field(
+        default=None, gt=0,
+        description="Vorschlag-Vorschub mm/min wenn auto_set_speeds aktiv.",
+    )
+    auto_spindel_rpm: float | None = Field(
+        default=None, gt=0,
+        description="Vorschlag-Spindelspeed RPM wenn auto_set_speeds aktiv.",
+    )
+
     notizen: str = ""
 
     @model_validator(mode="after")
     def _werkzeug_geometrie_check(self) -> "Werkzeug":
         if self.typ == WerkzeugTyp.V_BIT and self.spitzenwinkel is None:
             raise ValueError("spitzenwinkel ist Pflicht fuer V_BIT")
+        if self.typ == WerkzeugTyp.BALLNOSE_V_BIT:
+            if self.spitzenwinkel is None:
+                raise ValueError("spitzenwinkel ist Pflicht fuer BALLNOSE_V_BIT")
+            if self.spitzendurchmesser is None or self.spitzendurchmesser <= 0:
+                raise ValueError(
+                    "spitzendurchmesser (>0) ist Pflicht fuer BALLNOSE_V_BIT "
+                    "(= Durchmesser der Mini-Kugel an der Spitze)"
+                )
         # Auto-default: max_arbeitstiefe = schneidlaenge wenn nicht gesetzt
         if self.max_arbeitstiefe_mm is None:
             object.__setattr__(self, "max_arbeitstiefe_mm", self.schneidlaenge)
+        # Auto-default: free_length = gesamtlaenge wenn nicht explizit gesetzt
+        if self.free_length_mm is None:
+            object.__setattr__(self, "free_length_mm", self.gesamtlaenge)
         return self
 
     # --- Smart-Helpers ---
