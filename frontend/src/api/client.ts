@@ -385,6 +385,49 @@ export const camwosaApi = {
   materialLoeschen: (id: string): Promise<{ geloescht: boolean }> =>
     api.delete(`/materials/${id}`).then((r) => r.data),
 
+  // Diagnose: Z-Grid-Analyse (alpha.5, A47-Rest)
+  zGridAnalysieren: (daten: {
+    messpunkte: Array<{ x: number; y: number; z: number }>;
+    werkzeug_typ?: string;
+    bezugs_z?: number | null;
+  }): Promise<{
+    befund: "eben_ok" | "leichte_neigung" | "starke_neigung" | "unebene_oberflaeche";
+    klartext: string;
+    empfehlung: string;
+    anzahl_punkte: number;
+    z_min: number; z_max: number; z_spreizung: number; z_std: number;
+    neigung_grad: number; neigung_richtung_grad: number;
+    max_lokale_abweichung_mm: number;
+    abweichungen: number[];
+  }> => api.post("/diagnostics/z-grid", daten).then((r) => r.data),
+
+  // Spezial-Operationen (alpha.5, Cluster E + B)
+  dragEngraving: (
+    parameter: Record<string, unknown>,
+    geometrie: Record<string, unknown> | Array<Record<string, unknown>>,
+  ): Promise<Record<string, unknown>> =>
+    api.post("/spezial-ops/drag-engraving", { parameter, geometrie }).then((r) => r.data),
+  autoInlay: (
+    parameter: { spiel_mm?: number; werkzeug_radius_mm: number; tasche_tiefe_mm?: number; plug_uebermass_oben_mm?: number },
+    geometrie: Record<string, unknown>,
+  ): Promise<{
+    ergebnis: Record<string, unknown>;
+    tasche_geometrie: Record<string, unknown>;
+    plug_geometrie: Record<string, unknown>;
+  }> => api.post("/spezial-ops/auto-inlay", { parameter, geometrie }).then((r) => r.data),
+  threadMilling: (
+    parameter: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> =>
+    api.post("/spezial-ops/thread-milling", { parameter }).then((r) => r.data),
+  circularPocketPfade: (
+    parameter: Record<string, unknown>,
+  ): Promise<{ pfade: Array<Array<[number, number]>>; anzahl: number }> =>
+    api.post("/spezial-ops/circular-pocket-pfade", parameter).then((r) => r.data),
+  radialPocketPfade: (
+    parameter: Record<string, unknown>,
+  ): Promise<{ pfade: Array<Array<[number, number]>>; anzahl: number }> =>
+    api.post("/spezial-ops/radial-pocket-pfade", parameter).then((r) => r.data),
+
   // Geometrie-Annotationen
   annotationTypen: (): Promise<string[]> =>
     api.get("/annotationen/typen").then((r) => r.data),

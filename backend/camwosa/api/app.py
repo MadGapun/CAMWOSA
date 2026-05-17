@@ -47,6 +47,8 @@ def create_app(*, debug: bool = False) -> Flask:
         heightmap as heightmap_ep,
         text as text_ep,
         wrap as wrap_ep,
+        diagnostics as diagnostics_ep,
+        spezial_ops as spezial_ops_ep,
     )
 
     app.register_blueprint(machines.bp)
@@ -71,6 +73,8 @@ def create_app(*, debug: bool = False) -> Flask:
     app.register_blueprint(heightmap_ep.bp)
     app.register_blueprint(text_ep.bp)
     app.register_blueprint(wrap_ep.bp)
+    app.register_blueprint(diagnostics_ep.bp)
+    app.register_blueprint(spezial_ops_ep.bp)
 
     # OpenAPI-Spec-Generator (Master-Plan B3) — wird zuletzt registriert,
     # damit alle vorigen Routen in der Spec landen.

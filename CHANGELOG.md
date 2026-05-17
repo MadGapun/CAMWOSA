@@ -4,6 +4,88 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.5] — 2026-05-17
+
+**Backend-Erweiterungs-Release.** 5 neue CAM-Backend-Module + Diagnose-Tool
++ 65 neue Tests (10 Z-Grid, 12 Drag-Engraving, 12 Auto-Inlay, 9 Thread-Milling,
+12 Circular/Radial, 10 API-Tests). UI-Frontend bekommt API-Client-Bindings,
+echte UI-Komponenten kommen in spaeteren Sessions wenn Markus testet.
+
+### A47-Rest — Z-Grid-Diagnose
+
+✅ `diagnostics/z_grid.py` — analysiert Z-Probing-Daten (n×m XY-Grid mit
+Z-Messungen) und meldet:
+- **EBEN_OK** (< 0.1 mm) — Job kann starten
+- **LEICHTE_NEIGUNG** (< 0.5 mm) — Schruppen OK, Schlichten kompensieren
+- **STARKE_NEIGUNG** (< 2 mm) — neu aufspannen empfohlen
+- **UNEBENE_OBERFLAECHE** (> 2 mm) — Werkstueck planen vor dem Job
+
+Least-squares-Plane-Fit ohne numpy-Abhaengigkeit (eigene 3×3 Gauss-Jordan).
+Schwellwerte passen sich an Werkzeug-Typ an (Kugelfraeser strenger).
+Output liefert Klartext + Empfehlung pro Befund, plus Numerik fuer Heatmap.
+
+### A45-Rest — 4 neue Spezial-Operationen
+
+✅ `cam/drag_engraving.py` — Diamantgravierer/Schleppgravierer als eigene Op:
+- Werkzeug-Pflicht-Check (DRAG_GRAVIERER oder DIAMANTGRAVIERER)
+- Spindel zwingend AUS (M5)
+- Eintauch-Vorschub 1/10 vom Vorschub (Diamantspitze schonen)
+- Dwell an scharfen Knick-Ecken (Werkzeug neu ausrichten)
+- Tangentialer Lead-In gegen "Tropfen" am Start
+
+✅ `cam/auto_inlay.py` — Auto-Inlay (Tasche + passender Plug aus EINER Kontur):
+- Konfigurierbares Spiel (Holz 0.05-0.15, Kunststoff 0.0-0.05)
+- Werkzeug-Radius-Check (passt das Werkzeug ins Polygon?)
+- Plug-Hoehe = Tasche-Tiefe + Uebermass (zum Plan-Schleifen)
+- Output: zwei Polylinien (WKT + als GeometrieObjekt) zum direkten Anlegen
+  von Operationen
+- shapely-basiert (robuste Negativ-Buffer + MultiPolygon-Handling)
+
+✅ `cam/thread_milling.py` — Gewindefraesen mit Helix:
+- Innen- und Aussengewinde
+- Rechts- und Linksgewinde (Drehrichtung an Innen/Aussen angepasst)
+- Werkzeug-Pruefung (muss kleiner als Nenndurchmesser bei Innengewinde)
+- "Zurueck zur Mitte" vor Lift (vermeidet Gewindeschaden)
+- Metadaten markieren Thread-Milling fuer Postprozessor-Erkennung
+
+✅ `cam/circular_radial.py` — 2 neue Pocketing-Strategien:
+- **CIRCULAR**: konzentrische Kreis-Spiralen aussen↔innen
+- **RADIAL**: Sonnenstrahlen vom Mittelpunkt mit konfigurierbarem Speichen-Zahl
+
+### API-Endpoints + Frontend-Bindings
+
+✅ `POST /api/diagnostics/z-grid`
+✅ `POST /api/spezial-ops/drag-engraving`
+✅ `POST /api/spezial-ops/auto-inlay`
+✅ `POST /api/spezial-ops/thread-milling`
+✅ `POST /api/spezial-ops/circular-pocket-pfade`
+✅ `POST /api/spezial-ops/radial-pocket-pfade`
+
+Frontend-Client-Bindings in `frontend/src/api/client.ts`: `zGridAnalysieren`,
+`dragEngraving`, `autoInlay`, `threadMilling`, `circularPocketPfade`,
+`radialPocketPfade`. UI-Komponenten folgen in alpha.6 wenn Markus die
+Backend-Funktionen getestet hat.
+
+### Test-Status
+
+- Backend: **678 Tests gruen** (+65 fuer alpha.5)
+- Frontend: vite build 1.66 MB / 957 Module
+- conftest-Refactor: API-Test-Fixtures aus `test_crud_stammdaten.py` in
+  `tests/api/conftest.py` ausgelagert — alle API-Tests koennen sie jetzt nutzen
+
+### Master-Plan-Fortschritt
+
+| Punkt | Was | Status |
+|---|---|---|
+| A47-Rest | Z-Grid-Diagnose-Tool | ✅ |
+| A45-Rest | Drag-Engraving als eigene Op | ✅ |
+| A45-Rest | Auto-Inlay | ✅ |
+| A45-Rest | Thread-Milling | ✅ |
+| A43-Rest | Circular Pocketing | ✅ |
+| A43-Rest | Radial Pocketing | ✅ |
+
+---
+
 ## [0.0.1-alpha.4] — 2026-05-17
 
 **Frontend-Workflow + Onboarding-Release.** Master-Plan **D31** (Geometrie→
