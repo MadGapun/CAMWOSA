@@ -97,11 +97,12 @@ export default function DrechselnView() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-xl font-bold">Drechseln (Rotary)</h1>
+        <h1 className="text-xl font-bold">Drehen (Rotary)</h1>
         <p className="text-sm text-camwosa-muted">
           Fraeser haengt vertikal von oben, Werkstueck dreht sich langsam
-          darunter — Wrap-Carving statt klassischem Drechseln. Profil zeichnen,
-          Parameter setzen, G-Code erzeugen.
+          darunter — Rotary-Carving. (Nicht klassisches Drechseln mit
+          Drehmeissel auf Drehbank.) Profil zeichnen, Parameter setzen, G-Code
+          erzeugen.
         </p>
       </header>
 
