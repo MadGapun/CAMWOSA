@@ -87,11 +87,25 @@ Neue Checks hinzufuegen:
 3. Test in `tests/safety/test_checks.py`.
 4. Diesen Wiki-Eintrag aktualisieren.
 
+## Verwandte Pre-Run-Pruefungen
+
+- [Z-Grid-Diagnose](Z-Grid-Diagnose) — analysiert Z-Probing-Daten und meldet
+  ob das Werkstueck eben aufgespannt ist. Vier Befund-Stufen mit Klartext-
+  Empfehlung. (alpha.5, A47-Rest)
+- **Spannmittel-Modell** (`db/spannmittel.py`) — 8 Typen mit Sicherheitszonen.
+  `pruefe_toolpath_gegen_spannmittel()` checked Crash mit definierten
+  Klemmen, Vakuum-Tisch, Reitstock etc. (alpha.3, A47)
+- **Collet-Collision** via `Werkzeug.free_length_mm` — pruefen ob der
+  Schaft/Collet das Werkstueck oder die Spannmittel erreicht (alpha.3, A46).
+
 ## Geplante Erweiterungen
 
-- **Klemmen-Kollision** (Phase 1+): Toolpath-Pruefung gegen markierte Spannmittel-Bereiche.
-- **Werkzeughalter-Kollision** (Phase E3): 3D-Geometrie des Halters gegen Werkstueck.
-- **Adaptive-Clearing-Eingriffstiefe** (Phase E4): Kontrolle des konstanten Eingriffs.
+- **Werkzeughalter-Kollision** (Phase E3): 3D-Geometrie des Halters gegen
+  Werkstueck.
+- **Adaptive-Clearing-Eingriffstiefe** (Phase E4): Kontrolle des konstanten
+  Eingriffs.
+- **Reference-Planes-Modell**: explizite Werkstueck-Referenz-Ebenen fuer
+  Multi-Setup-Operationen.
 
 ## Verwandt
 
