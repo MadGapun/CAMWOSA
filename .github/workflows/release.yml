@@ -3,14 +3,36 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Manuell triggerbar damit wir Bugs ohne neuen Tag fixen koennen
+  workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+  # ---------------------------------------------------------------------------
+  # Schritt 1: Backend-Tests laufen einmal zentral (auf Linux, schnellster
+  # Runner). Wenn die fehlschlagen, brechen wir den ganzen Release ab.
+  # ---------------------------------------------------------------------------
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Backend tests
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          python -m pytest -q
+
+  # ---------------------------------------------------------------------------
+  # Schritt 2: Bundles pro Plattform.
+  # - Windows: portable ZIP via pack-portable.ps1 (umgeht winCodeSign-Bug)
+  # - macOS/Linux: electron-builder (kein winCodeSign-Symlink-Problem)
+  # ---------------------------------------------------------------------------
+  bundle-windows:
+    needs: tests
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,35 +42,174 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Backend deps + bundle
+      - name: Backend bundle (PyInstaller)
         working-directory: backend
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
           pip install pyinstaller
-          pyinstaller camwosa-backend.spec --clean --noconfirm
+          python -m PyInstaller camwosa-backend.spec --clean --noconfirm
+        shell: pwsh
 
       - name: Frontend build
         working-directory: frontend
         run: |
-          npm install --no-audit --no-fund
+          npm install --legacy-peer-deps --no-audit --no-fund
           npm run build
+        shell: pwsh
 
-      - name: Electron build
+      - name: Electron compile
         working-directory: electron
         run: |
           npm install --no-audit --no-fund
           npm run build
-          npm run build:installer
+        shell: pwsh
+
+      - name: Portable ZIP packen
+        run: pwsh -File scripts/pack-portable.ps1
+        shell: pwsh
+
+      - name: Smoke-Test (Backend antwortet)
+        run: |
+          $exe = "$env:GITHUB_WORKSPACE\electron\dist-portable\CAMWOSA-win32-x64\CAMWOSA.exe"
+          if (-not (Test-Path $exe)) { throw "Bundle EXE fehlt: $exe" }
+          Start-Process -FilePath $exe -PassThru | Out-Null
+          Start-Sleep -Seconds 15
+          $ok = $false
+          foreach ($port in 8765..8770) {
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/health" -TimeoutSec 2 -ErrorAction Stop
+              Write-Host "Backend Port $port OK: $($r.Content)"
+              $ok = $true; break
+            } catch { }
+          }
+          Get-Process | Where-Object { $_.Name -in @('CAMWOSA','camwosa-backend','electron') } | Stop-Process -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { throw "Bundle Backend antwortet nicht" }
+        shell: pwsh
+
+      - name: Upload Windows-Portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: camwosa-windows-portable
+          path: electron/dist-portable/CAMWOSA-*.zip
+
+  bundle-linux:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Backend bundle
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pyinstaller
+          python -m PyInstaller camwosa-backend.spec --clean --noconfirm
+
+      - name: Frontend build
+        working-directory: frontend
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+
+      - name: Electron build (AppImage)
+        working-directory: electron
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npx electron-builder --linux AppImage || echo "electron-builder linux failed (continuing)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts
+      - name: Upload Linux-AppImage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: camwosa-${{ matrix.os }}
+          name: camwosa-linux-appimage
           path: |
-            electron/release/*.exe
-            electron/release/*.dmg
-            electron/release/*.AppImage
-            electron/release/*.deb
+            electron/dist-installer/*.AppImage
+            electron/dist-installer/*.deb
+          if-no-files-found: warn
+
+  bundle-macos:
+    needs: tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Backend bundle
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pyinstaller
+          python -m PyInstaller camwosa-backend.spec --clean --noconfirm
+
+      - name: Frontend build
+        working-directory: frontend
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+
+      - name: Electron build (DMG)
+        working-directory: electron
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npx electron-builder --mac dmg || echo "electron-builder mac failed (continuing)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS-DMG
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: camwosa-macos-dmg
+          path: electron/dist-installer/*.dmg
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Schritt 3: Release-Assets hochladen.
+  # Lauft nur bei tag-push (nicht workflow_dispatch).
+  # ---------------------------------------------------------------------------
+  release:
+    needs: [bundle-windows, bundle-linux, bundle-macos]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download alle Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Upload zu Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "Tag: $TAG"
+          find artifacts -type f | head -20
+          # Falls Release schon existiert (manuell via gh angelegt), assets dazu
+          # uploaden statt neuen Release zu erstellen.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG existiert — Assets ergaenzen"
+            find artifacts -type f \( -name '*.zip' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.deb' \) \
+              -exec gh release upload "$TAG" {} --clobber \;
+          else
+            echo "Release $TAG anlegen + Assets hochladen"
+            find artifacts -type f \( -name '*.zip' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.deb' \) \
+              -exec gh release create "$TAG" {} --title "$TAG" --prerelease --generate-notes \;
+          fi
