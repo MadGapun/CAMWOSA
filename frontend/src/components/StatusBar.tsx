@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { camwosaApi } from "../api/client";
+import { apiBereit, camwosaApi } from "../api/client";
 import { useAppStore } from "../state/store";
 
 export default function StatusBar() {
@@ -8,14 +8,19 @@ export default function StatusBar() {
   const backendOk = useAppStore((s) => s.backendOk);
   const setBackendOk = useAppStore((s) => s.setBackendOk);
   const setStammdaten = useAppStore((s) => s.setStammdaten);
+  const [version, setVersion] = useState<string>("…");
 
   useEffect(() => {
     let cancel = false;
     async function init() {
       try {
-        await camwosaApi.health();
+        // In Electron-Prod: warte auf die backendUrl-IPC-Aufloesung,
+        // sonst koennen die ersten Calls noch ins Leere gehen.
+        await apiBereit;
+        const health = await camwosaApi.health();
         if (cancel) return;
         setBackendOk(true);
+        if (health?.version) setVersion(health.version);
         const [m, w, mat, sp] = await Promise.all([
           camwosaApi.maschinen(),
           camwosaApi.werkzeuge(),
@@ -48,7 +53,7 @@ export default function StatusBar() {
         />
         <span>{backendOk ? t("status.verbunden") : t("status.getrennt")}</span>
       </div>
-      <div className="text-camwosa-muted">CAMWOSA v0.1.0</div>
+      <div className="text-camwosa-muted">CAMWOSA v{version}</div>
     </footer>
   );
 }

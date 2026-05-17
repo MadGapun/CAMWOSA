@@ -18,12 +18,43 @@ import type {
   Werkzeug,
 } from "./types";
 
+/**
+ * baseURL-Strategie:
+ * - Dev (http://localhost:5173): Vite proxyt /api + /health auf 127.0.0.1:8765
+ *   → relative URLs reichen.
+ * - Production (file://, Electron): kein Proxy. Wir holen die echte Backend-URL
+ *   vom Main-Process via window.camwosa.backendUrl() und stellen sie axios als
+ *   `baseURL` voran. Der Port ist dynamisch (findFreePort 8765+).
+ */
 export const api = axios.create({
   baseURL: "/api",
   headers: { "Content-Type": "application/json" },
 });
 
 const health = axios.create({ baseURL: "/" });
+
+// In Electron-Production die echte Backend-URL aus dem Main-Process holen.
+// Wir mutieren die axios-defaults — alle nachfolgenden Aufrufe gehen dann
+// gegen http://127.0.0.1:<freier-port> statt gegen file:///.
+async function initBackendBaseUrl(): Promise<void> {
+  const camwosa = (window as unknown as {
+    camwosa?: { backendUrl?: () => Promise<string> };
+  }).camwosa;
+  if (!camwosa?.backendUrl) return;  // Nicht in Electron → Dev-Server-Proxy
+  try {
+    const baseUrl = await camwosa.backendUrl();
+    api.defaults.baseURL = `${baseUrl}/api`;
+    health.defaults.baseURL = baseUrl;
+  } catch (e) {
+    console.warn("[api] backendUrl-Lookup fehlgeschlagen, bleibe bei /api", e);
+  }
+}
+
+// Eager-init: lauft asynchron beim Modul-Load. Nachfolgende API-Calls warten
+// nicht explizit auf den Init — aber da React initial einen Loading-State hat
+// (siehe useEffect-Polling in App.tsx) ist das in der Praxis kein Problem.
+// Wer absolut sicher gehen will, kann auf `apiBereit` warten.
+export const apiBereit: Promise<void> = initBackendBaseUrl();
 
 export const camwosaApi = {
   // Health & Stammdaten

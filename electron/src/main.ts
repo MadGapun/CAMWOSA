@@ -79,12 +79,25 @@ async function createWindow(): Promise<void> {
 
   mainWindow.once("ready-to-show", () => mainWindow?.show());
 
+  // Debug-Hilfe: Renderer-Fehler sichtbar machen
+  mainWindow.webContents.on("did-fail-load", (_e, code, desc, url) => {
+    console.error(`[renderer] did-fail-load ${code} ${desc} ${url}`);
+  });
+  mainWindow.webContents.on("render-process-gone", (_e, details) => {
+    console.error(`[renderer] gone ${details.reason} ${details.exitCode}`);
+  });
+  // CAMWOSA_DEBUG=1 oeffnet DevTools auch im Production-Bundle — Markus' Bug-Path
+  if (process.env.CAMWOSA_DEBUG === "1" || process.env.CAMWOSA_DEV === "1") {
+    mainWindow.webContents.openDevTools({ mode: "right" });
+  }
+
   // Im Dev-Modus: Vite-Server. Im Prod: gebautes Frontend.
   if (process.env.CAMWOSA_DEV === "1") {
     await mainWindow.loadURL("http://localhost:5173");
-    mainWindow.webContents.openDevTools();
   } else {
-    await mainWindow.loadFile(path.join(__dirname, "../../frontend/dist/index.html"));
+    const indexPfad = path.join(__dirname, "../../frontend/dist/index.html");
+    console.log(`[main] loading frontend: ${indexPfad}`);
+    await mainWindow.loadFile(indexPfad);
   }
 }
 

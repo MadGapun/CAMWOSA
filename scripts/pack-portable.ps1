@@ -15,7 +15,7 @@
 
 $ErrorActionPreference = "Stop"
 $Repo = Split-Path -Parent $PSScriptRoot
-$Version = "0.0.1-alpha.0"
+$Version = "0.0.1-alpha.1"
 $AppName = "CAMWOSA"
 $OutDir = "$Repo\electron\dist-portable\$AppName-win32-x64"
 $ZipPath = "$Repo\electron\dist-portable\$AppName-$Version-portable.zip"
@@ -54,31 +54,39 @@ Rename-Item "$OutDir\electron.exe" "$AppName.exe"
 Write-Host "==> 2/4 App in resources\app\" -ForegroundColor Cyan
 $AppDir = "$OutDir\resources\app"
 New-Item -ItemType Directory -Path $AppDir -Force | Out-Null
-# package.json (nur die Felder die Electron braucht)
+# package.json (nur die Felder die Electron braucht — KEINE devDependencies)
 $pkg = @{
     name = "camwosa"
     version = $Version
     main = "dist/main.js"
     productName = $AppName
     description = "CAMWOSA - 2.5D CAM Tool"
+    dependencies = @{
+        "electron-updater" = "^6.1.0"
+    }
 }
-$pkg | ConvertTo-Json | Out-File -FilePath "$AppDir\package.json" -Encoding UTF8 -NoNewline
+$pkg | ConvertTo-Json -Depth 10 | Out-File -FilePath "$AppDir\package.json" -Encoding UTF8 -NoNewline
 # Electron-Code
 New-Item -ItemType Directory -Path "$AppDir\dist" -Force | Out-Null
 Copy-Item -Force "$Repo\electron\dist\*.js" "$AppDir\dist\"
-# electron-updater + dependencies muessen mit (lazy-loaded zur Laufzeit)
-New-Item -ItemType Directory -Path "$AppDir\node_modules" -Force | Out-Null
-if (Test-Path "$Repo\electron\node_modules\electron-updater") {
-    Copy-Item -Recurse -Force "$Repo\electron\node_modules\electron-updater" "$AppDir\node_modules\"
-    # transitive deps von electron-updater (builder-util-runtime, lodash, etc.) auch mitnehmen
-    @("builder-util-runtime", "fs-extra", "graceful-fs", "jsonfile", "universalify",
-      "js-yaml", "argparse", "sprintf-js", "lazy-val", "semver", "lodash.escaperegexp",
-      "lodash.isequal", "tiny-typed-emitter", "debug", "ms", "@types") | ForEach-Object {
-        $src = "$Repo\electron\node_modules\$_"
-        if (Test-Path $src) {
-            Copy-Item -Recurse -Force $src "$AppDir\node_modules\" -ErrorAction SilentlyContinue
-        }
-    }
+
+# Production-only node_modules via npm install in der Bundle-App.
+# Vorher npm-Cache deaktivieren damit es deterministisch ist.
+Write-Host "  npm install --omit=dev in resources\app\ ..."
+Push-Location $AppDir
+$env:NPM_CONFIG_AUDIT = "false"
+$env:NPM_CONFIG_FUND = "false"
+npm install --omit=dev --omit=optional --no-package-lock --silent 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Pop-Location
+    throw "npm install --omit=dev in $AppDir failed"
+}
+Pop-Location
+# Smoke-Check: sax muss da sein (transitiv von electron-updater)
+if (-not (Test-Path "$AppDir\node_modules\sax")) {
+    Write-Host "  WARNUNG: sax fehlt - electron-updater wird crashen" -ForegroundColor Yellow
+} else {
+    Write-Host "  ok node_modules komplett" -ForegroundColor Gray
 }
 
 # 3) Frontend in resources\app\frontend-dist\ (main.ts erwartet ../../frontend/dist)
@@ -94,6 +102,13 @@ Copy-Item -Recurse -Force "$Repo\frontend\dist\*" $FrontendTarget
 Write-Host "==> 4/4 Backend + data kopieren" -ForegroundColor Cyan
 Copy-Item -Recurse -Force "$Repo\backend\dist\camwosa-backend" "$OutDir\resources\backend"
 Copy-Item -Recurse -Force "$Repo\data" "$OutDir\resources\data"
+
+# 5) app-update.yml fuer electron-updater (sonst gibt's ENOENT-Warning beim Start)
+@"
+provider: github
+owner: MadGapun
+repo: CAMWOSA
+"@ | Out-File -FilePath "$OutDir\resources\app-update.yml" -Encoding ASCII
 
 # README im Bundle
 @"

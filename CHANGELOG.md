@@ -4,6 +4,44 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.1] — 2026-05-17
+
+**Fix-Release fuer Alpha 0.** Alpha 0 hatte einen Show-Stopper: schwarzer
+Bildschirm beim Start, nur Menue-Leiste sichtbar.
+
+### Gefixt
+
+- **Vite-Asset-Pfade jetzt relativ** (`base: './'` in vite.config.ts).
+  Vorher: `<script src="/assets/...">` schlug unter `file://`-Protokoll
+  fehl, Frontend lud nicht.
+- **API-baseURL via IPC**: `api.defaults.baseURL` wird zur Laufzeit vom
+  Main-Process via `window.camwosa.backendUrl()` gesetzt. Vorher gingen
+  API-Calls an `file:///api/...` ins Leere.
+- **electron-updater transitive Dependencies komplett**: `pack-portable.ps1`
+  macht jetzt einen sauberen `npm install --omit=dev` statt selektiver
+  Copy-Liste — `sax`, `fs-extra` etc. sind jetzt drin.
+- **`app-update.yml`** wird vom Pack mitgeneriert (sonst ENOENT beim
+  Update-Check).
+- **DevTools im Bundle** auf Abruf: `CAMWOSA_DEBUG=1` oeffnet sie auch
+  in Production-Builds.
+- **StatusBar-Version** wird aus Backend-`/health` gelesen statt
+  hartcodiert.
+
+### Neues Process-Protokoll
+
+Vor jedem Release: ZIP **entpacken in frischen Pfad** + doppelklicken +
+`/api/tools/` pruefen. „Backend antwortet" reicht nicht. Siehe
+[Memory feedback_bundle_real_testen.md].
+
+### Verifiziert in dieser Version
+
+- Backend Port 8766 antwortet `/health`
+- `/api/tools/` liefert 12 Werkzeuge → Frontend hat den Backend wirklich erreicht
+- Kein ENOENT, kein MODULE_NOT_FOUND in stderr
+- Backend pytest: 542 / 542 gruen
+
+---
+
 ## [0.0.1-alpha.0] — 2026-05-17
 
 **Erste Alpha-Veroeffentlichung.** Lauffaehiges Windows-Bundle (portable
