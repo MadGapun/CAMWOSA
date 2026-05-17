@@ -86,6 +86,14 @@ async function createWindow(): Promise<void> {
   mainWindow.webContents.on("render-process-gone", (_e, details) => {
     console.error(`[renderer] gone ${details.reason} ${details.exitCode}`);
   });
+  // ALLE Renderer-Console-Messages (warnings, errors) nach stdout
+  mainWindow.webContents.on("console-message", (_e, level, message, line, source) => {
+    const lvl = ["DBG", "LOG", "WRN", "ERR"][level] ?? `L${level}`;
+    console.log(`[renderer:${lvl}] ${message}  (${source}:${line})`);
+  });
+  mainWindow.webContents.on("did-finish-load", () => {
+    console.log("[renderer] did-finish-load");
+  });
   // CAMWOSA_DEBUG=1 oeffnet DevTools auch im Production-Bundle — Markus' Bug-Path
   if (process.env.CAMWOSA_DEBUG === "1" || process.env.CAMWOSA_DEV === "1") {
     mainWindow.webContents.openDevTools({ mode: "right" });
@@ -166,11 +174,34 @@ function setupMenu(): void {
 
 ipcMain.handle("backend:url", () => backendUrl());
 
+// Smoke-Test: nach 8s den DOM-Status in stdout printen damit externe
+// Tests (CI, lokales pack-portable.ps1) verifizieren koennen dass nicht
+// nur Backend laeuft sondern auch UI gerendert wurde.
+function startRendererSmoke(): void {
+  setTimeout(async () => {
+    if (!mainWindow) return;
+    try {
+      const r = await mainWindow.webContents.executeJavaScript(`
+        ({
+          url: window.location.href,
+          bodyLen: document.body?.innerHTML?.length || 0,
+          rootChildren: document.getElementById('root')?.children?.length || 0,
+          aside: document.querySelectorAll('aside, nav').length,
+        })
+      `);
+      console.log(`[smoke] dom url=${r.url} body=${r.bodyLen}B rootChildren=${r.rootChildren} aside=${r.aside}`);
+    } catch (e) {
+      console.log(`[smoke] dom-eval failed: ${e}`);
+    }
+  }, 8000);
+}
+
 app.whenReady().then(async () => {
   await startBackend();
   setupMenu();
   await createWindow();
   void setupAutoUpdater();
+  startRendererSmoke();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

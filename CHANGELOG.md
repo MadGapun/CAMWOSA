@@ -4,6 +4,57 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.2] — 2026-05-17
+
+**Zweiter Show-Stopper-Fix.** Alpha 0.0.1-alpha.1 startete immer noch
+schwarz: zwar Backend + Renderer-Asset-Loading OK, aber React rendert
+gar nichts und Klicks in der Sidebar gehen ins Leere.
+
+### Zwei echte Bugs gefunden
+
+1. **React 19 vs. Ecosystem-Inkompatibilitaet.** `@react-three/drei` und
+   andere Libs erwarten React 18, peer-deps wurden mit
+   `--legacy-peer-deps` gewaltsam installiert. Im Production-Build
+   crashed der erste Modul-Eval mit
+   `Cannot read properties of undefined (reading 'ReactCurrentBatchConfig')`.
+   In Dev-Mode (Vite-HMR) hatten wir das nicht gesehen, weil Vite
+   andere Module-Pfade nutzt. **Fix:** Downgrade auf React 18.3.1 + 18.3
+   types. `--legacy-peer-deps` ist nicht mehr noetig.
+
+2. **`BrowserRouter` unter `file://` kaputt.** React-Router 6 mit
+   `BrowserRouter` braucht die HTML5-History-API mit echten URLs. Unter
+   `file://D:/.../index.html` matched keine Route, Routes ist leer.
+   **Fix:** `HashRouter` in Production (Detection via
+   `window.location.protocol`), `BrowserRouter` bleibt im Dev.
+
+### Smoke-Test deutlich verstaerkt
+
+Mein bisheriger Test pruefte nur „Backend antwortet". Das hat beide
+obigen Bugs nicht erkannt, weil das Backend lief — nur der Renderer war
+tot. Neu in `main.ts`:
+
+- `console-message`-Hook leitet ALLE Renderer-Errors/Logs nach stdout
+- `did-finish-load` und `render-process-gone` Handler
+- `startRendererSmoke()` evaluiert nach 8s im Renderer
+  `document.body.innerHTML.length` + `#root.children.length` + Anzahl
+  `<aside>`/`<nav>` und loggt sie
+
+`pack-portable.ps1` macht jetzt nach jedem Pack automatisch einen
+Smoke-Test: entpackt das ZIP in `%TEMP%\camwosa-pack-smoke`, startet
+`CAMWOSA.exe`, wartet 20s, parsed den `[smoke] dom` Log. Wenn
+`rootChildren < 1` oder `body < 500B` -> Build wird mit Error
+abgebrochen. **So kann nie wieder ein schwarzer Bildschirm released
+werden.**
+
+### Verifiziert in dieser Version
+
+- `[smoke] dom url=...#/quickstart body=13698B rootChildren=1 aside=1`
+- HashRouter sichtbar im URL (`#/quickstart`)
+- Backend Port 8766 antwortet `/health` mit `0.0.1-alpha.2`
+- `/api/tools/` liefert 12 Werkzeuge
+
+---
+
 ## [0.0.1-alpha.1] — 2026-05-17
 
 **Fix-Release fuer Alpha 0.** Alpha 0 hatte einen Show-Stopper: schwarzer

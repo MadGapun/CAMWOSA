@@ -15,7 +15,7 @@
 
 $ErrorActionPreference = "Stop"
 $Repo = Split-Path -Parent $PSScriptRoot
-$Version = "0.0.1-alpha.1"
+$Version = "0.0.1-alpha.2"
 $AppName = "CAMWOSA"
 $OutDir = "$Repo\electron\dist-portable\$AppName-win32-x64"
 $ZipPath = "$Repo\electron\dist-portable\$AppName-$Version-portable.zip"
@@ -136,6 +136,37 @@ if (Test-Path $ZipPath) {
     Remove-Item -Force $ZipPath
 }
 Compress-Archive -Path "$OutDir\*" -DestinationPath $ZipPath -CompressionLevel Optimal
+
+# Smoke-Test: Bundle in frischen Pfad entpacken + starten + DOM pruefen.
+# Verhindert dass wir Bundles releasen wo der Renderer schwarz bleibt.
+$skipSmoke = $env:CAMWOSA_PACK_SKIP_SMOKE -eq "1"
+if (-not $skipSmoke) {
+    Write-Host ""
+    Write-Host "==> Smoke-Test (entpacken + starten + DOM pruefen)" -ForegroundColor Cyan
+    Get-Process | Where-Object { $_.Name -in @('CAMWOSA','camwosa-backend','electron') } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    $smokeDir = "$env:TEMP\camwosa-pack-smoke"
+    if (Test-Path $smokeDir) { Remove-Item -Recurse -Force $smokeDir -ErrorAction SilentlyContinue }
+    Expand-Archive -Path $ZipPath -DestinationPath $smokeDir -Force
+    $smokeOut = "$env:TEMP\camwosa-pack-smoke.log"
+    "" | Out-File $smokeOut
+    Start-Process -FilePath "$smokeDir\$AppName.exe" -RedirectStandardOutput $smokeOut -RedirectStandardError "$env:TEMP\camwosa-pack-smoke-err.log" | Out-Null
+    Start-Sleep -Seconds 20  # 8s smoke + Buffer
+    $out = Get-Content $smokeOut -Raw
+    Get-Process | Where-Object { $_.Name -in @('CAMWOSA','camwosa-backend','electron') } | Stop-Process -Force -ErrorAction SilentlyContinue
+    $smokeLine = ($out -split "`n") | Where-Object { $_ -match '\[smoke\] dom' } | Select-Object -First 1
+    if (-not $smokeLine) {
+        throw "Smoke-Test FAIL: kein '[smoke] dom'-Log nach 20s. stdout:`n$out"
+    }
+    $rootChildren = 0
+    if ($smokeLine -match 'rootChildren=(\d+)') { $rootChildren = [int]$matches[1] }
+    $bodyBytes = 0
+    if ($smokeLine -match 'body=(\d+)B') { $bodyBytes = [int]$matches[1] }
+    if ($rootChildren -lt 1 -or $bodyBytes -lt 500) {
+        throw "Smoke-Test FAIL: Renderer leer (rootChildren=$rootChildren body=$bodyBytes). UI rendert nicht."
+    }
+    Write-Host "  ok Renderer aktiv (body=$bodyBytes B, root=$rootChildren child, smoke OK)" -ForegroundColor Green
+}
 
 # Ergebnis
 $bytes = (Get-Item $ZipPath).Length
