@@ -22,6 +22,8 @@ interface AppState {
   setStammdaten: (
     m: MaschinenProfil[], w: Werkzeug[], mat: Material[], sp: Spindel[],
   ) => void;
+  setMaschinen: (m: MaschinenProfil[]) => void;
+  setSpindeln: (s: Spindel[]) => void;
   setWerkzeuge: (w: Werkzeug[]) => void;
   setMaterialien: (m: Material[]) => void;
 
@@ -60,6 +62,15 @@ interface AppState {
   setAusgewaehltesSicherheitsergebnis: (i: number | null) => void;
 }
 
+/**
+ * Vergibt einer Geometrie eine stabile ID, falls noch keine vorhanden ist.
+ * Master-Plan D31: Operationen referenzieren Geometrien via ID.
+ */
+function mitGeoId(g: GeometrieObjekt): GeometrieObjekt {
+  if (g.id) return g;
+  return { ...g, id: `geo_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}` };
+}
+
 export const useAppStore = create<AppState>((set) => ({
   backendOk: false,
   setBackendOk: (ok) => set({ backendOk: ok }),
@@ -70,6 +81,8 @@ export const useAppStore = create<AppState>((set) => ({
   spindeln: [],
   setStammdaten: (m, w, mat, sp) =>
     set({ maschinen: m, werkzeuge: w, materialien: mat, spindeln: sp }),
+  setMaschinen: (m) => set({ maschinen: m }),
+  setSpindeln: (s) => set({ spindeln: s }),
   setWerkzeuge: (w) => set({ werkzeuge: w }),
   setMaterialien: (mat) => set({ materialien: mat }),
 
@@ -83,8 +96,8 @@ export const useAppStore = create<AppState>((set) => ({
   setAktivesMaterial: (id) => set({ aktivesMaterialId: id }),
 
   geometrien: [],
-  setGeometrien: (g) => set({ geometrien: g }),
-  geometrieHinzufuegen: (g) => set((s) => ({ geometrien: [...s.geometrien, g] })),
+  setGeometrien: (g) => set({ geometrien: g.map(mitGeoId) }),
+  geometrieHinzufuegen: (g) => set((s) => ({ geometrien: [...s.geometrien, mitGeoId(g)] })),
   geometrienLeeren: () => set({ geometrien: [] }),
   ausgewaehlteGeometrieIndex: null,
   setAusgewaehlteGeometrieIndex: (i) => set({ ausgewaehlteGeometrieIndex: i }),

@@ -139,6 +139,8 @@ export type GeometrieTyp =
   | "ellipse" | "spline" | "punkt";
 
 export interface GeometrieObjekt {
+  /** Frontend-generierte stabile ID, damit Operationen Geometrien referenzieren koennen (Master-Plan D31). */
+  id?: string;
   typ: GeometrieTyp;
   layer: string;
   punkte: Array<[number, number]>;
@@ -325,14 +327,29 @@ export interface FeedsSpeedsErgebnis {
 
 // --- Operation in Liste ---
 
+/**
+ * Operation-Status (Master-Plan A48 Dependency-Graph).
+ * - NEU: noch nie berechnet
+ * - OK: Toolpath aktuell, Quellen gueltig
+ * - DIRTY: Quelle hat sich geaendert, Recalc noetig (orange)
+ * - BROKEN: Quelle fehlt - G-Code-Export blockiert (rot)
+ */
+export type OperationStatus = "neu" | "ok" | "dirty" | "broken";
+
 export interface OperationEintrag {
   id: string;
   name: string;
   typ: OperationsTyp;
+  /** @deprecated Nutze geometrie_ids stattdessen. */
   geometrie_id?: string | null;
+  /** Geometrien die diese Operation verwendet (Master-Plan D31). */
+  geometrie_ids?: string[];
   werkzeug_id: string;
   parameter: KonturParameter | TaschenParameter | BohrParameter | GravurParameter;
   toolpath?: Toolpath | null;
   sicherheits_bericht?: CheckBericht | null;
   aktiviert: boolean;
+  /** A48 Dirty-Tracking. */
+  status?: OperationStatus;
+  fehler_text?: string;
 }

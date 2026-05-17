@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer, Line, Rect, Circle as KCircle, Group, Text as KText } from "react-konva";
 import type Konva from "konva";
 import clsx from "clsx";
@@ -11,6 +10,26 @@ import {
 } from "../state/drawingStore";
 import { useAppStore } from "../state/store";
 import AnnotationenEditor, { type Annotation } from "../editor/AnnotationenEditor";
+import type { KonturParameter, OperationEintrag, OperationsTyp } from "../api/types";
+
+const QUICK_OPS: { typ: OperationsTyp; label: string; nurGeschlossen?: boolean; nurKreisPunkt?: boolean }[] = [
+  { typ: "kontur", label: "+ Kontur" },
+  { typ: "tasche", label: "+ Tasche", nurGeschlossen: true },
+  { typ: "bohren", label: "+ Bohren", nurKreisPunkt: true },
+  { typ: "gravur", label: "+ Gravur" },
+  { typ: "relief", label: "+ Relief", nurGeschlossen: true },
+];
+
+function uniqId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+}
+
+function typLabel(t: OperationsTyp): string {
+  return ({
+    kontur: "Kontur", tasche: "Tasche", bohren: "Bohren",
+    gravur: "Gravur", relief: "Relief", eilgang: "Eilgang", drechseln: "Drechseln",
+  } as Record<OperationsTyp, string>)[t];
+}
 
 const WERKZEUGE: { id: ZeichenWerkzeug; label: string; tooltip: string }[] = [
   { id: "auswahl", label: "✋", tooltip: "Auswahl / Pan" },
@@ -22,10 +41,12 @@ const WERKZEUGE: { id: ZeichenWerkzeug; label: string; tooltip: string }[] = [
 ];
 
 export default function ZeichnenView() {
-  const { t } = useTranslation();
   const setGeometrien = useAppStore((s) => s.setGeometrien);
   const operationHinzufuegen = useAppStore((s) => s.operationHinzufuegen);
+  const operationen = useAppStore((s) => s.operationen);
+  const werkzeuge = useAppStore((s) => s.werkzeuge);
   const [opErzeugungsHinweise, setOpErzeugungsHinweise] = useState<string[] | null>(null);
+  const [quickHinweis, setQuickHinweis] = useState<string | null>(null);
 
   const werkzeug = useDrawingStore((s) => s.werkzeug);
   const setWerkzeug = useDrawingStore((s) => s.setWerkzeug);
@@ -163,8 +184,60 @@ export default function ZeichnenView() {
   }
 
   function uebernehmenAlsGeometrie() {
-    setGeometrien(objekte.map(({ id, ...rest }) => rest));
+    // D31: IDs werden erhalten, damit ZeichenObjekte und Geometrien im Store
+    // referenzierbar sind und Operationen darauf verlinken koennen.
+    setGeometrien(objekte);
   }
+
+  /**
+   * D31: Quick-Create — direkt aus der Zeichnung eine Operation fuer das
+   * ausgewaehlte Objekt anlegen. Stellt sicher dass die Geometrien im Store sind.
+   */
+  function quickOpAnlegen(typ: OperationsTyp) {
+    if (!ausgewaehlteId) return;
+    if (werkzeuge.length === 0) {
+      setQuickHinweis("Bitte zuerst ein Werkzeug im Tab 'Werkzeuge' anlegen.");
+      return;
+    }
+    // 1. Sicherstellen, dass alle Zeichenobjekte im Geometrie-Store sind
+    setGeometrien(objekte);
+    // 2. Op mit Verknuepfung auf das selektierte Objekt anlegen
+    const wid = werkzeuge[0].id;
+    const opCount = operationen.length;
+    const op: OperationEintrag = {
+      id: uniqId("op"),
+      name: `${typLabel(typ)} ${opCount + 1}`,
+      typ,
+      werkzeug_id: wid,
+      geometrie_id: null,
+      geometrie_ids: [ausgewaehlteId],
+      parameter: { werkzeug_id: wid } as unknown as KonturParameter,
+      aktiviert: true,
+    };
+    operationHinzufuegen(op);
+    setQuickHinweis(`✓ ${op.name} angelegt — wechsle zum Tab "Operationen" um Parameter zu setzen.`);
+  }
+
+  /**
+   * Set aller Geometrie-IDs die mindestens von einer Operation referenziert werden.
+   * Wird fuer farbliche Markierung (D31 Schritt 4) + Op-Badges in der Objekt-Liste verwendet.
+   */
+  const verknuepfteIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const op of operationen) {
+      for (const id of op.geometrie_ids ?? []) set.add(id);
+      if (op.geometrie_id) set.add(op.geometrie_id);
+    }
+    return set;
+  }, [operationen]);
+
+  function opsFuer(id: string): OperationEintrag[] {
+    return operationen.filter(
+      (op) => (op.geometrie_ids ?? []).includes(id) || op.geometrie_id === id,
+    );
+  }
+
+  const ausgewaehltesObjekt = objekte.find((o) => o.id === ausgewaehlteId) ?? null;
 
   function onWheel(e: Konva.KonvaEventObject<WheelEvent>) {
     e.evt.preventDefault();
@@ -279,6 +352,7 @@ export default function ZeichnenView() {
                   obj={o}
                   scale={scale}
                   highlight={ausgewaehlteId === o.id}
+                  verknuepft={verknuepfteIds.has(o.id)}
                   onClick={
                     werkzeug === "auswahl" ? () => setAusgewaehlt(o.id) : undefined
                   }
@@ -376,39 +450,128 @@ export default function ZeichnenView() {
           <section className="rounded border border-gray-700 bg-camwosa-surface p-3">
             <h2 className="mb-2 text-sm font-semibold">
               Objekte ({objekte.length})
+              {verknuepfteIds.size > 0 && (
+                <span className="ml-2 text-[10px] font-normal text-[#3ad473]">
+                  · {verknuepfteIds.size} verknuepft
+                </span>
+              )}
             </h2>
             <ul className="space-y-1 text-xs">
-              {objekte.map((o) => (
-                <li
-                  key={o.id}
-                  className={clsx(
-                    "flex items-center justify-between rounded px-2 py-1",
-                    ausgewaehlteId === o.id
-                      ? "bg-camwosa-accent/20"
-                      : "hover:bg-camwosa-bg",
-                  )}
-                  onClick={() => setAusgewaehlt(o.id)}
-                >
-                  <span>
-                    {o.typ}
-                    {o.geschlossen ? " (geschlossen)" : ""}
-                  </span>
-                  <button
-                    className="text-camwosa-muted hover:text-camwosa-danger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      loeschen(o.id);
-                    }}
+              {objekte.map((o) => {
+                const ops = opsFuer(o.id);
+                return (
+                  <li
+                    key={o.id}
+                    className={clsx(
+                      "flex items-center justify-between rounded px-2 py-1",
+                      ausgewaehlteId === o.id
+                        ? "bg-camwosa-accent/20"
+                        : "hover:bg-camwosa-bg",
+                    )}
+                    onClick={() => setAusgewaehlt(o.id)}
                   >
-                    ×
-                  </button>
-                </li>
-              ))}
+                    <span className="flex items-center gap-1.5">
+                      <span>
+                        {o.typ}
+                        {o.geschlossen ? " (geschlossen)" : ""}
+                      </span>
+                      {ops.length > 0 && (
+                        <span
+                          className="rounded bg-[#3ad473]/20 px-1.5 py-0.5 text-[10px] text-[#3ad473]"
+                          title={ops.map((op) => op.name).join(", ")}
+                        >
+                          ↪ {ops.length}
+                        </span>
+                      )}
+                    </span>
+                    <button
+                      className="text-camwosa-muted hover:text-camwosa-danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        loeschen(o.id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </li>
+                );
+              })}
               {objekte.length === 0 && (
                 <li className="text-camwosa-muted">Noch nichts gezeichnet</li>
               )}
             </ul>
           </section>
+
+          {/* D31 Schritt 3: Quick-Create + Op-Liste fuer ausgewaehlte Geometrie */}
+          {ausgewaehltesObjekt && (
+            <section className="rounded border border-camwosa-accent/40 bg-camwosa-surface p-3">
+              <h2 className="mb-2 text-sm font-semibold text-camwosa-accent">
+                Ausgewaehlt: {ausgewaehltesObjekt.typ}
+                {ausgewaehltesObjekt.geschlossen ? " (geschlossen)" : ""}
+              </h2>
+              {opsFuer(ausgewaehltesObjekt.id).length > 0 ? (
+                <div className="mb-2">
+                  <div className="mb-1 text-[10px] uppercase tracking-wide text-camwosa-muted">
+                    Verknuepfte Operationen
+                  </div>
+                  <ul className="space-y-0.5 text-xs">
+                    {opsFuer(ausgewaehltesObjekt.id).map((op) => (
+                      <li key={op.id} className="rounded bg-camwosa-bg px-2 py-1">
+                        <span className="font-medium">{op.name}</span>
+                        <span className="ml-2 text-camwosa-muted">{typLabel(op.typ)}</span>
+                        {op.toolpath && (
+                          <span className="ml-2 text-camwosa-ok">✓ Toolpath</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="mb-2 text-xs text-camwosa-muted">
+                  Noch keine Operation verknuepft.
+                </p>
+              )}
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-camwosa-muted">
+                Schnell anlegen
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {QUICK_OPS.filter((q) => {
+                  if (q.nurGeschlossen && !ausgewaehltesObjekt.geschlossen) return false;
+                  if (q.nurKreisPunkt
+                      && ausgewaehltesObjekt.typ !== "kreis"
+                      && ausgewaehltesObjekt.typ !== "punkt") return false;
+                  return true;
+                }).map((q) => (
+                  <button
+                    key={q.typ}
+                    type="button"
+                    className="rounded border border-gray-600 bg-camwosa-bg px-2 py-1 text-xs hover:bg-camwosa-accent hover:text-white disabled:opacity-50"
+                    onClick={() => quickOpAnlegen(q.typ)}
+                    disabled={werkzeuge.length === 0}
+                    title={
+                      werkzeuge.length === 0
+                        ? "Bitte zuerst ein Werkzeug anlegen"
+                        : `Neue ${typLabel(q.typ)}-Operation mit dieser Geometrie`
+                    }
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+              {quickHinweis && (
+                <div className="mt-2 rounded border border-camwosa-ok bg-green-950/30 p-2 text-xs text-camwosa-ok">
+                  {quickHinweis}{" "}
+                  <button
+                    type="button"
+                    className="ml-2 underline"
+                    onClick={() => setQuickHinweis(null)}
+                  >
+                    schliessen
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
           <section className="rounded border border-gray-700 bg-camwosa-surface p-3 text-xs text-camwosa-muted">
             <strong>Werkzeug:</strong>{" "}
             {WERKZEUGE.find((w) => w.id === werkzeug)?.tooltip}
@@ -537,15 +700,22 @@ function ObjektShape({
   obj,
   scale,
   highlight,
+  verknuepft,
   onClick,
 }: {
   obj: ReturnType<typeof useDrawingStore.getState>["objekte"][number];
   scale: number;
   highlight: boolean;
+  verknuepft?: boolean;
   onClick?: () => void;
 }) {
-  const stroke = highlight ? "#ff6b00" : "#a8d2ff";
-  const sw = (highlight ? 2 : 1) / scale;
+  // D31 Schritt 4: Verknuepfte Geometrien gruen, ausgewaehlte orange, Rest hellblau
+  const stroke = highlight
+    ? "#ff6b00"
+    : verknuepft
+    ? "#3ad473"
+    : "#a8d2ff";
+  const sw = (highlight ? 2 : verknuepft ? 1.5 : 1) / scale;
   if (obj.typ === "linie" || obj.typ === "polylinie") {
     const flat = obj.punkte.flat();
     if (obj.geschlossen && obj.punkte.length > 0) {

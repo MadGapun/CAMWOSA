@@ -4,6 +4,88 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.4] — 2026-05-17
+
+**Frontend-Workflow + Onboarding-Release.** Master-Plan **D31** (Geometrie→
+Operation Verknuepfung) und **Issues #22 + #23** (First-Run-Wizard kann
+anlegen statt nur waehlen) umgesetzt. Markus' typischster Workflow
+„mehrere Konturen zeichnen → nur eine soll eine Tasche werden" ist jetzt
+erstmals sauber moeglich. Und beim ersten Start kann man Maschine /
+Spindel / Werkzeug / Material direkt inline anlegen.
+
+### Issues #22 + #23 — First-Run-Wizard kann anlegen
+
+✅ **Backend** — `POST/PUT/DELETE /api/machines/` (analog zu Spindeln,
+Werkzeugen, Materialien). 3 neue Tests in `test_crud_stammdaten.py`.
+
+✅ **Frontend** — `camwosaApi.maschineAnlegen/Updaten/Loeschen` +
+`spindelAnlegen/Updaten/Loeschen`. Store-Setter `setMaschinen` + `setSpindeln`.
+
+✅ **Wizard** — pro Schritt Toggle „Vorhandene waehlen (N)" vs „+ Neu
+anlegen". Inline-Formulare mit Pflichtfeldern + Defaults:
+- **Maschine**: Name, Hersteller/Modell, Controller, Arbeitsraum X/Y/Z,
+  max. Vorschub. Default-Werte ProVerXL-typisch (400×400×110, 3000 mm/min).
+- **Spindel**: Name, Typ (manuell/PWM/analog), Hersteller/Modell, RPM-Bereich.
+  Wenn Maschine im vorigen Schritt angelegt wurde, wird die neue Spindel
+  automatisch verknuepft + aktiv gesetzt.
+- **Werkzeug**: Name, Typ (10 Typen zur Wahl), Ø/Schaft-Ø/Schneidlaenge/
+  Schneiden.
+- **Material**: Name, Kategorie (6 Optionen), optional Unter-Kategorie.
+
+✅ **Backend-Verhalten** — neue Eintraege landen als Einzeldateien in
+`data/<typ>/`, die Sammel-Defaults bleiben unangetastet. User-Eintraege
+koennen geloescht werden, Default-Einzeldateien auch (Maschinen-Eigenheit,
+da alle Maschinen Einzeldateien sind).
+
+---
+
+**Frontend-Workflow-Release.** Master-Plan **D31** (Geometrie→Operation
+Verknuepfung) komplett umgesetzt. Markus' typischster Workflow „mehrere
+Konturen zeichnen → nur eine soll eine Tasche werden" ist jetzt erstmals
+sauber moeglich.
+
+### Master-Plan D31 — Geometrie-Verknuepfung
+
+✅ **Datenmodell** — `OperationEintrag.geometrie_ids: string[]` (Multi-
+Selektion) zusaetzlich zum Legacy-Feld `geometrie_id`. Geometrien
+bekommen beim Eintritt in den Store eine stabile ID (`geo_<base36>`).
+
+✅ **OperationenView — Pflicht-Dropdown „Geometrie-Verknuepfung"**
+- Checkbox-Liste filtert auf passende Typen (Tasche → nur geschlossene
+  Konturen; Bohren → nur Kreise/Punkte; Kontur/Gravur/Relief → ohne Punkte)
+- „Alle" / „Keine"-Buttons fuer Schnellauswahl
+- Pflichtfeld-Markierung (`*`) + gelbe Warnung wenn Geometrie fehlt
+- Toolpath-Button blockiert bis Pflicht erfuellt — Tooltip erklaert warum
+- Bohren ist Spezialfall (Auto-Wahl aller Kreise/Punkte), bleibt optional
+
+✅ **ZeichnenView — Quick-Create + Op-Verknuepfungen**
+- Selektierte Geometrie zeigt verknuepfte Operationen mit Toolpath-Status
+- Buttons „+ Kontur / + Tasche / + Bohren / + Gravur / + Relief" legen
+  Op an die selektierte Geometrie an (filtert was technisch passt)
+- Auto-Uebernahme: Quick-Create sorgt selbst dafuer dass alle gezeichneten
+  Objekte im Geometrie-Store landen — kein „Als Geometrie uebernehmen"
+  mehr noetig fuer den Schnellweg
+- IDs werden beim Uebernehmen erhalten — Zeichenobjekt und Geometrie
+  sind dadurch identifizierbar dieselbe Sache
+
+✅ **Farbliche Markierung verknuepfter Geometrien**
+- Verknuepfte Objekte gruen statt hellblau auf dem Canvas
+- Objekt-Liste zeigt Op-Badge „↪ N" mit Tooltip der Op-Namen
+
+### Folgewirkung
+
+Der Run-Lock aus alpha.3 (A48) bekommt jetzt echte Inputs: Operationen
+die keine Geometrie haben werden als BROKEN gekennzeichnet, sobald der
+Run-Lock-Check im UI verdrahtet ist (naechste Session).
+
+### Tests / Smoke
+
+- Backend: 610 grun (unveraendert)
+- Frontend: vite build 1.65 MB, 957 Module
+- Smoke-Test bei Pack-Prozess
+
+---
+
 ## [0.0.1-alpha.3] — 2026-05-17
 
 **Backend-Erweiterungs-Release.** Markus' Auftrag „vollende den Master-Plan"

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
-from camwosa.db.loader import lade_maschinen, spindel_index
+from camwosa.db.crud import loesche_einzel, schreibe_einzel
+from camwosa.db.loader import _data_root, lade_maschinen, spindel_index
 from camwosa.db.models import Maschine, Spindel
 
 bp = Blueprint("machines", __name__, url_prefix="/api/machines")
@@ -115,3 +116,36 @@ def import_bundle():
         "maschine": m.model_dump(mode="json"),
         "spindeln": [s.model_dump(mode="json") for s in spindeln],
     })
+
+
+@bp.post("/")
+def anlegen():
+    """Legt eine neue Maschine an (Issue #22: First-Run-Wizard inline-Anlegen)."""
+    try:
+        m = Maschine.model_validate(request.get_json() or {})
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    schreibe_einzel(m, _data_root() / "machines")
+    return jsonify({"gespeichert": True, "maschine": m.model_dump(mode="json")}), 201
+
+
+@bp.put("/<machine_id>")
+def aktualisieren(machine_id: str):
+    daten = request.get_json() or {}
+    daten["id"] = machine_id
+    try:
+        m = Maschine.model_validate(daten)
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    schreibe_einzel(m, _data_root() / "machines")
+    return jsonify({"gespeichert": True, "maschine": m.model_dump(mode="json")})
+
+
+@bp.delete("/<machine_id>")
+def loeschen(machine_id: str):
+    if loesche_einzel(_data_root() / "machines", machine_id):
+        return jsonify({"geloescht": True, "id": machine_id})
+    return jsonify({
+        "fehler": "Maschine kommt aus Sammel-Datei (Default). User-Override "
+                  "mit gleicher ID anlegen um zu uebersteuern.",
+    }), 409

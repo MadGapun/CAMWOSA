@@ -159,6 +159,58 @@ class TestSpindelCRUD:
 
 
 # ---------------------------------------------------------------------------
+# Maschinen (Issue #22 — First-Run-Wizard inline-Anlegen)
+# ---------------------------------------------------------------------------
+
+
+class TestMaschineCRUD:
+    NEU = {
+        "id": "user_test_maschine",
+        "name": "Testmaschine",
+        "hersteller": "Test",
+        "modell": "X",
+        "controller": "GRBL",
+        "arbeitsraum": {"x": 300, "y": 200, "z": 80},
+        "max_vorschub": 2000,
+        "sicherer_vorschub": 1500,
+        "eilgang": 3000,
+        "spindel_ids": [],
+        "spindel_typ": "manuell",
+        "spindel_rpm_min": 10000,
+        "spindel_rpm_max": 30000,
+        "sicherheitshoehe": 5.0,
+        "postprozessor": "grbl_genmitsu_pvxl",
+        "modi": ["standard_xyz"],
+        "aktiver_modus": "standard_xyz",
+    }
+
+    def test_anlegen_und_loeschen(self, client, isolierte_daten):
+        rv = client.post("/api/machines/", json=self.NEU)
+        assert rv.status_code == 201, rv.get_json()
+        gespeichert = rv.get_json()
+        assert gespeichert["maschine"]["id"] == "user_test_maschine"
+
+        rv2 = client.get("/api/machines/user_test_maschine")
+        assert rv2.status_code == 200
+
+        rv3 = client.delete("/api/machines/user_test_maschine")
+        assert rv3.status_code == 200
+
+    def test_aktualisieren(self, client, isolierte_daten):
+        client.post("/api/machines/", json=self.NEU)
+        rv = client.put("/api/machines/user_test_maschine", json={
+            **self.NEU, "name": "Geaendert",
+        })
+        assert rv.status_code == 200
+        assert rv.get_json()["maschine"]["name"] == "Geaendert"
+        client.delete("/api/machines/user_test_maschine")
+
+    def test_validierungsfehler_422(self, client):
+        rv = client.post("/api/machines/", json={"name": "unvollstaendig"})
+        assert rv.status_code == 422
+
+
+# ---------------------------------------------------------------------------
 # Smart-Helper-Endpoints
 # ---------------------------------------------------------------------------
 

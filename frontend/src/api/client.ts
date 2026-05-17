@@ -78,6 +78,22 @@ export const camwosaApi = {
     gueltig: boolean; maschine: MaschinenProfil; spindeln: Spindel[]; fehler?: string;
   }> => api.post("/machines/import", bundle).then((r) => r.data),
 
+  // Maschine CRUD (Issue #22 — First-Run-Wizard inline-Anlegen)
+  maschineAnlegen: (m: MaschinenProfil): Promise<{ gespeichert: boolean; maschine: MaschinenProfil }> =>
+    api.post("/machines/", m).then((r) => r.data),
+  maschineUpdaten: (id: string, m: MaschinenProfil): Promise<{ gespeichert: boolean; maschine: MaschinenProfil }> =>
+    api.put(`/machines/${id}`, m).then((r) => r.data),
+  maschineLoeschen: (id: string): Promise<{ geloescht: boolean }> =>
+    api.delete(`/machines/${id}`).then((r) => r.data),
+
+  // Spindel CRUD
+  spindelAnlegen: (s: Spindel): Promise<{ gespeichert: boolean; spindel: Spindel }> =>
+    api.post("/spindles/", s).then((r) => r.data),
+  spindelUpdaten: (id: string, s: Spindel): Promise<{ gespeichert: boolean; spindel: Spindel }> =>
+    api.put(`/spindles/${id}`, s).then((r) => r.data),
+  spindelLoeschen: (id: string): Promise<{ geloescht: boolean }> =>
+    api.delete(`/spindles/${id}`).then((r) => r.data),
+
   // Feeds & Speeds
   feedsBerechnen: (
     maschine_id: string,
