@@ -4,11 +4,24 @@
 
 > CAMWOSA ist eine 2.5D CAM-Desktop-App, die direkt mit Claude zusammenarbeitet. Du importierst dein CAD-Modell (DXF, STL, STEP, SVG, …), definierst was gefräst werden soll — und bekommst fertigen G-Code für deine Maschine. Läuft lokal als Electron-App, kostet nichts, deine Daten bleiben bei dir.
 
-[![Status](https://img.shields.io/badge/Status-Konzeptphase-orange.svg)](#roadmap)
+[![Release](https://img.shields.io/github/v/release/MadGapun/CAMWOSA?include_prereleases&label=Alpha)](https://github.com/MadGapun/CAMWOSA/releases)
+[![Status](https://img.shields.io/badge/Status-Alpha-yellow.svg)](#roadmap)
+[![Tests](https://img.shields.io/badge/Backend--Tests-542%20gr%C3%BCn-brightgreen.svg)](#)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![Lizenz](https://img.shields.io/badge/Lizenz-MIT-green.svg)](LICENSE)
 [![Plattformen](https://img.shields.io/badge/Plattformen-Windows_%7C_macOS_%7C_Linux-blue.svg)](#)
-[![Maschinen](https://img.shields.io/badge/Maschinen-GRBL%2FGenmitsu%2FProVerXL-lightgrey.svg)](#maschinenprofile)
+
+---
+
+## Alpha herunterladen
+
+**Aktueller Release:** [v0.0.1-alpha.1](https://github.com/MadGapun/CAMWOSA/releases/tag/v0.0.1-alpha.1) — Windows portable ZIP, ~204 MB.
+
+1. ZIP aus dem Release laden + entpacken (irgendwohin — kein Installer noetig)
+2. Doppelklick auf `CAMWOSA.exe`
+3. Wenn Windows-Defender warnt: „Weitere Informationen" → „Trotzdem ausfuehren" (Build ist nicht signiert — siehe [Issue #21](https://github.com/MadGapun/CAMWOSA/issues/21))
+
+Master-Plan-Status: **Teile A-E komplett ✅**, Teil F (Distribution) bis auf Code-Signing + NSIS-Installer fertig. Siehe [docs/wiki/Master-Plan.md](docs/wiki/Master-Plan.md).
 
 ---
 

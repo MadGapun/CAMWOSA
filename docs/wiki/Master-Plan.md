@@ -136,7 +136,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | F2 | Python-Backend gebündelt (PyInstaller / py2app) | — | [Installer](Installer.md) | ✅ |
 | F3 | Code-Signing (Windows + macOS) | — | [Installer](Installer.md) | ⬜ |
 | F4 | GitHub Actions: Build + Release-Pipeline | — | [CI-CD](CI-CD.md) | ✅ |
-| F5 | Auto-Updater-Backend — `publish.github` Config in electron/package.json zeigt auf MadGapun/CAMWOSA. Volle Funktion erst ab Alpha 0.0.2 (NSIS-Installer noetig statt portable ZIP, weil electron-updater kein generischer ZIP-Provider hat). | — | [Auto-Updater](Auto-Updater.md) | 🟨 |
+| F5 | Auto-Updater-Backend — `publish.github` Config + `app-update.yml` im Bundle + `electron-updater.checkForUpdates()` laeuft beim Start. **Auto-Update funktioniert nur mit NSIS-Installer**: portable ZIP kann sich nicht selbst aktualisieren (electron-updater hat keinen ZIP-Provider). NSIS-Build scheitert aktuell am winCodeSign-Symlink-Bug auf Windows ohne Developer-Mode (siehe [Issue #21](https://github.com/MadGapun/CAMWOSA/issues/21)). User bekommt update-available-Dialog, kann das ZIP manuell laden. | [#21](https://github.com/MadGapun/CAMWOSA/issues/21) | [Auto-Updater](Auto-Updater.md) | 🟨 |
 
 ---
 
