@@ -4,6 +4,64 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.3] — 2026-05-17
+
+**Backend-Erweiterungs-Release.** Markus' Auftrag „vollende den Master-Plan"
+wurde in mehreren Phasen abgearbeitet. UI-schwere Punkte folgen in
+spaeteren Sessions.
+
+### Master-Plan-Fortschritt (10 Positionen bearbeitet)
+
+✅ **A39** Werkzeug-Erweiterung — BALLNOSE_V_BIT + DRAG_GRAVIERER Typen,
+   V-Bit-Range 1-179° (statt 10-180°)
+✅ **A41** Werkzeug-Typen-Wiki — 12 Typen mit ASCII-Skizze + Anwendung +
+   Pflichtfeldern + Markus' Fischschwanz-Frage erklaert
+✅ **A46** Cutter-Modellierung — `free_length_mm` + `auto_set_speeds` /
+   `auto_feedrate` / `auto_spindel_rpm`
+✅ **A48** Run-Lock + Dependency-Graph — OperationStatus (NEU/OK/DIRTY/
+   BROKEN), `workflow/run_lock.py` mit Change-Propagation, API-Endpoint
+   `POST /api/workflow/run-lock`. Markus' Regel: „Im Zweifel laeuft das
+   Programm nicht."
+✅ **D32** Rename UI Drechseln → Drehen
+🟨 **A43** 3D-Strategien — Waterline (`cam/waterline.py` mit eigener
+   Marching-Squares-Implementation)
+🟨 **A45** Spezial-Operationen — Dogbone (`cam/dogbone.py` mit DOGBONE +
+   T_BONE Stilen), Lithophane (`stl/lithophane.py`), Chamfer
+   (`cam/chamfer.py`)
+🟨 **A47** Sicherheit/Workholding — Spannmittel-Modell (`db/spannmittel.py`
+   mit 8 Typen + Sicherheitszonen + Z-Hoehe-Check)
+🟨 **D36** Hilfe-System — Glossar (60+ CNC-Begriffe)
+
+### Was offen bleibt (Folge-Sessions)
+
+UI-schwere Punkte die Frontend-Iteration brauchen:
+- D26/D27 Wizard Quick-Add (Maschine/Spindel/Werkzeug)
+- D28 Eigenschaften-Panel im Zeichnen
+- D29 Smart-Snap + Align-Buttons
+- D30 Text-Werkzeug im Zeichnen
+- D31 Geometrie→Operation-Verknuepfung (Frontend)
+- D33 Drehen-Profil-Editor numerisch
+- D34 Werkzeug-UI mit SVG-Skizzen
+- D35 ProjectTree + Animation + Multi-View
+- D36 Hover-Help-Audit (200+ Eingaben)
+- A40 3D-Drehen (5-stufige Pipeline)
+- A42 Vector-Ops Details
+- A44 Two-Sided + Indexed Wizards
+- A49 Multi-Setup mit Werkstueck-Transformation
+- A47 Rest (Collet-Visualisierung, Z-Grid-Tool)
+- A45 Rest (Auto-Inlay, V-Carve Inlay, Thread, Rest-Machining, Drag-Engraving-Op)
+- A43 Rest (Circular/Radial/Offset/Pencil)
+
+### Tests
+
+- Backend pytest: **610 / 610 grün** (+68 seit alpha.2)
+- 7 neue Test-Module: `test_run_lock` (29), `test_dogbone` (11),
+  `test_waterline` (8), `test_lithophane` (5), `test_spannmittel` (8),
+  `test_chamfer` (7)
+- Schema-Version 1 -> 2
+
+---
+
 ## [0.0.1-alpha.2] — 2026-05-17
 
 **Zweiter Show-Stopper-Fix.** Alpha 0.0.1-alpha.1 startete immer noch
