@@ -79,10 +79,17 @@ export default function Simulation3D({
         </span>
       </div>
       <div className="h-[500px] overflow-hidden rounded border border-gray-700 bg-black">
-        <Canvas camera={{ position: [200, 200, 200], fov: 50 }}>
+        <Canvas camera={{ position: [200, 200, 200], fov: 50, near: 0.1, far: 5000 }}>
           <ambientLight intensity={0.4} />
           <directionalLight position={[100, 200, 100]} intensity={0.8} />
-          <OrbitControls />
+          {/* Weiter Zoom-Bereich: von 1 mm Entfernung (Detail-View) bis 3 m (Uebersicht) */}
+          <OrbitControls
+            minDistance={1}
+            maxDistance={3000}
+            zoomSpeed={1.2}
+            enableDamping
+            dampingFactor={0.08}
+          />
           {/* Rohmaterial */}
           <Box
             args={[roh.laenge, roh.hoehe, roh.breite]}

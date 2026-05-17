@@ -12,6 +12,52 @@ import { app, BrowserWindow, ipcMain, dialog, Menu } from "electron";
 import * as path from "path";
 import { startBackend, stopBackend, backendUrl } from "./backend_runner";
 
+// Auto-Updater — Master-Plan C4. Lazy-Import damit der Dev-Run nicht meckert,
+// wenn electron-updater nicht installiert ist.
+async function setupAutoUpdater(): Promise<void> {
+  if (process.env.CAMWOSA_DEV === "1") return;  // im Dev nicht updaten
+  try {
+    const { autoUpdater } = await import("electron-updater");
+    autoUpdater.autoDownload = false;  // erst fragen, dann laden
+    autoUpdater.on("update-available", async (info) => {
+      const result = await dialog.showMessageBox({
+        type: "info",
+        title: "Update verfuegbar",
+        message: `CAMWOSA ${info.version} ist verfuegbar (aktuell ${app.getVersion()}).`,
+        detail: "Jetzt herunterladen?",
+        buttons: ["Herunterladen", "Spaeter"],
+        defaultId: 0,
+      });
+      if (result.response === 0) {
+        await autoUpdater.downloadUpdate();
+      }
+    });
+    autoUpdater.on("update-downloaded", async () => {
+      const result = await dialog.showMessageBox({
+        type: "info",
+        title: "Update bereit",
+        message: "Das Update wird beim naechsten Start installiert.",
+        buttons: ["Jetzt neu starten", "Spaeter"],
+        defaultId: 0,
+      });
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+    autoUpdater.on("error", (e) => {
+      console.warn("[updater] Fehler (nicht-kritisch):", e?.message ?? e);
+    });
+    // Check beim Start (verzoegert damit das UI erst sichtbar ist)
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((e) => {
+        console.warn("[updater] check fehlgeschlagen:", e?.message ?? e);
+      });
+    }, 5000);
+  } catch (e) {
+    console.warn("[updater] electron-updater nicht verfuegbar:", e);
+  }
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 async function createWindow(): Promise<void> {
@@ -111,6 +157,7 @@ app.whenReady().then(async () => {
   await startBackend();
   setupMenu();
   await createWindow();
+  void setupAutoUpdater();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

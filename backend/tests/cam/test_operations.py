@@ -226,6 +226,74 @@ class TestTasche:
 
 
 # ---------------------------------------------------------------------------
+# Adaptive Clearing (Master-Plan E4)
+# ---------------------------------------------------------------------------
+
+
+class TestAdaptiveClearing:
+    def test_adaptive_strategie_erzeugt_toolpath(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param
+    ) -> None:
+        tasche_param.strategie = TaschenStrategie.ADAPTIVE
+        tp = erzeuge_tasche_toolpath(quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        assert len(tp.bewegungen) > 0
+        assert tp.metadaten["strategie"] == "adaptive"
+
+    def test_adaptive_hat_mehr_bewegungen_als_offset_kontur(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param
+    ) -> None:
+        """Kleinerer Stepover → mehr Bahnen → mehr Punkte."""
+        tasche_param.strategie = TaschenStrategie.OFFSET_KONTUR
+        tp_offset = erzeuge_tasche_toolpath(
+            quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        tasche_param.strategie = TaschenStrategie.ADAPTIVE
+        tp_adapt = erzeuge_tasche_toolpath(
+            quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        assert len(tp_adapt.bewegungen) > len(tp_offset.bewegungen)
+
+    def test_adaptive_amplitude_default_null_macht_kein_modulieren(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param
+    ) -> None:
+        """Mit amplitude=0 bleibt die Bahn auf der Offset-Kontur."""
+        tasche_param.strategie = TaschenStrategie.ADAPTIVE
+        tasche_param.adaptive_amplitude_faktor = 0.0
+        tp = erzeuge_tasche_toolpath(quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        # Bei amplitude=0 soll Modulation no-op sein → Bahn bleibt achs-aligned
+        # X-Werte sollten alle in {0..50}-Bereich liegen (Quadrat 50x50)
+        xs = [b.x for b in tp.bewegungen]
+        assert max(xs) - min(xs) <= 50.0 + 0.5
+
+    def test_adaptive_amplitude_verschiebt_bahn(
+        self, quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param
+    ) -> None:
+        """Mit grosserer Amplitude wandern Punkte messbar von der reinen Offset-Bahn weg."""
+        tasche_param.strategie = TaschenStrategie.ADAPTIVE
+        tasche_param.adaptive_amplitude_faktor = 0.0
+        tp_keine_amp = erzeuge_tasche_toolpath(
+            quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        tasche_param.adaptive_amplitude_faktor = 0.15
+        tp_mit_amp = erzeuge_tasche_toolpath(
+            quadrat_50x50_polygon, schaftfraeser_6mm, tasche_param)
+        # Mindestens ein Punkt sollte sich messbar unterscheiden
+        # (gleiche Anzahl Bewegungen, weil gleiche Schritte)
+        xs_a = [b.x for b in tp_keine_amp.bewegungen]
+        xs_b = [b.x for b in tp_mit_amp.bewegungen]
+        n = min(len(xs_a), len(xs_b))
+        max_diff = max(abs(xs_a[i] - xs_b[i]) for i in range(n))
+        assert max_diff > 0.1, f"Amplitude 0.15 sollte Punkte um >0.1mm verschieben (war {max_diff})"
+
+    def test_adaptive_wellen_pro_mm_validation(self) -> None:
+        """Negative Welligkeit muss Pydantic bei Construction ablehnen."""
+        with pytest.raises(Exception):
+            TaschenParameter(
+                werkzeug_id="x",
+                spindel_rpm=18000, vorschub=600, eintauch_vorschub=200,
+                max_tiefe=5, stepdown=2,
+                adaptive_wellen_pro_mm=-1.0,
+            )
+
+
+# ---------------------------------------------------------------------------
 # Bohren
 # ---------------------------------------------------------------------------
 

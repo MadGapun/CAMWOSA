@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Stage, Layer, Line, Rect, Circle as KCircle, Group } from "react-konva";
+import { Stage, Layer, Line, Rect, Circle as KCircle, Group, Text as KText } from "react-konva";
 import type Konva from "konva";
 import clsx from "clsx";
 import {
@@ -10,6 +10,7 @@ import {
   type ZeichenWerkzeug,
 } from "../state/drawingStore";
 import { useAppStore } from "../state/store";
+import AnnotationenEditor, { type Annotation } from "../editor/AnnotationenEditor";
 
 const WERKZEUGE: { id: ZeichenWerkzeug; label: string; tooltip: string }[] = [
   { id: "auswahl", label: "✋", tooltip: "Auswahl / Pan" },
@@ -23,6 +24,8 @@ const WERKZEUGE: { id: ZeichenWerkzeug; label: string; tooltip: string }[] = [
 export default function ZeichnenView() {
   const { t } = useTranslation();
   const setGeometrien = useAppStore((s) => s.setGeometrien);
+  const operationHinzufuegen = useAppStore((s) => s.operationHinzufuegen);
+  const [opErzeugungsHinweise, setOpErzeugungsHinweise] = useState<string[] | null>(null);
 
   const werkzeug = useDrawingStore((s) => s.werkzeug);
   const setWerkzeug = useDrawingStore((s) => s.setWerkzeug);
@@ -34,6 +37,10 @@ export default function ZeichnenView() {
   const alleLoeschen = useDrawingStore((s) => s.alle_loeschen);
   const snapGrid = useDrawingStore((s) => s.snap_grid);
   const setSnapGrid = useDrawingStore((s) => s.setSnapGrid);
+  const annotationen = useDrawingStore((s) => s.annotationen);
+  const annotationSetzen = useDrawingStore((s) => s.annotationSetzen);
+  const annotationPickId = useDrawingStore((s) => s.annotationPickId);
+  const setAnnotationPickId = useDrawingStore((s) => s.setAnnotationPickId);
 
   // Konva: Welt-Koordinaten anhand Stage-Transform aus Maus-Position rechnen
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,6 +80,17 @@ export default function ZeichnenView() {
   function onMouseDown() {
     const w = weltAusMaus();
     if (!w) return;
+
+    // Annotation-Pick-Modus: naechster Klick setzt x/y der ausgewaehlten Annotation
+    if (annotationPickId) {
+      annotationSetzen(
+        annotationen.map((a) =>
+          a.id === annotationPickId ? { ...a, x: w[0], y: w[1] } : a,
+        ),
+      );
+      setAnnotationPickId(null);
+      return;
+    }
 
     if (werkzeug === "auswahl") {
       setAusgewaehlt(null);
@@ -324,10 +342,33 @@ export default function ZeichnenView() {
                 </Group>
               )}
 
+              {/* Annotationen — Bohrungen / Refpunkte / Kommentare / Ausschnitte */}
+              {annotationen.map((a) => (
+                <AnnotationShape
+                  key={a.id}
+                  ann={a}
+                  scale={scale}
+                  highlight={annotationPickId === a.id}
+                />
+              ))}
+
               {/* Origin */}
               <KCircle x={0} y={0} radius={2 / scale} fill="#dc3545" />
             </Layer>
           </Stage>
+
+          {/* Pick-Modus-Hinweis */}
+          {annotationPickId && (
+            <div className="absolute left-2 top-2 rounded border border-camwosa-accent bg-camwosa-accent-soft px-3 py-1.5 text-xs text-camwosa-accent">
+              Klick im Canvas → setzt Position der Annotation ·{" "}
+              <button
+                className="underline"
+                onClick={() => setAnnotationPickId(null)}
+              >
+                abbrechen
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Liste rechts */}
@@ -374,11 +415,123 @@ export default function ZeichnenView() {
             <br />
             <span>Polygon: Doppelklick beendet</span>
           </section>
+
+          <section className="rounded border border-gray-700 bg-camwosa-surface p-3">
+            <h2 className="mb-2 text-sm font-semibold">
+              Annotationen ({annotationen.length})
+              <span className="ml-2 text-[10px] font-normal text-camwosa-muted">
+                Anschlagbohrungen, Refpunkte, ...
+              </span>
+            </h2>
+            <AnnotationenEditor
+              annotationen={annotationen}
+              onChange={annotationSetzen}
+              onPosWaehlen={(id) => setAnnotationPickId(id)}
+              onOperationenErzeugt={(ops, hinweise) => {
+                for (const op of ops) {
+                  operationHinzufuegen({
+                    id: op.id,
+                    name: op.name,
+                    typ: op.typ as "kontur" | "tasche" | "bohren" | "gravur" | "relief",
+                    werkzeug_id: (op.parameter.werkzeug_id as string) ?? "",
+                    geometrie_id: null,
+                    parameter: op.parameter as any,
+                    aktiviert: true,
+                  });
+                }
+                setOpErzeugungsHinweise(hinweise);
+              }}
+            />
+            {opErzeugungsHinweise !== null && (
+              <div className="mt-2 rounded border border-camwosa-info bg-info-soft p-2 text-xs">
+                <div className="mb-1 font-semibold text-camwosa-text">
+                  ✓ Operationen erzeugt — siehe Tab „Operationen"
+                </div>
+                {opErzeugungsHinweise.length > 0 && (
+                  <ul className="space-y-0.5 text-camwosa-muted">
+                    {opErzeugungsHinweise.map((h, i) => (
+                      <li key={i}>· {h}</li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  className="mt-1 text-camwosa-accent underline"
+                  onClick={() => setOpErzeugungsHinweise(null)}
+                >
+                  schliessen
+                </button>
+              </div>
+            )}
+          </section>
         </aside>
       </div>
     </div>
   );
 }
+
+function AnnotationShape({
+  ann, scale, highlight,
+}: { ann: Annotation; scale: number; highlight: boolean }) {
+  const farbe = highlight ? "#FF6B00" : ICON_FARBE[ann.typ];
+  const sw = (highlight ? 2 : 1) / scale;
+
+  // Bohrung / Ausschnitt → Kreis mit Durchmesser
+  if (ann.typ === "anschlagbohrung" || ann.typ === "ausschnitt") {
+    const r = (ann.durchmesser_mm ?? 3) / 2;
+    return (
+      <Group>
+        <KCircle
+          x={ann.x} y={ann.y} radius={r}
+          stroke={farbe} strokeWidth={sw}
+          dash={ann.typ === "ausschnitt" ? [3 / scale, 3 / scale] : undefined}
+        />
+        {/* Fadenkreuz fuer Mittelpunkt */}
+        <Line points={[ann.x - r * 1.3, ann.y, ann.x + r * 1.3, ann.y]}
+              stroke={farbe} strokeWidth={sw} />
+        <Line points={[ann.x, ann.y - r * 1.3, ann.x, ann.y + r * 1.3]}
+              stroke={farbe} strokeWidth={sw} />
+      </Group>
+    );
+  }
+  // Refpunkt → kleines Kreuz
+  if (ann.typ === "refpunkt") {
+    const s = 3 / scale;
+    return (
+      <Group>
+        <Line points={[ann.x - s, ann.y - s, ann.x + s, ann.y + s]}
+              stroke={farbe} strokeWidth={sw} />
+        <Line points={[ann.x - s, ann.y + s, ann.x + s, ann.y - s]}
+              stroke={farbe} strokeWidth={sw} />
+      </Group>
+    );
+  }
+  // Kommentar → kleiner Punkt + Text-Label (nur wenn Zoom hoch genug)
+  if (ann.typ === "kommentar") {
+    return (
+      <Group>
+        <KCircle x={ann.x} y={ann.y} radius={1.5 / scale} fill={farbe} />
+        {scale > 2 && ann.text && (
+          <KText
+            x={ann.x + 3 / scale} y={ann.y + 3 / scale}
+            text={ann.text}
+            fontSize={11 / scale}
+            fill={farbe}
+            // Konva Y ist gespiegelt; Text muss zurueckgespiegelt werden
+            scaleY={-1}
+          />
+        )}
+      </Group>
+    );
+  }
+  return null;
+}
+
+const ICON_FARBE: Record<Annotation["typ"], string> = {
+  anschlagbohrung: "#FFB800",
+  refpunkt: "#4A9EFF",
+  kommentar: "#A8A8B0",
+  ausschnitt: "#B388FF",
+};
 
 function ObjektShape({
   obj,

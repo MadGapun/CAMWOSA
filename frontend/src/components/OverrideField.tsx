@@ -1,4 +1,6 @@
 import clsx from "clsx";
+import { FachTooltip } from "./Tooltip";
+import { FACHBEGRIFFE } from "./fachbegriffe";
 
 type QuelleTyp = "override" | "material_preset" | "projekt_default" | "fallback" | "werkzeug";
 
@@ -10,6 +12,9 @@ interface BaseProps {
   effektivAnzeige?: string | number;
   onReset?: () => void;
   disabled?: boolean;
+  /** Wenn gesetzt, zeigt ein „?"-Icon neben dem Label mit einer Fachbegriff-Erklaerung.
+   *  Wert muss ein Key aus ``FACHBEGRIFFE`` sein (siehe components/fachbegriffe.ts). */
+  hilfe?: keyof typeof FACHBEGRIFFE;
 }
 
 interface NumProps extends BaseProps {
@@ -52,6 +57,15 @@ const QUELLE_FARBE: Record<QuelleTyp, string> = {
   werkzeug: "text-purple-400",
 };
 
+/** 6px-Punkt-Klassen — siehe styles/index.css und Design-Note 2. */
+const QUELLE_DOT_CLASS: Record<QuelleTyp, string> = {
+  override: "override",
+  material_preset: "material",
+  projekt_default: "projekt",
+  fallback: "fallback",
+  werkzeug: "werkzeug",
+};
+
 /**
  * OverrideField: Ein Eingabefeld mit Override-Mechanik.
  *
@@ -72,11 +86,16 @@ export default function OverrideField<T extends string = string>(
   return (
     <div className="rounded border border-gray-700 bg-camwosa-bg/40 p-2 text-xs">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-camwosa-muted">
+        <span className="flex items-center text-camwosa-muted">
+          <span
+            className={clsx("cw-src-dot", QUELLE_DOT_CLASS[quelle])}
+            title={QUELLE_LABEL[quelle]}
+          />
           {props.label}
           {props.einheit && (
             <span className="ml-1 text-[10px]">({props.einheit})</span>
           )}
+          {props.hilfe && <FachTooltip {...FACHBEGRIFFE[props.hilfe]} />}
         </span>
         <span className="flex items-center gap-1.5">
           <span className={clsx("text-[10px]", QUELLE_FARBE[quelle])}>

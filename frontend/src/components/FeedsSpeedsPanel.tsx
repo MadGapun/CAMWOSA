@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { camwosaApi } from "../api/client";
 import type { FeedsSpeedsErgebnis } from "../api/types";
 import clsx from "clsx";
+import { FachTooltip } from "./Tooltip";
+import { FACHBEGRIFFE } from "./fachbegriffe";
 
 interface Props {
   maschineId: string | null;
@@ -64,12 +66,12 @@ export default function FeedsSpeedsPanel({
       </h3>
       <div className="grid grid-cols-3 gap-2 text-xs">
         <Cell label="RPM" wert={erg.rpm.toFixed(0)} einheit="U/min" />
-        <Cell label="Vorschub" wert={erg.vorschub.toFixed(0)} einheit="mm/min" />
-        <Cell label="Eintauchvorschub" wert={erg.eintauch_vorschub.toFixed(0)} einheit="mm/min" />
-        <Cell label="Stepdown" wert={erg.stepdown.toFixed(2)} einheit="mm" />
-        <Cell label="Stepover" wert={erg.stepover_prozent.toFixed(0)} einheit="%" />
-        <Cell label="Vc" wert={erg.schnittgeschwindigkeit_vc.toFixed(0)} einheit="m/min" />
-        <Cell label="Spanvolumen Q" wert={erg.spanvolumen_q.toFixed(2)} einheit="cm³/min" />
+        <Cell label="Vorschub" wert={erg.vorschub.toFixed(0)} einheit="mm/min" hilfe="vorschub" />
+        <Cell label="Eintauchvorschub" wert={erg.eintauch_vorschub.toFixed(0)} einheit="mm/min" hilfe="plunge" />
+        <Cell label="Stepdown" wert={erg.stepdown.toFixed(2)} einheit="mm" hilfe="stepdown" />
+        <Cell label="Stepover" wert={erg.stepover_prozent.toFixed(0)} einheit="%" hilfe="stepover" />
+        <Cell label="Vc" wert={erg.schnittgeschwindigkeit_vc.toFixed(0)} einheit="m/min" hilfe="schnittgeschwindigkeit" />
+        <Cell label="Spanvolumen Q" wert={erg.spanvolumen_q.toFixed(2)} einheit="cm³/min" hilfe="spanlast" />
       </div>
       {erg.warnungen.length > 0 && (
         <ul className="mt-2 space-y-1 text-xs">
@@ -91,10 +93,20 @@ export default function FeedsSpeedsPanel({
   );
 }
 
-function Cell({ label, wert, einheit }: { label: string; wert: string; einheit: string }) {
+function Cell({
+  label, wert, einheit, hilfe,
+}: {
+  label: string;
+  wert: string;
+  einheit: string;
+  hilfe?: keyof typeof FACHBEGRIFFE;
+}) {
   return (
     <div>
-      <div className="text-camwosa-muted">{label}</div>
+      <div className="flex items-center text-camwosa-muted">
+        {label}
+        {hilfe && <FachTooltip {...FACHBEGRIFFE[hilfe]} />}
+      </div>
       <div className="font-mono">
         {wert} <span className="text-[10px] text-camwosa-muted">{einheit}</span>
       </div>

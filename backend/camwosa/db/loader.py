@@ -35,20 +35,40 @@ def _load_json_files(directory: Path) -> list[dict]:
     """Sammelt alle *.json-Dateien aus einem Verzeichnis.
 
     Eine Datei kann ein einzelnes Objekt oder eine Liste enthalten.
+
+    Dedup: bei ID-Kollision gewinnt die ``<id>.json``-Einzeldatei gegenueber
+    Eintraegen aus Sammel-Dateien — damit User-Overrides die Default-Liste
+    ueberschreiben koennen, ohne die Sammel-Datei zu mutieren.
     """
     if not directory.exists():
         return []
-    eintraege: list[dict] = []
+    aus_einzel: dict[str, dict] = {}
+    aus_sammel: list[dict] = []
     for pfad in sorted(directory.glob("*.json")):
         with pfad.open("r", encoding="utf-8") as f:
             inhalt = json.load(f)
         if isinstance(inhalt, list):
-            eintraege.extend(inhalt)
+            aus_sammel.extend(inhalt)
         elif isinstance(inhalt, dict):
-            eintraege.append(inhalt)
+            eid = inhalt.get("id")
+            if eid and pfad.stem == eid:
+                # User-Override / Einzel-Eintrag
+                aus_einzel[eid] = inhalt
+            else:
+                aus_sammel.append(inhalt)
         else:
             raise ValueError(f"Unerwartetes Format in {pfad}: {type(inhalt).__name__}")
-    return eintraege
+    # Einzeldateien gewinnen
+    ergebnis = list(aus_einzel.values())
+    bekannte = set(aus_einzel.keys())
+    for e in aus_sammel:
+        eid = e.get("id")
+        if eid and eid in bekannte:
+            continue
+        ergebnis.append(e)
+        if eid:
+            bekannte.add(eid)
+    return ergebnis
 
 
 def _parse_alle(eintraege: list[dict], modell: type[T]) -> list[T]:
@@ -94,6 +114,13 @@ def rotary_index(data_dir: Path | None = None) -> dict[str, RotaryProfil]:
     return {r.id: r for r in lade_rotary_profile(data_dir)}
 
 
+def lade_alle_cutting_presets(data_dir: Path | None = None):
+    """Re-Export: liefert alle CuttingPresets (inkl. Legacy-Migration)."""
+    from camwosa.db.cutting_presets import lade_cutting_presets
+
+    return lade_cutting_presets(data_dir)
+
+
 def speichere_maschine(maschine: Maschine, data_dir: Path | None = None) -> Path:
     """Schreibt eine einzelne Maschine als JSON-Profil zurueck."""
     root = data_dir or _data_root()
@@ -105,6 +132,7 @@ def speichere_maschine(maschine: Maschine, data_dir: Path | None = None) -> Path
 
 
 __all__ = [
+    "lade_alle_cutting_presets",
     "lade_maschinen",
     "lade_materialien",
     "lade_rotary_profile",

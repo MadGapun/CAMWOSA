@@ -11,6 +11,7 @@ import {
 } from "../state/workflowStore";
 import { camwosaApi } from "../api/client";
 import FotoSlot from "../components/FotoSlot";
+import SchrittListeEditor from "../editor/SchrittListeEditor";
 
 const PAUSE_LABEL: Record<SetupPauseTyp, string> = {
   werkzeugwechsel: "Werkzeugwechsel",
@@ -397,6 +398,64 @@ function SetupEditor({
           onChange={(p) => onChange({ foto_pfad: p })}
         />
       </div>
+
+      {/* Schritt-Liste (Multi-Werkzeug innerhalb des Setups, Manual NC, ...) */}
+      <SchritteAkkordion
+        setup={setup}
+        werkzeuge={werkzeuge}
+        onChange={(schritte) => onChange({ schritte })}
+      />
+    </div>
+  );
+}
+
+function SchritteAkkordion({
+  setup, werkzeuge, onChange,
+}: {
+  setup: Setup;
+  werkzeuge: Array<{ id: string; name: string }>;
+  onChange: (schritte: unknown[]) => void;
+}) {
+  const [offen, setOffen] = useState(false);
+  const schritte = (setup.schritte ?? []) as Parameters<typeof SchrittListeEditor>[0]["schritte"];
+
+  return (
+    <div className="mt-3 rounded border border-camwosa-subtle">
+      <button
+        className="flex w-full items-center justify-between rounded px-3 py-1.5 text-left text-xs text-camwosa-muted hover:bg-camwosa-overlay"
+        onClick={() => setOffen(!offen)}
+      >
+        <span>
+          <span className="mr-1">{offen ? "▾" : "▸"}</span>
+          Schritt-Liste (Multi-Werkzeug, Manual NC, ...)
+          {schritte.length > 0 && (
+            <span className="ml-2 rounded bg-camwosa-accent-soft px-1.5 text-camwosa-accent">
+              {schritte.length}
+            </span>
+          )}
+        </span>
+        <span className="text-[10px] text-camwosa-muted">
+          {schritte.length === 0 ? "leer = aus Pause + Operationen abgeleitet" : "uebersteuert"}
+        </span>
+      </button>
+      {offen && (
+        <div className="border-t border-camwosa-subtle p-3">
+          <SchrittListeEditor
+            schritte={schritte}
+            onChange={(s) => onChange(s)}
+            operationen={[]}
+            werkzeuge={werkzeuge as any}
+            start_werkzeug_id={setup.werkzeug_id}
+          />
+          {schritte.length === 0 && (
+            <p className="mt-2 text-xs text-camwosa-muted">
+              💡 Klassischer Multi-WZ-Workflow: 1. Operation Schruppen · 2. Werkzeugwechsel
+              (Strategie „Separate Datei") · 3. Operation Schlichten. Klick oben auf
+              „+ Operation" / „+ Werkzeugwechsel" um anzulegen.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

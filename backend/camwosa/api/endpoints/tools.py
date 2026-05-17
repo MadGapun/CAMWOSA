@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
-from camwosa.db.loader import lade_werkzeuge
-from camwosa.db.models import Werkzeug
+from camwosa.db.crud import loesche_einzel, schreibe_einzel
+from camwosa.db.loader import _data_root, lade_werkzeuge
+from camwosa.db.models import (
+    Werkzeug,
+    berechne_v_bit_spitzendurchmesser,
+    berechne_v_bit_winkel,
+)
 
 _BUNDLE_TYP = "camwosa.tool_bundle"
 
@@ -57,3 +62,76 @@ def import_tool_bundle():
     except Exception as e:  # noqa: BLE001
         return jsonify({"fehler": str(e)}), 422
     return jsonify({"gueltig": True, "werkzeug": t.model_dump(mode="json")})
+
+
+# ---------------------------------------------------------------------------
+# CRUD: anlegen, aktualisieren, loeschen — User-Overrides als Einzeldateien
+# ---------------------------------------------------------------------------
+
+
+@bp.post("/")
+def anlegen():
+    try:
+        t = Werkzeug.model_validate(request.get_json() or {})
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    schreibe_einzel(t, _data_root() / "tools")
+    return jsonify({"gespeichert": True, "werkzeug": t.model_dump(mode="json")}), 201
+
+
+@bp.put("/<tool_id>")
+def aktualisieren(tool_id: str):
+    daten = request.get_json() or {}
+    daten["id"] = tool_id
+    try:
+        t = Werkzeug.model_validate(daten)
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    schreibe_einzel(t, _data_root() / "tools")
+    return jsonify({"gespeichert": True, "werkzeug": t.model_dump(mode="json")})
+
+
+@bp.delete("/<tool_id>")
+def loeschen(tool_id: str):
+    if loesche_einzel(_data_root() / "tools", tool_id):
+        return jsonify({"geloescht": True, "id": tool_id})
+    return jsonify({
+        "fehler": "Werkzeug kommt aus Sammel-Datei (Default) und kann nicht "
+                  "geloescht werden. Lege stattdessen eine User-Override mit "
+                  "gleicher ID an um die Defaults zu uebersteuern.",
+    }), 409
+
+
+# ---------------------------------------------------------------------------
+# Smart-Helpers fuer den UI-Werkzeug-Editor
+# ---------------------------------------------------------------------------
+
+
+@bp.post("/helper/v-bit-spitzendurchmesser")
+def helper_spitzendurchmesser():
+    """Body: ``{ spitzenwinkel_grad, schneidlaenge_mm, durchmesser_max_mm }``."""
+    d = request.get_json() or {}
+    try:
+        result = berechne_v_bit_spitzendurchmesser(
+            float(d["spitzenwinkel_grad"]),
+            float(d["schneidlaenge_mm"]),
+            float(d["durchmesser_max_mm"]),
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        return jsonify({"fehler": f"Eingaben ungueltig: {e}"}), 422
+    return jsonify({"spitzendurchmesser_mm": result})
+
+
+@bp.post("/helper/v-bit-winkel")
+def helper_winkel():
+    """Body: ``{ spitzendurchmesser_mm, durchmesser_max_mm, schneidlaenge_mm }``."""
+    d = request.get_json() or {}
+    try:
+        result = berechne_v_bit_winkel(
+            float(d["spitzendurchmesser_mm"]),
+            float(d["durchmesser_max_mm"]),
+            float(d["schneidlaenge_mm"]),
+        )
+    except (KeyError, ValueError, TypeError) as e:
+        return jsonify({"fehler": f"Eingaben ungueltig: {e}"}), 422
+    return jsonify({"spitzenwinkel_grad": result})

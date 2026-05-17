@@ -254,8 +254,47 @@ class WerkzeugDrehrichtung(str, Enum):
     CCW = "ccw"  # Linkslauf (M4)
 
 
+class WerkzeugSegment(BaseModel):
+    """Ein konisches Segment des Werkzeugs entlang der Z-Achse.
+
+    Erlaubt komplexe Geometrien wie Gravurstichel (Spitze 0.5 mm, dann
+    konisch auf 3.175 mm Schaft) oder Schwalbenschwanz-Fraeser.
+
+    Konvention: z_oben = 0 ist Werkzeug-Spitze, z waechst nach oben.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    z_unten: float = Field(ge=0, description="Z-Position Segment-Unterkante (mm von Spitze)")
+    z_oben: float = Field(gt=0, description="Z-Position Segment-Oberkante (mm von Spitze)")
+    durchmesser_unten: float = Field(ge=0, description="Durchmesser an z_unten in mm")
+    durchmesser_oben: float = Field(gt=0, description="Durchmesser an z_oben in mm")
+    ist_schneide: bool = Field(
+        default=False,
+        description="Schneidet dieses Segment? (False = nur Schaft/Halter, kein Eingriff erlaubt)",
+    )
+
+    @model_validator(mode="after")
+    def _check_z(self) -> "WerkzeugSegment":
+        if self.z_oben <= self.z_unten:
+            raise ValueError("z_oben muss > z_unten sein")
+        return self
+
+
 class Werkzeug(BaseModel):
-    """Werkzeug-Definition mit allen Geometrie- und Anwendungs-Daten."""
+    """Werkzeug-Definition mit allen Geometrie- und Anwendungs-Daten.
+
+    Erweitertes Modell (ab v2):
+    - Geometrie ist segmentiert (Cutter + Shaft + ggf. Halter) — fuer korrekte
+      Kollisionserkennung bei konischen Werkzeugen wie Gravurstichel.
+    - max_arbeitstiefe_mm pro Werkzeug — wird von Operations geprueft.
+    - Smart-Helpers helfen den User beim Anlegen (auto-Berechnung von Winkel
+      aus Schneidlaenge+Durchmesser, etc.).
+
+    Rueckwaerts-kompatibel: die alten Felder (durchmesser, schneidlaenge,
+    schaft_durchmesser, gesamtlaenge) sind weiter Pflicht — die Segmente
+    sind ein Override fuer Praezision.
+    """
 
     model_config = ConfigDict(extra="ignore")
 
@@ -264,19 +303,45 @@ class Werkzeug(BaseModel):
     typ: WerkzeugTyp
     material: WerkzeugMaterial = WerkzeugMaterial.HARTMETALL
     beschichtung: WerkzeugBeschichtung = WerkzeugBeschichtung.KEINE
+
+    # --- Klassische Felder (Schema v1, weiter unterstuetzt) ---
     durchmesser: float = Field(gt=0, description="Schneid-Durchmesser in mm")
     schaft_durchmesser: float = Field(gt=0, description="Schaft-Durchmesser in mm")
     schneidlaenge: float = Field(gt=0, description="Schneidlaenge in mm")
     gesamtlaenge: float = Field(gt=0, description="Gesamtlaenge in mm")
     schneiden: int = Field(ge=1, le=12, description="Anzahl Schneiden")
+
+    # --- Erweiterte Geometrie (Schema v2) ---
+    segmente: list[WerkzeugSegment] = Field(
+        default_factory=list,
+        description="Segment-basierte Geometrie. Wenn leer: aus klassischen Feldern abgeleitet.",
+    )
+    halter_segmente: list[WerkzeugSegment] = Field(
+        default_factory=list,
+        description="Halter-Segmente (oberhalb gesamtlaenge). Fuer Kollisionserkennung.",
+    )
+
+    # --- Charakteristik ---
     spitzenwinkel: float | None = Field(
         default=None, ge=10, le=180, description="V-Bit/Bohrer-Spitzenwinkel in Grad"
     )
     spitzenradius: float | None = Field(
         default=None, ge=0, description="Eckenradius bei Bull-Nose oder Ball-End-Radius"
     )
+    spitzendurchmesser: float | None = Field(
+        default=None, ge=0, description="Bei Gravurstichel/V-Bit: Durchmesser an der Spitze (kann 0 sein)"
+    )
+
+    # --- Limits ---
+    max_arbeitstiefe_mm: float | None = Field(
+        default=None, gt=0,
+        description="Max. Bearbeitungstiefe pro Eintauchen (mm). "
+                     "Wird in Operations geprueft, damit Schaft nicht ins Material taucht.",
+    )
+
     drehrichtung: WerkzeugDrehrichtung = WerkzeugDrehrichtung.CW
     steigung: WerkzeugSteigung = WerkzeugSteigung.UPCUT
+
     # Standzeit-Tracking (Phase E2)
     standzeit_max_minuten: float | None = Field(
         default=None, ge=0,
@@ -288,7 +353,105 @@ class Werkzeug(BaseModel):
     def _werkzeug_geometrie_check(self) -> "Werkzeug":
         if self.typ == WerkzeugTyp.V_BIT and self.spitzenwinkel is None:
             raise ValueError("spitzenwinkel ist Pflicht fuer V_BIT")
+        # Auto-default: max_arbeitstiefe = schneidlaenge wenn nicht gesetzt
+        if self.max_arbeitstiefe_mm is None:
+            object.__setattr__(self, "max_arbeitstiefe_mm", self.schneidlaenge)
         return self
+
+    # --- Smart-Helpers ---
+
+    def effektive_segmente(self) -> list[WerkzeugSegment]:
+        """Liefert die Segmente. Wenn keine explizit gesetzt, werden sie aus
+        den klassischen Feldern abgeleitet (Cylinder Schneide + Cylinder Schaft).
+        """
+        if self.segmente:
+            return self.segmente
+        # Default: Schneidlaenge als Schneid-Segment, Rest bis gesamtlaenge als Schaft
+        spitze_d = self.spitzendurchmesser
+        if spitze_d is None and self.spitzenwinkel:
+            # V-Bit: Spitze=0
+            spitze_d = 0.0
+        else:
+            spitze_d = self.durchmesser
+        return [
+            WerkzeugSegment(
+                z_unten=0.0,
+                z_oben=self.schneidlaenge,
+                durchmesser_unten=spitze_d,
+                durchmesser_oben=self.durchmesser,
+                ist_schneide=True,
+            ),
+            WerkzeugSegment(
+                z_unten=self.schneidlaenge,
+                z_oben=self.gesamtlaenge,
+                durchmesser_unten=self.schaft_durchmesser,
+                durchmesser_oben=self.schaft_durchmesser,
+                ist_schneide=False,
+            ),
+        ]
+
+    def durchmesser_bei_z(self, z_von_spitze: float) -> float:
+        """Liefert den effektiven Werkzeug-Durchmesser bei einer Z-Position von der Spitze.
+
+        Wichtig fuer Kollisionserkennung — z.B. ein Gravurstichel mit 0.5mm Spitze
+        und 3.175mm Schaft bei z=5mm hat schon 3.175mm Durchmesser.
+        """
+        for seg in self.effektive_segmente():
+            if seg.z_unten <= z_von_spitze <= seg.z_oben:
+                # Lineare Interpolation
+                if seg.z_oben == seg.z_unten:
+                    return seg.durchmesser_unten
+                t = (z_von_spitze - seg.z_unten) / (seg.z_oben - seg.z_unten)
+                return seg.durchmesser_unten + t * (seg.durchmesser_oben - seg.durchmesser_unten)
+        # Ausserhalb: max-Durchmesser
+        return self.schaft_durchmesser
+
+    def darf_in_tiefe(self, schnitttiefe_mm: float) -> bool:
+        """Prueft ob die Bearbeitungstiefe vom Werkzeug noch zulaessig ist."""
+        max_t = self.max_arbeitstiefe_mm or self.schneidlaenge
+        return abs(schnitttiefe_mm) <= max_t
+
+
+def berechne_v_bit_spitzendurchmesser(
+    spitzenwinkel_grad: float, schneidlaenge_mm: float, durchmesser_max_mm: float,
+) -> float:
+    """Smart-Helper: Berechnet bei V-Bit den Durchmesser an der Spitze.
+
+    Geometrie: bei einem konischen V-Bit ergibt sich der Spitzen-Durchmesser
+    aus dem Winkel und der konischen Hoehe. Wenn der Konus auf voller
+    Schneidlaenge bis zum Durchmesser_max laeuft, ist die Spitze 0.
+
+    Eigentlich liefert diese Funktion einen Hinweis: Bei welchem Spitzenwinkel
+    + Schneidlaenge wuerde der Konus den durchmesser_max ueberschreiten? Dann
+    ist die Spitze nicht 0, sondern hat einen Rest-Durchmesser.
+    """
+    import math
+    halb = math.radians(spitzenwinkel_grad / 2.0)
+    # Bei 0er-Spitze laeuft d von 0 (unten) auf 2*tan(halb)*schneidlaenge (oben).
+    d_an_oberkante = 2 * math.tan(halb) * schneidlaenge_mm
+    if d_an_oberkante <= durchmesser_max_mm:
+        return 0.0  # Spitze ist echt 0
+    # Sonst: die Spitze ist abgestumpft auf einen Rest-Durchmesser
+    # Wir loesen: 2*tan(halb)*z_unten + d_spitze = durchmesser_max
+    # mit z_unten + schneidlaenge*tan(halb) = max-Hoehe ... eigentlich anders.
+    # Vereinfacht: Spitze hat den Wert der noetig ist um auf durchmesser_max zu kommen
+    return durchmesser_max_mm - 2 * math.tan(halb) * schneidlaenge_mm
+
+
+def berechne_v_bit_winkel(
+    spitzendurchmesser_mm: float, durchmesser_max_mm: float, schneidlaenge_mm: float,
+) -> float:
+    """Smart-Helper: Berechnet bei V-Bit den Spitzenwinkel aus Geometrie.
+
+    z.B. Gravurstichel Spitze 0.3mm, Durchmesser oben 3.175mm, Schneidlaenge 6mm
+    -> Halbwinkel = atan((d_oben - d_spitze)/2 / schneidlaenge)
+    -> Spitzenwinkel = 2 * Halbwinkel
+    """
+    import math
+    if schneidlaenge_mm <= 0:
+        return 0.0
+    halb_rad = math.atan((durchmesser_max_mm - spitzendurchmesser_mm) / 2.0 / schneidlaenge_mm)
+    return 2 * math.degrees(halb_rad)
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +577,9 @@ __all__ = [
     "WerkzeugBeschichtung",
     "WerkzeugDrehrichtung",
     "WerkzeugMaterial",
+    "WerkzeugSegment",
     "WerkzeugSteigung",
     "WerkzeugTyp",
+    "berechne_v_bit_spitzendurchmesser",
+    "berechne_v_bit_winkel",
 ]

@@ -31,6 +31,9 @@ export interface Setup {
   nullpunkt: [number, number, number];
   operationen: unknown[];
   pause_vor: SetupPause | null;
+  /** ArbeitsSchritt-Liste (ab v2). Wenn leer, wird aus pause_vor + operationen
+   *  abgeleitet (Backwards-Kompat). Pflegt der SchrittListeEditor. */
+  schritte?: unknown[];
   foto_pfad: string | null;
   geschaetzte_zeit_minuten: number;
   notizen: string;
@@ -94,6 +97,7 @@ export function neueSetup(name: string, werkzeug_id: string): Setup {
     rohmaterial_uebernehmen: true,
     nullpunkt: [0, 0, 0],
     operationen: [],
+    schritte: [],
     pause_vor: null,
     foto_pfad: null,
     geschaetzte_zeit_minuten: 0,

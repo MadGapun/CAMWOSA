@@ -34,6 +34,8 @@ from camwosa.db.models import (
     Werkzeug,
 )
 
+from camwosa.project.schritte import ArbeitsSchritt
+
 
 CWP_SCHEMA_VERSION = 1
 """Schema-Version. Aenderungen erfordern Migration."""
@@ -98,9 +100,20 @@ class Setup(BaseModel):
     nullpunkt: tuple[float, float, float] = (0.0, 0.0, 0.0)
     operationen: list[OperationsKonfig] = Field(default_factory=list)
     pause_vor: SetupPause | None = None
+    # Schritt-Liste (ab v2): flexible Workflow-Reihenfolge mit ArbeitsSchritt.
+    # Wenn leer, wird aus pause_vor + operationen abgeleitet (Backwards-Kompat).
+    schritte: list[ArbeitsSchritt] = Field(default_factory=list)
     foto_pfad: str | None = None
     geschaetzte_zeit_minuten: float = 0.0
     notizen: str = ""
+
+    def effektive_schritte(self) -> list[ArbeitsSchritt]:
+        """Liefert die Schritt-Liste, wenn leer wird Legacy abgeleitet."""
+        if self.schritte:
+            return list(self.schritte)
+        from camwosa.project.schritte import aus_setup_legacy
+
+        return aus_setup_legacy(self)
 
 
 # ---------------------------------------------------------------------------
@@ -108,11 +121,54 @@ class Setup(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class GeometrieAnnotationTyp(str, Enum):
+    """Typ einer manuellen Annotation, die User auf eine importierte Geometrie setzen.
+
+    Annotationen sind reine Zusatz-Punkte — sie aendern die Original-Geometrie
+    nicht. Beispiel: nachtraegliche Anschlagbohrung in einem importierten STL.
+    """
+
+    ANSCHLAGBOHRUNG = "anschlagbohrung"
+    REFPUNKT = "refpunkt"
+    KOMMENTAR = "kommentar"
+    AUSSCHNITT = "ausschnitt"
+
+
+class GeometrieAnnotation(BaseModel):
+    """Eine User-Annotation auf einer Geometrie.
+
+    Wird vom Frontend gepflegt — der Backend speichert sie nur und gibt sie
+    an die jeweiligen Operations weiter (z.B. erzeugt eine ANSCHLAGBOHRUNG-
+    Annotation eine zusaetzliche Bohren-Operation im Workflow).
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    typ: GeometrieAnnotationTyp
+    x: float
+    y: float
+    z: float = 0.0
+    durchmesser_mm: float | None = Field(
+        default=None, ge=0,
+        description="Bei ANSCHLAGBOHRUNG: Bohr-Durchmesser",
+    )
+    tiefe_mm: float | None = Field(
+        default=None, gt=0,
+        description="Bei ANSCHLAGBOHRUNG: Bohr-Tiefe",
+    )
+    text: str = ""
+
+
 class GeometrieSnapshot(BaseModel):
     """Eine Geometrie wie sie im Projekt liegt.
 
     Das kann eine importierte DXF-Datei oder ein Zeichnungs-Objekt aus dem
     integrierten Zeichnen-Modul sein.
+
+    Zusaetzlich koennen User nachtraeglich ``annotationen`` setzen — z.B.
+    eine Anschlagbohrung in ein importiertes 3D-Modell legen, ohne die
+    Original-Datei zu mutieren.
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -125,6 +181,7 @@ class GeometrieSnapshot(BaseModel):
     eingebettete_datei: str | None = None
     # Bei Zeichnung: serialisierte Geometrie
     daten: dict[str, Any] = Field(default_factory=dict)
+    annotationen: list[GeometrieAnnotation] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +202,9 @@ class Variante(BaseModel):
     name: str
     rohmaterial: Rohmaterial
     setups: list[Setup] = Field(default_factory=list)
+    # Globale Annotationen — auf Werkstueck-Ebene, nicht an eine Geometrie gebunden.
+    # (Pro-Geometrie-Annotationen leben in GeometrieSnapshot.annotationen.)
+    annotationen: list[GeometrieAnnotation] = Field(default_factory=list)
     notizen: str = ""
 
 
@@ -202,6 +262,8 @@ def neues_projekt(
 __all__ = [
     "CWPProjekt",
     "CWP_SCHEMA_VERSION",
+    "GeometrieAnnotation",
+    "GeometrieAnnotationTyp",
     "GeometrieSnapshot",
     "OperationsKonfig",
     "Setup",

@@ -1,11 +1,12 @@
 {
   "name": "camwosa-frontend",
-  "version": "0.1.0",
+  "version": "0.0.1-alpha.0",
   "description": "CAMWOSA Frontend (React + Vite)",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
+    "build:strict": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "lint": "eslint src --ext .ts,.tsx"

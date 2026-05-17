@@ -22,6 +22,8 @@ interface AppState {
   setStammdaten: (
     m: MaschinenProfil[], w: Werkzeug[], mat: Material[], sp: Spindel[],
   ) => void;
+  setWerkzeuge: (w: Werkzeug[]) => void;
+  setMaterialien: (m: Material[]) => void;
 
   // Aktive Auswahl
   aktiveMaschineId: string | null;
@@ -68,6 +70,8 @@ export const useAppStore = create<AppState>((set) => ({
   spindeln: [],
   setStammdaten: (m, w, mat, sp) =>
     set({ maschinen: m, werkzeuge: w, materialien: mat, spindeln: sp }),
+  setWerkzeuge: (w) => set({ werkzeuge: w }),
+  setMaterialien: (mat) => set({ materialien: mat }),
 
   aktiveSpindelId: null,
   setAktiveSpindelId: (id) => set({ aktiveSpindelId: id }),

@@ -40,6 +40,13 @@ def create_app(*, debug: bool = False) -> Flask:
         feeds as feeds_ep,
         postprocessors,
         workflow as workflow_ep,
+        cutting_presets as cutting_presets_ep,
+        annotationen as annotationen_ep,
+        quickcam as quickcam_ep,
+        simulation as simulation_ep,
+        heightmap as heightmap_ep,
+        text as text_ep,
+        wrap as wrap_ep,
     )
 
     app.register_blueprint(machines.bp)
@@ -57,6 +64,18 @@ def create_app(*, debug: bool = False) -> Flask:
     app.register_blueprint(workflow_ep.bp)
     app.register_blueprint(standzeit_ep.bp)
     app.register_blueprint(rotary_ep.bp)
+    app.register_blueprint(cutting_presets_ep.bp)
+    app.register_blueprint(annotationen_ep.bp)
+    app.register_blueprint(quickcam_ep.bp)
+    app.register_blueprint(simulation_ep.bp)
+    app.register_blueprint(heightmap_ep.bp)
+    app.register_blueprint(text_ep.bp)
+    app.register_blueprint(wrap_ep.bp)
+
+    # OpenAPI-Spec-Generator (Master-Plan B3) — wird zuletzt registriert,
+    # damit alle vorigen Routen in der Spec landen.
+    from camwosa.api import openapi as openapi_mod
+    app.register_blueprint(openapi_mod.bp)
 
     @app.route("/health")
     def health():

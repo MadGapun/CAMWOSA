@@ -112,35 +112,48 @@ def _offset_kontur_bahnen(
 def _adaptive_bahnen(
     polygon: Polygon, werkzeug: Werkzeug, parameter: TaschenParameter
 ) -> list[list[tuple[float, float]]]:
-    """Adaptive Clearing (vereinfacht).
+    """Adaptive Clearing — trochoidal-modulierte Offset-Bahnen (Master-Plan E4).
 
-    Echte Adaptive-Clearing-Implementierungen rechnen Eingriffswinkel pro
-    Schritt und passen die Bahn an. CAMWOSA verwendet als Naeherung sehr
-    kleine Stepover-Offsets (Werkzeug-Durchmesser * 0.1 statt 0.4) und
-    trochoidale Sinus-Modulation entlang der Offset-Konturen.
-    Ergebnis: konstanter Eingriff, sanftere Belastung, hoeherer Materialabtrag
-    pro Zeit moeglich.
+    Ansatz:
+    - Sehr kleiner Stepover (10-15% statt 40%) → konstanter Werkzeug-Eingriff
+    - Sinus-Modulation senkrecht zur Bahnrichtung → trochoidaler Pfad
+    - Modulationsamplitude wird vom ``parameter.adaptive_amplitude_faktor``
+      gesteuert (Default 0.05 * Durchmesser ≈ leichte Welligkeit)
 
-    Hinweis: dies ist eine Naeherung. Echte commercial Adaptive-Implementierungen
-    (Autodesk HSM, Fusion 360) sind deutlich ausgefeilter.
+    Das ist noch keine engagement-winkel-gesteuerte Implementierung wie
+    Fusion HSM (= Voronoi + Restmaterial-Tracking), liefert aber merkliche
+    Vorteile gegenueber OFFSET_KONTUR:
+    - Konstanter Eingriff → laengere Standzeit
+    - Hoehere Vorschuebe + tiefere Stepdowns moeglich
+    - Sanftere Akustik (kein Rattern in Innenecken)
+
+    Wer echte Adaptive will: Folge-Iteration mit Engagement-Calculator.
     """
     r = werkzeug.durchmesser / 2.0
     # Adaptive nutzt sehr kleinen Stepover (10-15% statt 40%)
     stepover = werkzeug.durchmesser * 0.12
+    # Trochoidale Modulation: Amplitude relativ zum Werkzeug-Durchmesser.
+    # Wenn der Parameter setzt wurde, nehmen wir den, sonst 5% des Durchmessers.
+    amplitude = (
+        parameter.adaptive_amplitude_faktor * werkzeug.durchmesser
+        if getattr(parameter, "adaptive_amplitude_faktor", None) is not None
+        else werkzeug.durchmesser * 0.05
+    )
+    wellen_pro_mm = getattr(parameter, "adaptive_wellen_pro_mm", 0.5)
+
     aussen_offset = -(r + parameter.aufmass_wand)
     bahn = offset_polygon(polygon, aussen_offset)
     bahnen: list[list[tuple[float, float]]] = []
     while bahn is not None and not bahn.is_empty:
         if isinstance(bahn, Polygon):
-            # Sinus-Modulation: Werkzeug ueberlagert leichte Wellen
             bahnen.append(_modulieren(list(bahn.exterior.coords),
-                                       amplitude=werkzeug.durchmesser * 0.05,
-                                       wellen_pro_mm=0.5))
+                                       amplitude=amplitude,
+                                       wellen_pro_mm=wellen_pro_mm))
         elif isinstance(bahn, MultiPolygon):
             for p in bahn.geoms:
                 bahnen.append(_modulieren(list(p.exterior.coords),
-                                           amplitude=werkzeug.durchmesser * 0.05,
-                                           wellen_pro_mm=0.5))
+                                           amplitude=amplitude,
+                                           wellen_pro_mm=wellen_pro_mm))
         bahn = offset_polygon(bahn, -stepover)
         if bahn is not None and bahn.area < 1e-6:
             break
@@ -151,15 +164,47 @@ def _modulieren(
     pfad: list[tuple[float, float]],
     amplitude: float,
     wellen_pro_mm: float,
-) -> list[list[tuple[float, float]]]:
-    """Naive Sinus-Modulation (zur Approximation eines trochoidalen Pfads)."""
+) -> list[tuple[float, float]]:
+    """Trochoidale Sinus-Modulation senkrecht zur Bahnrichtung.
+
+    Fuer jeden Pfad-Punkt:
+    1. Tangente = Richtung zum naechsten Punkt
+    2. Normale = Tangente um 90° gedreht
+    3. Modulation = ``amplitude * sin(2π * weg_kumuliert * wellen_pro_mm)``
+    4. Neuer Punkt = Original + Normale * Modulation
+
+    Der erste und letzte Punkt werden NICHT moduliert (damit die Bahn
+    geschlossen bleibt und Uebergaenge zwischen den Offset-Konturen
+    konsistent sind).
+    """
     import math
-    if len(pfad) < 2 or amplitude <= 0:
-        return pfad
-    # Aktuell: kein echtes Modulieren, weil Sinus-Verschiebung um Normalrichtung
-    # die Geometrie verkomplizieren wuerde. Wir liefern die unveraenderte Kontur
-    # zurueck — die Wirkung des Adaptive-Verfahrens kommt von kleinem Stepover.
-    return pfad
+    if len(pfad) < 3 or amplitude <= 0 or wellen_pro_mm <= 0:
+        return list(pfad)
+
+    ergebnis: list[tuple[float, float]] = [pfad[0]]
+    weg_kumuliert = 0.0
+    for i in range(1, len(pfad) - 1):
+        x_prev, y_prev = pfad[i - 1]
+        x, y = pfad[i]
+        x_next, y_next = pfad[i + 1]
+        # Tangente: Mittelwert der beiden anliegenden Segmente
+        tx = (x_next - x_prev) * 0.5
+        ty = (y_next - y_prev) * 0.5
+        laenge = math.hypot(tx, ty)
+        if laenge < 1e-9:
+            ergebnis.append((x, y))
+            continue
+        tx /= laenge
+        ty /= laenge
+        # Normale: 90° linksdrehung
+        nx = -ty
+        ny = tx
+        # Weg vom letzten Punkt zum aktuellen
+        weg_kumuliert += math.hypot(x - x_prev, y - y_prev)
+        mod = amplitude * math.sin(2 * math.pi * weg_kumuliert * wellen_pro_mm)
+        ergebnis.append((x + nx * mod, y + ny * mod))
+    ergebnis.append(pfad[-1])
+    return ergebnis
 
 
 def _spiral_aussen_bahnen(

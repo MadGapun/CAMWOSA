@@ -1,6 +1,8 @@
 # Master-Implementierungsplan
 
-> **Stand:** 16.05.2026 · Lebendiges Dokument · Wird mit jedem Schritt aktualisiert.
+> **Stand:** 17.05.2026 · Lebendiges Dokument · Wird mit jedem Schritt aktualisiert.
+>
+> **Arbeitsprinzip:** Master-Plan-First. Neue Ideen werden erst hier eingeordnet (mit Status ⬜ und ggf. Issue), dann nach Plan abgearbeitet — nicht ad-hoc gebaut und spaeter nachgezogen.
 
 Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge der Umsetzung. Jede Position verlinkt auf ihren Wiki-Eintrag (Stub solange nicht umgesetzt). Die Reihenfolge ist nach Abhängigkeit sortiert: was unten steht, baut auf dem auf was oben steht.
 
@@ -37,19 +39,26 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | A16 | Maschinen-Profil-Modul + 5 Default-Profile | — | [Maschinenprofil-Format](Maschinenprofil-Format.md) | ✅ |
 | A17 | Rohmaterial-Definition (Quader/Zylinder/Platte/frei) | — | [Rohmaterial](Rohmaterial.md) | ✅ |
 | A18 | Projekt-Format `.cwp` (ZIP, Schema-Version, Auto-Save, Crash-Recovery) | [#9](https://github.com/MadGapun/CAMWOSA/issues/9) | [Projekt-Format](Projekt-Format.md) | ✅ |
-| A19 | Varianten-System innerhalb eines Projekts | [#9](https://github.com/MadGapun/CAMWOSA/issues/9) | [Varianten](Varianten.md) | 🟨 |
-| A20 | Multi-Setup Workflow-Modul (Setups, Pausen, Werkzeugwechsel-Bestätigung) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [Workflow-Modul](Workflow-Modul.md) | 🟨 |
-| A21 | Arbeitsplan-Generator (PDF + In-UI-Checkliste) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [Arbeitsplan](Arbeitsplan.md) | 🟨 |
+| A19 | Varianten-System innerhalb eines Projekts — Backend (`Variante` in schema.py) ✅ + Frontend-VarianteSwitcher in Topbar mit Snapshot-Logik + Verwaltungs-Modal ✅ | [#9](https://github.com/MadGapun/CAMWOSA/issues/9) | [Varianten](Varianten.md) | ✅ |
+| A20 | Multi-Setup Workflow-Modul (Setups, Pausen, Werkzeugwechsel-Bestätigung) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [Workflow-Modul](Workflow-Modul.md) [ArbeitsSchritt](ArbeitsSchritt.md) [Multi-Werkzeug-Setup](Multi-Werkzeug-Setup.md) | ✅ |
+| A21 | Arbeitsplan-Generator (PDF + In-UI-Checkliste) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [Arbeitsplan](Arbeitsplan.md) | ✅ |
 | A22 | Nesting-Engine (rectpack + nest2D, Faserrichtung, Sperrzonen) | [#14](https://github.com/MadGapun/CAMWOSA/issues/14) | [Nesting](Nesting.md) | ✅ |
 | A23 | STL-Parser + Heightmap-Berechnung | [#5](https://github.com/MadGapun/CAMWOSA/issues/5) | [STL-Import](STL-Import.md) | ✅ |
 | A24 | CAM-Operation: 2.5D-Relief (Raster, Konturparallel, 3D-Offset) | [#5](https://github.com/MadGapun/CAMWOSA/issues/5) | [Operation-Relief](Operation-Relief.md) | ✅ |
-| A25 | Maschinen-Modi-Konzept (Standard XYZ vs Rotary) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Maschinenmodi](Maschinenmodi.md) | 🟨 |
+| A25 | Maschinen-Modi-Konzept (Standard XYZ vs Rotary) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Maschinenmodi](Maschinenmodi.md) | ✅ |
 | A26 | Postprozessor: GRBL Rotary Y | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Postprozessor-GRBL-Rotary](Postprozessor-GRBL-Rotary.md) | ✅ |
 | A27 | Rotary-Wrapping (2D-Geometrie auf Zylinder) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Rotary-Wrapping](Rotary-Wrapping.md) | ✅ |
 | A28 | Rotary-Vorschub-Korrektur (linear → Grad/min am Radius) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Rotary-Vorschub](Rotary-Vorschub.md) | ✅ |
 | A29 | 3,5-Achs-Indexing (Y wird durch Drehung ersetzt) | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | [Rotary-Indexing](Rotary-Indexing.md) | ✅ |
-| A30 | Drechsel-Operationen (Plandrehen, Längsdrehen, Spirale, Helix) | — | [Drechseln](Drechseln.md) | ⬜ |
+| A30 | Drechsel-Operationen (Plandrehen, Längsdrehen, Spirale, Helix) — Continuous-Lathe + 4 Strategien + Postprozessor + Frontend-Profil-Editor | — | [Drechseln](Drechseln.md) [Wrap-Mode](Wrap-Mode.md) | ✅ |
 | A31 | Backplot-Annotation im G-Code (Operations-Kommentare) | [#8](https://github.com/MadGapun/CAMWOSA/issues/8) | [Backplot-Annotation](Backplot-Annotation.md) | ✅ |
+| A32 | Wrap-Mode-Generator (cam/wrap.py) — 2D-Pfad → Y→A-Umrechnung + Pattern-Skalierung auf Werkstueck | — | [Wrap-Mode](Wrap-Mode.md) | ✅ |
+| A33 | Bild-zu-Heightmap — Phase A: Grayscale-Bild → Heightmap (stl/bild_heightmap.py), API + MCP, kompatibel zu cam/relief.py | — | [Bild-zu-Relief](Bild-zu-Relief.md) | ✅ |
+| A34 | Bild-zu-Relief — Phase C: Wrap-Kombination, Heightmap auf Zylinder (`erzeuge_wrap_relief_toolpath` in cam/wrap.py + 2 API-Endpoints + 12 Tests) | [#16](https://github.com/MadGapun/CAMWOSA/issues/16) | [Bild-zu-Relief](Bild-zu-Relief.md#wrap-kombination-✅-fertig-phase-c) | ✅ |
+| A35 | Bild-zu-Relief — Phase D Backend: 6 Heightmap-Filter (Gamma, Histogramm-Stretch, Zero-Plane, Edge-Boost, Selective-Smoothing, Detail-Slider) + 6 API-Endpoints + 22 Tests | [#17](https://github.com/MadGapun/CAMWOSA/issues/17) | [Bild-zu-Relief](Bild-zu-Relief.md#stufe-2-heightmap-bild--vorverarbeitung-✅-backend-fertig-phase-d) | ✅ |
+| A36 | Bild-zu-Relief — Phase E (`[ai]`-Extra): AI-Tiefenschaetzung Scaffolding (Depth-Anything-V2 + MiDaS via HuggingFace transformers, Lazy-Import, 3 Modelle, API `/aus-bild-ai` + `/ai/modelle`, 422+Hinweis ohne Extra, 9 Tests + 1 Integration-Smoke) | [#18](https://github.com/MadGapun/CAMWOSA/issues/18) | [Bild-zu-Relief](Bild-zu-Relief.md#stufe-3-ai-basierte-tiefenbild-generierung-anspruchsvoll) | ✅ |
+| A37 | Text-zu-Pfad-Konverter (fontTools-basiert, System-Font-Fallback, Loch-Erkennung via Contains-Hierarchie, integriert in `auto_cam_erstellen.beschriftung_wrap`, 2 API-Endpoints + 18 Tests) | [#19](https://github.com/MadGapun/CAMWOSA/issues/19) | [Text-zu-Pfad](Text-zu-Pfad.md) · [Wrap-Mode](Wrap-Mode.md) | ✅ |
+| A38 | DXF-Import in Wrap-Editor: Backend-Skalierungs-Helper `skaliere_pattern_fuer_werkstueck` (3 Modi: feste/auf_werkstueck/wiederholen) + Batch-Toolpath fuer Polygon-Listen + 2 API-Endpoints + 18 Tests. Frontend-Integration ist D24/Wrap-View | [#20](https://github.com/MadGapun/CAMWOSA/issues/20) | [Wrap-Mode](Wrap-Mode.md#pattern-skalierung-master-plan-a38) | ✅ |
 
 ## Teil B — REST-API + MCP
 
@@ -57,10 +66,10 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 |----|----------|-------|------|--------|
 | B1 | Flask-App-Setup (localhost only, CORS, Logging) | — | [API](API.md) | ✅ |
 | B2 | API-Endpoints für alle Backend-Module | — | [API-Endpoints](API-Endpoints.md) | ✅ |
-| B3 | OpenAPI-Spec generieren | — | [API-Endpoints](API-Endpoints.md) | ⬜ |
+| B3 | OpenAPI-3.1-Spec automatisch aus Flask-Routen + Docstrings (`api/openapi.py`) + `GET /api/openapi.json` + `/api/openapi.yaml` + Swagger-UI unter `/api/docs` + 9 Tests | — | [API](API.md#interaktive-doku-openapi--swagger) | ✅ |
 | B4 | MCP-Server-Setup (FastMCP) | — | [MCP-Server](MCP-Server.md) | ✅ |
 | B5 | MCP-Tools für alle Backend-Funktionen (vollständige Parität mit UI) | — | [MCP-Tools](MCP-Tools.md) | ✅ |
-| B6 | MCP-Tool: `auto_cam_erstellen` (Claude erstellt komplette Bearbeitung) | — | [MCP-AutoCAM](MCP-AutoCAM.md) | ⬜ |
+| B6 | MCP-Tool: `auto_cam_erstellen` (Claude erstellt komplette Bearbeitung) — 3 Aufgaben-Typen: tasche, anschlagbohrungen, beschriftung_wrap. Regelbasierte Heuristik für Werkzeug-Auswahl + Schrupp+Schlicht | — | [MCP-AutoCAM](MCP-AutoCAM.md) | ✅ |
 
 ## Teil C — Desktop-App (Electron)
 
@@ -69,7 +78,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | C1 | Electron-Skelett mit Vite/React/TypeScript | [#6](https://github.com/MadGapun/CAMWOSA/issues/6) | [Electron-App](Electron-App.md) | ✅ |
 | C2 | Backend-Subprozess-Management (Start/Stop/Health-Check) | [#6](https://github.com/MadGapun/CAMWOSA/issues/6) | [Electron-App](Electron-App.md) | ✅ |
 | C3 | Datei-Assoziation `.cwp` + OS-Tray | [#6](https://github.com/MadGapun/CAMWOSA/issues/6) | [Electron-App](Electron-App.md) | ✅ |
-| C4 | Auto-Updater | — | [Auto-Updater](Auto-Updater.md) | 🟨 |
+| C4 | Auto-Updater Frontend — `electron-updater` Lazy-Import in main.ts mit update-available / update-downloaded Dialogs + Quit-and-Install. Inaktiv im Dev-Modus. | — | [Auto-Updater](Auto-Updater.md) | ✅ |
 | C5 | i18n-Setup (DE/EN, Translation-Keys auf Deutsch) | — | [Frontend](Frontend.md) | ✅ |
 | C6 | State-Management (zustand) | — | [Frontend](Frontend.md) | ✅ |
 | C7 | Tailwind + Komponenten-Bibliothek | — | [Frontend](Frontend.md) | ✅ |
@@ -82,13 +91,13 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | D1 | Maschinen-Verwaltung (Liste, Editor, Profil-Import/Export) | — | [UI-Maschinen](UI-Maschinen.md) | ✅ |
 | D2 | Werkzeug-Verwaltung (Liste, Editor, Material-Presets pro Werkzeug) | — | [UI-Werkzeuge](UI-Werkzeuge.md) | ✅ |
 | D3 | Material-Verwaltung (Liste, Editor, Janka-Sortierung) | — | [UI-Material](UI-Material.md) | ✅ |
-| D4 | Projekt-Verwaltung (Neu/Öffnen/Speichern/Speichern als/Varianten) | [#9](https://github.com/MadGapun/CAMWOSA/issues/9) | [UI-Projekt](UI-Projekt.md) | 🟨 |
+| D4 | Projekt-Verwaltung (Neu/Öffnen/Speichern/Speichern als + Variante-Sync via varianteStore + Autor + Dirty-Indikator + Recent-List + 5 API-Tests) | [#9](https://github.com/MadGapun/CAMWOSA/issues/9) | [UI-Projekt](UI-Projekt.md) | ✅ |
 | D5 | Rohmaterial-Editor (Form + Position + Nullpunkt) | — | [UI-Rohmaterial](UI-Rohmaterial.md) | ✅ |
 | D6 | DXF/STL-Import-Dialog mit Vorschau | [#1](https://github.com/MadGapun/CAMWOSA/issues/1) [#5](https://github.com/MadGapun/CAMWOSA/issues/5) | [UI-Import](UI-Import.md) | ✅ |
 | D7 | Integriertes Zeichnen (LightBurn-inspiriert, Konva) | [#7](https://github.com/MadGapun/CAMWOSA/issues/7) | [Zeichnen](Zeichnen.md) | ✅ |
 | D8 | Operations-Editor (alle Operations-Typen) | — | [UI-Operationen](UI-Operationen.md) | ✅ |
 | D9 | 2D-Toolpath-Preview (Konva, Tiefen-Vorschau Seitenansicht) | [#2](https://github.com/MadGapun/CAMWOSA/issues/2) | [Preview-2D](Preview-2D.md) | ✅ |
-| D10 | 3D-Materialabtrag-Simulation (Three.js, Voxel) | — | [Simulation-3D](Simulation-3D.md) | 🟨 |
+| D10 | 3D-Materialabtrag-Simulation (Three.js, Voxel) — InstancedMesh + Surface-Extraktion | — | [Simulation-3D](Simulation-3D.md) [Material-Abtrag-Simulation](Material-Abtrag-Simulation.md) | ✅ |
 | D11 | Sicherheits-Panel (Status, Klick-zur-Stelle, Blocker-Logik) | [#11](https://github.com/MadGapun/CAMWOSA/issues/11) | [UI-Sicherheits-Panel](UI-Sicherheits-Panel.md) | ✅ |
 | D12 | Workflow-/Setup-Editor (Setups anlegen, Pausen einfügen) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [UI-Workflow](UI-Workflow.md) | ✅ |
 | D13 | Arbeitsplan-Ansicht (PDF-Export + In-UI-Checkliste) | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [Arbeitsplan](Arbeitsplan.md) | ✅ |
@@ -97,6 +106,13 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | D16 | G-Code-Editor (Monaco, Befehlsbibliothek, Live-Sync, Outline, Mass-Edit) | [#8](https://github.com/MadGapun/CAMWOSA/issues/8) | [GCode-Editor](GCode-Editor.md) | ✅ |
 | D17 | Settings (Theme, Sprache, Pfade, Update-Verhalten, KI-Features) | — | [UI-Settings](UI-Settings.md) | ✅ |
 | D18 | Foto-Slot pro Setup | [#13](https://github.com/MadGapun/CAMWOSA/issues/13) | [UI-Workflow](UI-Workflow.md) | ✅ |
+| D19 | Design-System (CSS-Tokens, Theme Dark/Light, 3 Density-Stufen 10"-34", Vorschau-Modi) | — | [Design-System](Design-System.md) | ✅ |
+| D20 | First-Run-Wizard (4-Schritt-Onboarding: Maschine → Spindel → Werkzeug → Material) | — | [First-Run-Wizard](First-Run-Wizard.md) | ✅ |
+| D21 | Tooltip-System (3-stufig: Wert / Fachbegriff / Coach-Mark) | — | [Tooltip-System](Tooltip-System.md) | ✅ |
+| D22 | Bild-Relief-View (Frontend Phase B: Drag&Drop-Upload + Live-Vorschau + Parameter-Panel + Heightmap-Generierung) | — | [Bild-zu-Relief](Bild-zu-Relief.md) | ✅ |
+| D23 | Wrap-Preview3D (Three.js-Komponente: 2D-Pfad auf Zylinder gewickelt anzeigen mit Pattern-Skalierung) | — | [Wrap-Mode](Wrap-Mode.md) | ✅ |
+| D24 | Operation-Preview3D (Three.js-Komponente: Toolpath einer einzelnen Operation in 3D) | — | [Simulation-3D](Simulation-3D.md) | ✅ |
+| D25 | Bild-Relief-Filterpanel — Frontend zu Phase D: `HeightmapFilterStack`-Komponente mit Filter-Liste (6 Filter), Reorder ↑↓, Toggle, Reset, Live-Anwendung gegen Backend-Endpoints + AI-Toggle in `BildReliefView` (Phase E). Three.js-3D-Preview folgt als spaetere Iteration. | [#17](https://github.com/MadGapun/CAMWOSA/issues/17) | [Bild-zu-Relief](Bild-zu-Relief.md) | ✅ |
 
 ## Teil E — Polish und Pro-Features
 
@@ -105,7 +121,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | E1 | EN-Übersetzung | — | [i18n](i18n.md) | ✅ |
 | E2 | Werkzeug-Standzeit-Tracking | — | [Standzeit-Tracking](Standzeit-Tracking.md) | ✅ |
 | E3 | Kollisionsanalyse Werkzeughalter (3D) | — | [Kollisionsanalyse](Kollisionsanalyse.md) | ✅ |
-| E4 | Adaptive Clearing (trochoidal) | — | [Adaptive-Clearing](Adaptive-Clearing.md) | 🟨 |
+| E4 | Adaptive Clearing — kleines Stepover (12%) + trochoidale Sinus-Modulation senkrecht zur Bahn (`_adaptive_bahnen` + `_modulieren`) + 2 Parameter-Felder (`adaptive_amplitude_faktor`, `adaptive_wellen_pro_mm`) + 5 Tests | — | [Adaptive-Clearing](Adaptive-Clearing.md) | ✅ |
 | E5 | Community-Sharing für Werkzeuge/Materialien (JSON-Austausch + optionaler Cloud-Sync) | — | [Community-Sharing](Community-Sharing.md) | ✅ |
 | E6 | Bohrbild aus DXF-Kreisen automatisch erkennen | — | [Bohrbild-Erkennung](Bohrbild-Erkennung.md) | ✅ |
 | E7 | Spezial-Operationen: T-Nuten, Schwalbenschwanz, Fasen | — | [Spezial-Operationen](Spezial-Operationen.md) | ✅ |
@@ -120,7 +136,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | F2 | Python-Backend gebündelt (PyInstaller / py2app) | — | [Installer](Installer.md) | ✅ |
 | F3 | Code-Signing (Windows + macOS) | — | [Installer](Installer.md) | ⬜ |
 | F4 | GitHub Actions: Build + Release-Pipeline | — | [CI-CD](CI-CD.md) | ✅ |
-| F5 | Auto-Updater-Backend | — | [Auto-Updater](Auto-Updater.md) | 🟨 |
+| F5 | Auto-Updater-Backend — `publish.github` Config in electron/package.json zeigt auf MadGapun/CAMWOSA. Volle Funktion erst ab Alpha 0.0.2 (NSIS-Installer noetig statt portable ZIP, weil electron-updater kein generischer ZIP-Provider hat). | — | [Auto-Updater](Auto-Updater.md) | 🟨 |
 
 ---
 

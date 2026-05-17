@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { GeometrieObjekt } from "../api/types";
+import type { Annotation } from "../editor/AnnotationenEditor";
 
 export type ZeichenWerkzeug =
   | "auswahl"
@@ -7,7 +8,8 @@ export type ZeichenWerkzeug =
   | "rechteck"
   | "kreis"
   | "polygon"
-  | "punkt";
+  | "punkt"
+  | "annotation_pick";  // Pick-Modus: naechster Klick setzt Position einer Annotation
 
 export interface ZeichenObjekt extends GeometrieObjekt {
   id: string;
@@ -28,6 +30,14 @@ interface DrawingState {
 
   snap_grid: number;
   setSnapGrid: (v: number) => void;
+
+  // Annotationen — sitzen pro Zeichnung (global, da pro Projekt)
+  annotationen: Annotation[];
+  annotationSetzen: (a: Annotation[]) => void;
+  /** Pick-Target: wenn gesetzt, geht der naechste Canvas-Klick in diese
+   *  Annotation als x/y. Wird nach dem Klick auf null gesetzt. */
+  annotationPickId: string | null;
+  setAnnotationPickId: (id: string | null) => void;
 }
 
 export const useDrawingStore = create<DrawingState>((set) => ({
@@ -49,6 +59,11 @@ export const useDrawingStore = create<DrawingState>((set) => ({
 
   snap_grid: 1,
   setSnapGrid: (v) => set({ snap_grid: v }),
+
+  annotationen: [],
+  annotationSetzen: (a) => set({ annotationen: a }),
+  annotationPickId: null,
+  setAnnotationPickId: (id) => set({ annotationPickId: id }),
 }));
 
 export function snap(v: number, grid: number): number {

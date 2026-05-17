@@ -1,10 +1,15 @@
 import { useRef, useState } from "react";
-import Editor, { OnMount } from "@monaco-editor/react";
+import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { camwosaApi } from "../api/client";
 import { useAktiveMaschine, useAppStore } from "../state/store";
 import { BEFEHLE, findeBefehl, type GCodeBefehl } from "../components/GCodeBibliothek";
+import {
+  registriereGcodeHighlighting,
+  SPRACHE_ID as GCODE_SPRACHE,
+  THEME_ID as GCODE_THEME,
+} from "../components/gcodeHighlighter";
 
 const KAT_LABEL: Record<GCodeBefehl["kategorie"], string> = {
   bewegung: "Bewegung",
@@ -44,6 +49,10 @@ export default function GCodeEditorView() {
   const [generieren, setGenerieren] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+
+  const beforeMount: BeforeMount = (m) => {
+    registriereGcodeHighlighting(m);
+  };
 
   function onMount(editor: Parameters<OnMount>[0]) {
     editorRef.current = editor;
@@ -139,16 +148,20 @@ export default function GCodeEditorView() {
         <div className="col-span-9 overflow-hidden rounded border border-gray-700">
           <Editor
             height="70vh"
-            defaultLanguage="plaintext"
+            defaultLanguage={GCODE_SPRACHE}
+            language={GCODE_SPRACHE}
             value={value}
             onChange={(v) => setValue(v ?? "")}
+            beforeMount={beforeMount}
             onMount={onMount}
-            theme="vs-dark"
+            theme={GCODE_THEME}
             options={{
               minimap: { enabled: true },
               fontSize: 13,
               wordWrap: "off",
               lineNumbers: "on",
+              fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace",
+              renderWhitespace: "selection",
             }}
           />
         </div>

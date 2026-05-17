@@ -1,7 +1,21 @@
 # Werkzeug-Standzeit-Tracking
 
-> **Status:** ✅ Implementiert (Phase E2 Backend + API). Frontend-Anzeige in Werkzeug-View folgt.
-> **Code:** [backend/camwosa/db/standzeit.py](../../backend/camwosa/db/standzeit.py)
+> **Status:** ✅ Backend + API + Frontend (Progress-Bar in WerkzeugeView).
+> **Code:** [backend/camwosa/db/standzeit.py](../../backend/camwosa/db/standzeit.py) · [frontend/src/views/WerkzeugeView.tsx](../../frontend/src/views/WerkzeugeView.tsx) (Komponente `StandzeitZelle`)
+
+## Frontend-Anzeige
+
+In WerkzeugeView wird pro Werkzeug eine **farbige Progress-Bar** angezeigt:
+
+- 🟢 Grün: < 80% genutzt
+- 🟡 Gelb: 80–100% (Warnung)
+- 🔴 Rot: ≥ 100% (Werkzeug ueberzogen, Austausch faellig)
+
+Hover-Tooltip zeigt die Rohdaten („12.5 / 60 min"). Der `↺`-Button setzt die
+Standzeit zurueck (nach Werkzeugwechsel oder Schaerfung) — mit Confirm-Dialog
+um Versehen zu verhindern.
+
+Werkzeuge ohne `standzeit_max_minuten` zeigen `—`.
 
 Verfolgt pro Werkzeug die kumulierten Schnitt-Minuten und warnt wenn die `standzeit_max_minuten` aus dem Werkzeug-Profil ueberschritten wird.
 

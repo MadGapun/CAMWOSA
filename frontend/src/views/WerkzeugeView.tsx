@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../state/store";
 import type { Werkzeug, WerkzeugTyp } from "../api/types";
 import Modal from "../components/Modal";
+import WerkzeugEditor from "../editor/WerkzeugEditor";
+import { camwosaApi } from "../api/client";
 
 const TYP_LABELS: Record<WerkzeugTyp, string> = {
   schaftfraeser: "Schaftfraeser",
@@ -20,9 +22,55 @@ const TYP_LABELS: Record<WerkzeugTyp, string> = {
 export default function WerkzeugeView() {
   const { t } = useTranslation();
   const werkzeuge = useAppStore((s) => s.werkzeuge);
+  const setWerkzeuge = useAppStore((s) => s.setWerkzeuge);
   const materialien = useAppStore((s) => s.materialien);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState<"none" | "neu" | "bearbeiten">("none");
   const [filterTyp, setFilterTyp] = useState<WerkzeugTyp | "">("");
+  const [standzeit, setStandzeit] = useState<Record<string, {
+    genutzt_minuten: number; max_minuten: number | null;
+    prozent: number | null; warnung: boolean; kritisch: boolean;
+  }>>({});
+
+  async function reloadStandzeit() {
+    try {
+      const liste = await camwosaApi.standzeitListe();
+      const map: typeof standzeit = {};
+      for (const s of liste) {
+        map[s.werkzeug_id] = {
+          genutzt_minuten: s.genutzt_minuten,
+          max_minuten: s.max_minuten,
+          prozent: s.prozent,
+          warnung: s.warnung,
+          kritisch: s.kritisch,
+        };
+      }
+      setStandzeit(map);
+    } catch { /* Standzeit-API optional */ }
+  }
+
+  useEffect(() => { void reloadStandzeit(); }, [werkzeuge.length]);
+
+  async function standzeitReset(w: Werkzeug) {
+    if (!window.confirm(`Standzeit fuer '${w.name}' wirklich zuruecksetzen?`)) return;
+    await camwosaApi.standzeitReset(w.id);
+    await reloadStandzeit();
+  }
+
+  async function reload() {
+    setWerkzeuge(await camwosaApi.werkzeuge());
+  }
+
+  async function loeschen(w: Werkzeug) {
+    if (!window.confirm(`Werkzeug '${w.name}' wirklich loeschen?`)) return;
+    try {
+      await camwosaApi.werkzeugLoeschen(w.id);
+      await reload();
+    } catch (e: any) {
+      const msg = e.response?.data?.fehler ?? e.message;
+      window.alert(`Loeschen fehlgeschlagen: ${msg}`);
+    }
+  }
 
   const detail = werkzeuge.find((w) => w.id === detailId) ?? null;
   const gefiltert = werkzeuge.filter(
@@ -55,6 +103,12 @@ export default function WerkzeugeView() {
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
+          <button
+            className="rounded bg-camwosa-accent px-3 py-1 text-sm font-medium text-camwosa-bg hover:opacity-90"
+            onClick={() => { setDetailId(null); setEditMode("neu"); }}
+          >
+            + Neues Werkzeug
+          </button>
         </div>
       </div>
 
@@ -80,10 +134,21 @@ export default function WerkzeugeView() {
               <td>{w.durchmesser} mm</td>
               <td>{w.schneiden}</td>
               <td>{w.schneidlaenge} mm</td>
-              <td className="text-xs text-camwosa-muted">
-                {w.standzeit_max_minuten ? `${w.standzeit_max_minuten} min` : "—"}
+              <td className="text-xs">
+                <StandzeitZelle
+                  werkzeug={w}
+                  status={standzeit[w.id]}
+                  onReset={() => void standzeitReset(w)}
+                />
               </td>
-              <td>
+              <td className="space-x-1 whitespace-nowrap">
+                <button
+                  className="rounded border border-gray-600 px-2 py-0.5 text-xs hover:bg-gray-700"
+                  onClick={() => { setDetailId(w.id); setEditMode("bearbeiten"); }}
+                  title="Bearbeiten"
+                >
+                  ✏
+                </button>
                 <button
                   className="rounded border border-gray-600 px-2 py-0.5 text-xs hover:bg-gray-700"
                   onClick={() => void exportWerkzeug(w)}
@@ -91,11 +156,34 @@ export default function WerkzeugeView() {
                 >
                   📦
                 </button>
+                <button
+                  className="rounded border border-red-700 px-2 py-0.5 text-xs hover:bg-red-900/40"
+                  onClick={() => void loeschen(w)}
+                  title="Loeschen"
+                >
+                  🗑
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <Modal
+        open={editMode !== "none"}
+        onClose={() => setEditMode("none")}
+        titel={editMode === "neu" ? "Neues Werkzeug" : "Werkzeug bearbeiten"}
+        breit
+      >
+        <WerkzeugEditor
+          initial={editMode === "bearbeiten" ? detail : null}
+          onAbbrechen={() => setEditMode("none")}
+          onGespeichert={async () => {
+            await reload();
+            setEditMode("none");
+          }}
+        />
+      </Modal>
 
       <Modal
         open={detail !== null}
@@ -193,6 +281,48 @@ function WerkzeugDetail({
           (<code>data/materials/</code>). Editier-UI folgt.
         </p>
       </section>
+    </div>
+  );
+}
+
+function StandzeitZelle({
+  werkzeug, status, onReset,
+}: {
+  werkzeug: Werkzeug;
+  status?: {
+    genutzt_minuten: number; max_minuten: number | null;
+    prozent: number | null; warnung: boolean; kritisch: boolean;
+  };
+  onReset: () => void;
+}) {
+  if (!werkzeug.standzeit_max_minuten) {
+    return <span className="text-camwosa-muted">—</span>;
+  }
+  const genutzt = status?.genutzt_minuten ?? 0;
+  const prozent = status?.prozent ?? 0;
+  const farbe = status?.kritisch
+    ? "bg-camwosa-danger"
+    : status?.warnung
+    ? "bg-camwosa-warn"
+    : "bg-camwosa-ok";
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-2 w-16 overflow-hidden rounded bg-camwosa-inset">
+        <div
+          className={`h-full ${farbe}`}
+          style={{ width: `${Math.min(100, prozent)}%` }}
+        />
+      </div>
+      <span className="font-mono text-[10px]" title={`${genutzt.toFixed(1)} / ${werkzeug.standzeit_max_minuten} min`}>
+        {prozent.toFixed(0)}%
+      </span>
+      <button
+        className="rounded border border-camwosa-default px-1 text-[10px] text-camwosa-muted hover:text-camwosa-text"
+        onClick={(e) => { e.stopPropagation(); onReset(); }}
+        title="Standzeit zuruecksetzen (Werkzeug ausgetauscht)"
+      >
+        ↺
+      </button>
     </div>
   );
 }

@@ -101,7 +101,7 @@ export default function OverrideOperationForm({
         effektivAnzeige={eff("spindel_rpm") as number}
       />
       <OverrideField
-        label="Vorschub" einheit="mm/min" step={100}
+        label="Vorschub" einheit="mm/min" step={100} hilfe="vorschub"
         wert={ov<number>("vorschub")}
         onChange={(v) => set("vorschub", v)}
         onReset={() => set("vorschub", null)}
@@ -109,7 +109,7 @@ export default function OverrideOperationForm({
         effektivAnzeige={eff("vorschub") as number}
       />
       <OverrideField
-        label="Eintauchvorschub" einheit="mm/min" step={50}
+        label="Eintauchvorschub" einheit="mm/min" step={50} hilfe="plunge"
         wert={ov<number>("eintauch_vorschub")}
         onChange={(v) => set("eintauch_vorschub", v)}
         onReset={() => set("eintauch_vorschub", null)}
@@ -133,7 +133,7 @@ export default function OverrideOperationForm({
         effektivAnzeige={eff("max_tiefe") as number}
       />
       <OverrideField
-        label="Stepdown" einheit="mm" step={0.1} min={0.1}
+        label="Stepdown" einheit="mm" step={0.1} min={0.1} hilfe="stepdown"
         wert={ov<number>("stepdown")}
         onChange={(v) => set("stepdown", v)}
         onReset={() => set("stepdown", null)}
@@ -173,7 +173,7 @@ export default function OverrideOperationForm({
           ]}
         />
         <OverrideField<"rampe" | "helix" | "senkrecht">
-          typ="select" label="Eintauchstrategie"
+          typ="select" label="Eintauchstrategie" hilfe="rampe"
           wert={ov<"rampe" | "helix" | "senkrecht">("eintauch_strategie")}
           onChange={(v) => set("eintauch_strategie", v)}
           onReset={() => set("eintauch_strategie", null)}
@@ -185,7 +185,7 @@ export default function OverrideOperationForm({
             { value: "senkrecht", label: "Senkrecht" },
           ]}
         />
-        <OverrideField label="Tabs Anzahl" step={1} min={0}
+        <OverrideField label="Tabs Anzahl" step={1} min={0} hilfe="tabs"
           wert={ov<number>("tabs_anzahl")}
           onChange={(v) => set("tabs_anzahl", v)}
           onReset={() => set("tabs_anzahl", null)}
@@ -206,7 +206,7 @@ export default function OverrideOperationForm({
           quelle={quelle("tabs_breite")}
           effektivAnzeige={eff("tabs_breite") as number}
         />
-        <OverrideField label="Aufmass" einheit="mm" step={0.1}
+        <OverrideField label="Aufmass" einheit="mm" step={0.1} hilfe="aufmass"
           wert={ov<number>("aufmass")}
           onChange={(v) => set("aufmass", v)}
           onReset={() => set("aufmass", null)}
@@ -236,7 +236,7 @@ export default function OverrideOperationForm({
             { value: "adaptive", label: "Adaptive (geplant)" },
           ]}
         />
-        <OverrideField label="Stepover" einheit="%" step={5} min={5} max={95}
+        <OverrideField label="Stepover" einheit="%" step={5} min={5} max={95} hilfe="stepover"
           wert={ov<number>("stepover_prozent")}
           onChange={(v) => set("stepover_prozent", v)}
           onReset={() => set("stepover_prozent", null)}
@@ -256,14 +256,14 @@ export default function OverrideOperationForm({
             { value: "senkrecht", label: "Senkrecht" },
           ]}
         />
-        <OverrideField label="Aufmass Wand" einheit="mm" step={0.1}
+        <OverrideField label="Aufmass Wand" einheit="mm" step={0.1} hilfe="aufmass"
           wert={ov<number>("aufmass_wand")}
           onChange={(v) => set("aufmass_wand", v)}
           onReset={() => set("aufmass_wand", null)}
           quelle={quelle("aufmass_wand")}
           effektivAnzeige={eff("aufmass_wand") as number}
         />
-        <OverrideField label="Aufmass Boden" einheit="mm" step={0.1}
+        <OverrideField label="Aufmass Boden" einheit="mm" step={0.1} hilfe="aufmass"
           wert={ov<number>("aufmass_boden")}
           onChange={(v) => set("aufmass_boden", v)}
           onReset={() => set("aufmass_boden", null)}

@@ -67,6 +67,10 @@ export default function ToolpathStage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toolpaths.length, geometrien.length, width, height, rohmaterial?.breite]);
 
+  // Min/Max-Zoom — fuer 0.1mm-Details bis Uebersicht ueber 400x400-Werkstueck
+  const SCALE_MIN = 0.01;
+  const SCALE_MAX = 1000;
+
   function onWheel(e: Konva.KonvaEventObject<WheelEvent>) {
     e.evt.preventDefault();
     const stage = stageRef.current;
@@ -79,7 +83,9 @@ export default function ToolpathStage({
       y: -(pointer.y - pos.y) / oldScale,
     };
     const direction = e.evt.deltaY > 0 ? -1 : 1;
-    const newScale = Math.max(0.05, Math.min(50, oldScale * (1 + direction * 0.1)));
+    // Shift = Fein-Zoom (2%), normal = 10%, Ctrl = grob (25%)
+    const step = e.evt.shiftKey ? 0.02 : e.evt.ctrlKey ? 0.25 : 0.10;
+    const newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, oldScale * (1 + direction * step)));
     setScale(newScale);
     setPos({
       x: pointer.x - mousePointTo.x * newScale,
@@ -87,27 +93,48 @@ export default function ToolpathStage({
     });
   }
 
+  function fitView() {
+    const bbox = berechneBBox(toolpaths, geometrien, rohmaterial);
+    if (!bbox) return;
+    const padding = 40;
+    const sx = (width - 2 * padding) / Math.max(bbox.w, 1);
+    const sy = (height - 2 * padding) / Math.max(bbox.h, 1);
+    const s = Math.min(sx, sy, SCALE_MAX);
+    setScale(s);
+    const cx = bbox.x + bbox.w / 2;
+    const cy = bbox.y + bbox.h / 2;
+    setPos({ x: width / 2 - cx * s, y: height / 2 + cy * s });
+  }
+
+  function setScaleAround(neuerScale: number) {
+    const cx = width / 2;
+    const cy = height / 2;
+    const ratio = neuerScale / scale;
+    setPos({
+      x: cx - (cx - pos.x) * ratio,
+      y: cy - (cy - pos.y) * ratio,
+    });
+    setScale(Math.max(SCALE_MIN, Math.min(SCALE_MAX, neuerScale)));
+  }
+
   return (
     <div className="relative">
-      <div className="absolute right-2 top-2 z-10 flex gap-1 rounded bg-camwosa-bg/80 p-1 text-xs">
+      <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded bg-camwosa-bg/80 p-1 text-xs">
         <button className="rounded px-2 py-0.5 hover:bg-gray-700"
-                onClick={() => setScale(scale * 1.2)}>+</button>
+                title="Zoom out (Mausrad: Pfeil nach unten)"
+                onClick={() => setScaleAround(scale / 1.2)}>−</button>
         <button className="rounded px-2 py-0.5 hover:bg-gray-700"
-                onClick={() => setScale(scale / 1.2)}>−</button>
+                title="100% (1 mm = 1 px)"
+                onClick={() => setScaleAround(1)}>1:1</button>
         <button className="rounded px-2 py-0.5 hover:bg-gray-700"
-                onClick={() => {
-                  const bbox = berechneBBox(toolpaths, geometrien, rohmaterial);
-                  if (!bbox) return;
-                  const padding = 40;
-                  const sx = (width - 2 * padding) / Math.max(bbox.w, 1);
-                  const sy = (height - 2 * padding) / Math.max(bbox.h, 1);
-                  const s = Math.min(sx, sy, 5);
-                  setScale(s);
-                  const cx = bbox.x + bbox.w / 2;
-                  const cy = bbox.y + bbox.h / 2;
-                  setPos({ x: width / 2 - cx * s, y: height / 2 + cy * s });
-                }}>Fit</button>
-        <span className="px-2 py-0.5 text-camwosa-muted">{(scale * 100).toFixed(0)}%</span>
+                title="Zoom in (Mausrad: Pfeil nach oben)"
+                onClick={() => setScaleAround(scale * 1.2)}>+</button>
+        <button className="rounded px-2 py-0.5 hover:bg-gray-700"
+                title="Alles einpassen (F)"
+                onClick={fitView}>Fit</button>
+        <span className="px-2 py-0.5 font-mono text-camwosa-muted">
+          {scale >= 100 ? `${scale.toFixed(0)}×` : `${(scale * 100).toFixed(0)}%`}
+        </span>
       </div>
 
       <Stage
@@ -168,7 +195,7 @@ export default function ToolpathStage({
 
       {/* Status unten */}
       <div className="absolute bottom-2 left-2 rounded bg-camwosa-bg/80 px-2 py-1 text-xs text-camwosa-muted">
-        Mausrad: Zoom · Drag: Pan · Werkzeug-Nullpunkt rot
+        Mausrad: Zoom · Shift = Fein · Ctrl = Grob · Drag: Pan · Werkzeug-Nullpunkt rot
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+@import "./tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,17 +7,43 @@
 html, body, #root {
   height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+  font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
+  font-size: var(--font-size-body);
 }
 
 body {
-  background-color: #1a1a1a;
-  color: #e8e8e8;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #252525; }
-::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #666; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* Override-Quelle-Punkt — 6px farbiger Punkt vor Werten (Design-Note 2) */
+.cw-src-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.cw-src-dot.material  { background: var(--src-material); }
+.cw-src-dot.projekt   { background: var(--src-projekt); }
+.cw-src-dot.override  { background: var(--src-override); box-shadow: 0 0 0 2px var(--accent-soft); }
+.cw-src-dot.werkzeug  { background: var(--src-werkzeug); }
+.cw-src-dot.fallback  { background: var(--src-fallback); }
+
+/* Sicherheits-Container (Design-Note 3): 2px farbiger Border-Left */
+.cw-safety {
+  border-left: 2px solid var(--danger);
+  padding-left: 10px;
+}
+.cw-safety[data-stufe="warnung"]  { border-left-color: var(--warning); }
+.cw-safety[data-stufe="kritisch"] { border-left-color: var(--danger); }
+.cw-safety[data-stufe="info"]     { border-left-color: var(--info); }

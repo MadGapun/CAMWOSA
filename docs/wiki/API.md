@@ -1,9 +1,35 @@
 # Flask-API
 
-> **Status:** ✅ Phase 1 (Maschinen, Werkzeuge, Material, DXF, Operations, Feeds, Safety, Nesting, Projekt, Postprozessoren). Workflow + STL kommen.
-> **Code:** [backend/camwosa/api/](../../backend/camwosa/api/) · **Tests:** [backend/tests/api/test_app.py](../../backend/tests/api/test_app.py)
+> **Status:** ✅ Voll aufgebaut + OpenAPI-3.1-Spec (Master-Plan B3).
+> **Code:** [backend/camwosa/api/](../../backend/camwosa/api/) · **Tests:** [backend/tests/api/](../../backend/tests/api/)
+> **OpenAPI-Spec:** `GET /api/openapi.json` · **Swagger-UI:** `GET /api/docs`
 
 Die Flask-API ist die **Single Source of Truth** zwischen UI/MCP und Backend. Sie laeuft **nur auf localhost** (127.0.0.1) — kein externer Zugriff.
+
+## Interaktive Doku (OpenAPI / Swagger)
+
+Wer alle Endpoints durchklicken + ausprobieren will:
+
+```
+http://localhost:8765/api/docs
+```
+
+Das ist eine Swagger-UI-Seite, die `/api/openapi.json` rendert. Funktioniert
+ohne Internet nicht (Assets vom CDN) — bei Offline-Betrieb stattdessen die
+Spec einfach in [editor.swagger.io](https://editor.swagger.io/) einfuegen:
+
+```bash
+curl http://localhost:8765/api/openapi.json > camwosa-api.json
+# oder als YAML (wenn PyYAML installiert):
+curl http://localhost:8765/api/openapi.yaml
+```
+
+Die Spec wird **automatisch** aus den Flask-Routen + den Funktions-Docstrings
+generiert ([api/openapi.py](../../backend/camwosa/api/openapi.py)) — jeder
+neue Endpoint mit Docstring landet automatisch in der Spec, ohne dass man
+Schema-Decorators verteilen muss. Wer mehr Detail will, kann pro Endpoint
+in ``openapi_extra`` ein eigenes Dict registrieren, das in den Path-Eintrag
+eingemischt wird.
 
 ## Starten
 

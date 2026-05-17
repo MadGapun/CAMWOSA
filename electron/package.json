@@ -1,15 +1,17 @@
 {
   "name": "camwosa-electron",
-  "version": "0.1.0",
+  "version": "0.0.1-alpha.0",
   "description": "CAMWOSA Desktop-App (Electron-Wrapper)",
   "main": "dist/main.js",
   "scripts": {
     "dev": "tsc -p tsconfig.json && electron .",
     "build": "tsc -p tsconfig.json",
     "build:installer": "electron-builder",
+    "build:portable": "electron-packager . CAMWOSA --platform=win32 --arch=x64 --out=dist-portable --overwrite --app-version=0.0.1-alpha.0 --build-version=0.0.1-alpha.0 --prune=true --ignore=\"^/release$|^/dist-installer$|^/dist-portable$|/src$|tsconfig\\.json$|\\.ts$\" --extra-resource=../backend/dist/camwosa-backend --extra-resource=../data",
     "lint": "eslint src --ext .ts"
   },
   "devDependencies": {
+    "@electron/packager": "^20.0.0",
     "@types/node": "^20.10.0",
     "electron": "^30.0.0",
     "electron-builder": "^24.13.0",
@@ -21,15 +23,19 @@
   "build": {
     "appId": "de.elwosa.camwosa",
     "productName": "CAMWOSA",
+    "copyright": "Copyright (c) 2026 Markus Birzite",
+    "directories": {
+      "output": "dist-installer",
+      "buildResources": "build"
+    },
     "files": [
       "dist/**/*",
       "../frontend/dist/**/*"
     ],
     "extraResources": [
       {
-        "from": "../backend",
-        "to": "backend",
-        "filter": ["camwosa/**", "pyproject.toml"]
+        "from": "../backend/dist/camwosa-backend",
+        "to": "backend"
       },
       {
         "from": "../data",
@@ -41,11 +47,36 @@
         "ext": "cwp",
         "name": "CAMWOSA Project",
         "description": "CAMWOSA Project File",
-        "icon": "build/icon.ico"
+        "role": "Editor"
       }
     ],
-    "win": { "target": "nsis" },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" }
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "MadGapun",
+        "repo": "CAMWOSA",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "CAMWOSA-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CAMWOSA"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.graphics-design"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Graphics"
+    }
   }
 }

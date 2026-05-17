@@ -43,11 +43,37 @@ camwosa-mcp
 
 ## Verfuegbare Tools
 
-### Stammdaten
+### Stammdaten — Lesen
 - `maschinen_anzeigen()` -> Liste
 - `maschine_details(maschine_id)`
 - `werkzeuge_anzeigen()` / `werkzeug_details(werkzeug_id)`
 - `materialien_anzeigen()` / `material_details(material_id)`
+- `spindeln_anzeigen()`
+
+### Stammdaten — CRUD (Claude kann anlegen / aendern / loeschen)
+- `werkzeug_anlegen(werkzeug)` / `werkzeug_aktualisieren(id, werkzeug)` / `werkzeug_loeschen(id)`
+- `material_anlegen(material)` / `material_aktualisieren(id, material)` / `material_loeschen(id)`
+- `spindel_anlegen(spindel)` / `spindel_loeschen(id)`
+
+Loeschen funktioniert nur fuer User-Eintraege (Default-Stammdaten aus Sammel-Dateien werden per ID ueberschrieben statt geloescht).
+
+### Werkzeug-Smart-Helpers
+- `v_bit_winkel_berechnen(spitzendurchmesser_mm, durchmesser_max_mm, schneidlaenge_mm)`
+- `v_bit_spitzendurchmesser_berechnen(spitzenwinkel_grad, schneidlaenge_mm, durchmesser_max_mm)`
+
+### CuttingPresets (Schnittparameter als Top-Level-Entitaet)
+- `cutting_presets_anzeigen(material_id?, werkzeug_id?, operation_typ?)`
+- `cutting_preset_lookup(material_id, werkzeug_id, operation_typ='generic')` — bestes Preset finden, Fallback auf GENERIC
+- `cutting_preset_anlegen(preset)` / `cutting_preset_loeschen(id)`
+
+### QuickCAM-Templates (in unter 60 s zum lauffaehigen Projekt)
+- `quickcam_templates()` — Liste der Vorlagen (Tasche, Schriftzug, Bohrlochmuster, Kontur)
+- `quickcam_erzeugen(template_id, eingaben, maschine_id, werkzeug_id, material_id, projekt_name?)`
+
+### Geometrie-Annotationen
+- `annotation_typen()`
+- `annotationen_validieren(annotationen)` — Liste mit Dedup + Sammel-Fehlerbericht
+- `annotationen_zu_operationen(annotationen, werkzeug_ids?)` — gruppiert Bohrungen nach Tiefe+Ø, baut daraus Bohren-Operationen; Ausschnitte → Tasche-Operationen
 
 ### Berechnung
 - `feeds_speeds_berechnen(maschine_id, werkzeug_id, material_id, rpm_wunsch?)`

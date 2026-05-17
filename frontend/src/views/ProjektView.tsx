@@ -1,6 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../state/store";
+import { useProjektStore } from "../state/projektStore";
+import {
+  projektLaden,
+  projektNeu,
+  projektSpeichern,
+  projektSpeichernAls,
+} from "../state/projektIO";
+import { useVarianteStore } from "../state/varianteStore";
 import CADImportDialog from "../components/CADImportDialog";
 import RohmaterialEditor from "../components/RohmaterialEditor";
 
@@ -157,19 +165,185 @@ export default function ProjektView() {
         )}
       </section>
 
-      <section className="rounded border border-gray-700 bg-camwosa-surface p-4">
-        <h2 className="mb-2 font-semibold">Schnellaktionen</h2>
-        <div className="flex gap-2">
-          <button className="rounded bg-camwosa-accent px-4 py-2 text-sm font-semibold text-white">
-            {t("projekt.neu")}
-          </button>
-          <button className="rounded border border-gray-600 px-4 py-2 text-sm">
-            {t("projekt.oeffnen")}
-          </button>
-        </div>
-      </section>
+      <ProjektPersistenzPanel />
 
       <CADImportDialog open={dxfOffen} onClose={() => setDxfOffen(false)} />
     </div>
+  );
+}
+
+
+/**
+ * Projekt-Speichern/Laden-Panel (Master-Plan D4).
+ *
+ * Buttons: Neu, Oeffnen, Speichern, Speichern als — plus Dateiname-Anzeige
+ * und Liste der zuletzt verwendeten Projekte (aus localStorage).
+ */
+function ProjektPersistenzPanel() {
+  const { t } = useTranslation();
+  const dateiname = useProjektStore((s) => s.dateiname);
+  const autor = useProjektStore((s) => s.autor);
+  const dirty = useProjektStore((s) => s.dirty);
+  const zuletzt = useProjektStore((s) => s.zuletzt_geoeffnet);
+  const setAutor = useProjektStore((s) => s.setAutor);
+  const aktiveMaschineId = useAppStore((s) => s.aktiveMaschineId);
+  const anzahlVarianten = useVarianteStore((s) => s.varianten.length);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function handleNeu() {
+    if (dirty && !window.confirm(
+      "Aktuelles Projekt enthaelt ungespeicherte Aenderungen. Trotzdem neues Projekt anlegen?",
+    )) return;
+    const name = window.prompt("Name des neuen Projekts?", "Unbenanntes Projekt");
+    if (name === null) return;
+    projektNeu(name);
+    setMeldung(`Neues Projekt „${name}" angelegt.`);
+    setFehler(null);
+  }
+
+  async function handleSpeichern() {
+    if (!aktiveMaschineId) {
+      setFehler("Bitte erst eine Maschine waehlen, dann kann gespeichert werden.");
+      return;
+    }
+    setBusy(true);
+    setFehler(null);
+    try {
+      await projektSpeichern();
+      setMeldung(`Gespeichert als ${dateiname || "Unbenanntes Projekt"}.cwp`);
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSpeichernAls() {
+    const neu = window.prompt("Dateiname (ohne .cwp)?", dateiname || "MeinProjekt");
+    if (!neu) return;
+    setBusy(true);
+    setFehler(null);
+    try {
+      await projektSpeichernAls(neu);
+      setMeldung(`Gespeichert als ${neu}.cwp`);
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleOeffnen() {
+    fileInputRef.current?.click();
+  }
+
+  async function handleDatei(e: React.ChangeEvent<HTMLInputElement>) {
+    const datei = e.target.files?.[0];
+    if (!datei) return;
+    if (dirty && !window.confirm(
+      "Aktuelles Projekt enthaelt ungespeicherte Aenderungen. Trotzdem ueberschreiben?",
+    )) {
+      e.target.value = "";
+      return;
+    }
+    setBusy(true);
+    setFehler(null);
+    try {
+      await projektLaden(datei);
+      setMeldung(`Geladen: ${datei.name}`);
+    } catch (err) {
+      setFehler(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+      e.target.value = "";  // damit gleiche Datei erneut auswaehlbar ist
+    }
+  }
+
+  return (
+    <section className="rounded border border-gray-700 bg-camwosa-surface p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <h2 className="font-semibold">{t("projekt.titel")}</h2>
+        <span className="text-xs text-camwosa-muted">
+          {dateiname ? `${dateiname}.cwp` : "— neu —"}
+          {dirty && <span className="ml-1 text-camwosa-warn">●</span>}
+          <span className="ml-2">({anzahlVarianten} Varianten)</span>
+        </span>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        <button
+          className="rounded bg-camwosa-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          onClick={handleNeu}
+          disabled={busy}
+        >
+          {t("projekt.neu")}
+        </button>
+        <button
+          className="rounded border border-gray-600 px-4 py-2 text-sm hover:bg-camwosa-bg disabled:opacity-50"
+          onClick={handleOeffnen}
+          disabled={busy}
+        >
+          {t("projekt.oeffnen")}
+        </button>
+        <button
+          className="rounded border border-camwosa-accent bg-camwosa-accent-soft px-4 py-2 text-sm font-medium text-camwosa-accent hover:opacity-90 disabled:opacity-50"
+          onClick={handleSpeichern}
+          disabled={busy || !aktiveMaschineId}
+          title={!aktiveMaschineId ? "Erst Maschine waehlen" : "Speichern als .cwp"}
+        >
+          {t("projekt.speichern")}
+        </button>
+        <button
+          className="rounded border border-gray-600 px-4 py-2 text-sm hover:bg-camwosa-bg disabled:opacity-50"
+          onClick={handleSpeichernAls}
+          disabled={busy || !aktiveMaschineId}
+        >
+          {t("projekt.speichern_als")}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".cwp,application/zip"
+          onChange={handleDatei}
+          className="hidden"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <label>
+          <span className="text-camwosa-muted">{t("projekt.autor")}</span>
+          <input
+            type="text"
+            value={autor}
+            onChange={(e) => setAutor(e.target.value)}
+            className="w-full rounded border border-camwosa-default bg-camwosa-bg px-2 py-1"
+            placeholder="Dein Name"
+          />
+        </label>
+        {zuletzt.length > 0 && (
+          <div>
+            <span className="text-camwosa-muted">Zuletzt geoeffnet:</span>
+            <ul className="mt-1 list-disc pl-4 text-camwosa-text">
+              {zuletzt.slice(0, 5).map((p) => (
+                <li key={p}>{p}.cwp</li>
+              ))}
+            </ul>
+            <span className="text-[10px] text-camwosa-muted">
+              (Liste — Browser muss .cwp-Datei selbst auswaehlen)
+            </span>
+          </div>
+        )}
+      </div>
+
+      {meldung && (
+        <p className="mt-2 text-xs text-camwosa-ok">{meldung}</p>
+      )}
+      {fehler && (
+        <p className="mt-2 text-xs text-camwosa-danger">⚠ {fehler}</p>
+      )}
+    </section>
   );
 }

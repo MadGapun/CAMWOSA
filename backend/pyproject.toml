@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "camwosa"
-version = "0.1.0"
+version = "0.0.1a0"
 description = "CAMWOSA Backend — 2.5D CAM für GRBL-Maschinen"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,6 +28,7 @@ dependencies = [
     "rectpack>=0.2.2",
     "reportlab>=4.0",
     "pillow>=10.0",
+    "fonttools>=4.40",
 ]
 
 [project.optional-dependencies]
@@ -44,6 +45,14 @@ nesting-extra = [
     # nest2D ist optional und LGPL-3.0 lizenziert.
     # Nur installieren wenn No-Fit-Polygon-Nesting gewuenscht.
     # "nest2D>=0.4",
+]
+ai = [
+    # AI-Tiefenschaetzung fuer Bild-zu-Relief Phase E (Master-Plan A36).
+    # Achtung: PyTorch ~700 MB, Modelle ~250 MB on first use.
+    # Lokal, kein Cloud-Aufruf — Modelle werden von HuggingFace gecacht.
+    "torch>=2.0",
+    "transformers>=4.40",  # liefert Depth-Anything-V2 + MiDaS
+    "safetensors>=0.4",
 ]
 
 [project.scripts]

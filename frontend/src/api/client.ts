@@ -2,6 +2,7 @@ import axios from "axios";
 import type {
   BohrParameter,
   CheckBericht,
+  DrechselParameter,
   DXFImportErgebnis,
   FeedsSpeedsErgebnis,
   GeometrieObjekt,
@@ -118,6 +119,134 @@ export const camwosaApi = {
       .post("/operations/gravur", { werkzeug_id, geometrie, parameter })
       .then((r) => r.data),
 
+  // Bild → Heightmap (Phase A der Bild-zu-Relief-Pipeline)
+  bildZuHeightmap: async (
+    datei: File,
+    parameter: {
+      max_tiefe_mm?: number;
+      pixel_pro_mm?: number;
+      invertieren?: boolean;
+      glaetten_radius?: number;
+      zero_plane_schwelle?: number;
+      max_dimension_px?: number | null;
+    } = {},
+  ): Promise<{
+    aufloesung_mm: number;
+    x_min_mm: number;
+    y_min_mm: number;
+    z_max_mm: number;
+    shape: [number, number];
+    z_values_base64: string;
+    z_values_dtype: string;
+    statistik: {
+      shape_x: number; shape_y: number; anzahl_pixel: number;
+      aufloesung_mm: number; breite_mm: number; hoehe_mm: number;
+      z_min: number; z_max: number; z_mittel: number; max_tiefe_mm: number;
+    };
+  }> => {
+    const fd = new FormData();
+    fd.append("datei", datei);
+    for (const [k, v] of Object.entries(parameter)) {
+      if (v !== null && v !== undefined) fd.append(k, String(v));
+    }
+    const r = await api.post("/heightmap/aus-bild", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return r.data;
+  },
+
+  // --- Heightmap-Bearbeitungs-Filter (Master-Plan A35 / Phase D) ---
+
+  heightmapFilter: async (
+    name:
+      | "gamma" | "histogramm-stretch" | "zero-plane"
+      | "edge-boost" | "selective-smoothing" | "detail-slider",
+    heightmap: unknown,
+    parameter: Record<string, unknown>,
+  ): Promise<unknown> => {
+    const r = await api.post(`/heightmap/bearbeitung/${name}`, {
+      heightmap, ...parameter,
+    });
+    return r.data;
+  },
+
+  // --- AI-Tiefenkarte (Master-Plan A36 / Phase E, optional [ai]-Extra) ---
+
+  aiModelle: (): Promise<{
+    ist_installiert: boolean;
+    default: string;
+    modelle: Record<string, { huggingface: string; groesse_mb: string; qualitaet: string }>;
+  }> => api.get("/heightmap/ai/modelle").then((r) => r.data),
+
+  bildZuHeightmapAi: async (
+    datei: File,
+    parameter: {
+      max_tiefe_mm?: number;
+      pixel_pro_mm?: number;
+      modell?: string;
+      invertieren?: boolean;
+      max_dimension_px?: number;
+    } = {},
+  ): Promise<unknown> => {
+    const fd = new FormData();
+    fd.append("datei", datei);
+    for (const [k, v] of Object.entries(parameter)) {
+      if (v !== null && v !== undefined) fd.append(k, String(v));
+    }
+    const r = await api.post("/heightmap/aus-bild-ai", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return r.data;
+  },
+
+  // Voxel-Material-Abtrag-Simulation
+  voxelSimulation: (
+    toolpaths: unknown[],
+    werkzeug_id: string,
+    werkstueck: {
+      laenge_x: number; breite_y: number; hoehe_z: number;
+      nullpunkt_x?: number; nullpunkt_y?: number;
+    },
+    aufloesung_mm = 2.0,
+    z_oberkante_material?: number,
+  ): Promise<{
+    aufloesung_mm: number;
+    nx: number; ny: number; nz: number;
+    werkstueck: typeof werkstueck;
+    boundary_voxel: Array<[number, number, number]>;
+    voxel_count: number;
+    voxel_volumen_mm3: number;
+    abgetragenes_volumen_mm3: number;
+    bewegungen_simuliert: number;
+  }> => api.post("/simulation/voxel", {
+    toolpaths, werkzeug_id, werkstueck, aufloesung_mm, z_oberkante_material,
+  }).then((r) => r.data),
+
+  opDrechseln: (
+    werkzeug_id: string,
+    parameter: DrechselParameter,
+  ): Promise<Toolpath> =>
+    api
+      .post("/operations/drechseln", { werkzeug_id, parameter })
+      .then((r) => r.data),
+
+  opWrap: (
+    werkzeug_id: string,
+    punkte_xy: Array<[number, number]>,
+    parameter: Record<string, unknown>,
+  ): Promise<Toolpath & { warnungen?: string[] }> =>
+    api
+      .post("/operations/wrap", { werkzeug_id, punkte_xy, parameter })
+      .then((r) => r.data),
+
+  opWrapPruefe: (
+    punkte_xy: Array<[number, number]>,
+    werkstueck_radius_mm: number,
+  ): Promise<{ gueltig: boolean; warnungen: string[] }> =>
+    api
+      .post("/operations/wrap/pruefe", { punkte_xy, werkstueck_radius_mm })
+      .then((r) => r.data),
+
   /** Loest Overrides + Material-Preset + Projekt-Defaults zu effektiven Parametern + Quellen auf. */
   opAufloesen: (
     typ: "kontur" | "tasche" | "bohren" | "gravur",
@@ -170,6 +299,103 @@ export const camwosaApi = {
       .post("/nesting/run", { teile, platten, abstand_zwischen_teilen })
       .then((r) => r.data),
 
+  // Werkzeug-Standzeit
+  standzeitListe: (): Promise<Array<{
+    werkzeug_id: string; name: string;
+    genutzt_minuten: number; max_minuten: number | null;
+    prozent: number | null; warnung: boolean; kritisch: boolean;
+  }>> => api.get("/standzeit/").then((r) => r.data),
+  standzeitReset: (werkzeug_id: string): Promise<{ ok: boolean }> =>
+    api.post(`/standzeit/reset/${werkzeug_id}`).then((r) => r.data),
+  standzeitAddieren: (werkzeug_id: string, minuten: number): Promise<{ ok: boolean }> =>
+    api.post("/standzeit/addiere", { werkzeug_id, minuten }).then((r) => r.data),
+
+  // Werkzeug CRUD
+  werkzeugAnlegen: (w: Werkzeug): Promise<{ gespeichert: boolean; werkzeug: Werkzeug }> =>
+    api.post("/tools/", w).then((r) => r.data),
+  werkzeugUpdaten: (id: string, w: Werkzeug): Promise<{ gespeichert: boolean; werkzeug: Werkzeug }> =>
+    api.put(`/tools/${id}`, w).then((r) => r.data),
+  werkzeugLoeschen: (id: string): Promise<{ geloescht: boolean }> =>
+    api.delete(`/tools/${id}`).then((r) => r.data),
+  vBitSpitze: (
+    spitzenwinkel_grad: number, schneidlaenge_mm: number, durchmesser_max_mm: number,
+  ): Promise<{ spitzendurchmesser_mm: number }> =>
+    api.post("/tools/helper/v-bit-spitzendurchmesser", {
+      spitzenwinkel_grad, schneidlaenge_mm, durchmesser_max_mm,
+    }).then((r) => r.data),
+  vBitWinkel: (
+    spitzendurchmesser_mm: number, durchmesser_max_mm: number, schneidlaenge_mm: number,
+  ): Promise<{ spitzenwinkel_grad: number }> =>
+    api.post("/tools/helper/v-bit-winkel", {
+      spitzendurchmesser_mm, durchmesser_max_mm, schneidlaenge_mm,
+    }).then((r) => r.data),
+
+  // Material CRUD
+  materialAnlegen: (m: Material): Promise<{ gespeichert: boolean; material: Material }> =>
+    api.post("/materials/", m).then((r) => r.data),
+  materialUpdaten: (id: string, m: Material): Promise<{ gespeichert: boolean; material: Material }> =>
+    api.put(`/materials/${id}`, m).then((r) => r.data),
+  materialLoeschen: (id: string): Promise<{ geloescht: boolean }> =>
+    api.delete(`/materials/${id}`).then((r) => r.data),
+
+  // Geometrie-Annotationen
+  annotationTypen: (): Promise<string[]> =>
+    api.get("/annotationen/typen").then((r) => r.data),
+  annotationValidieren: (a: Record<string, unknown>): Promise<{
+    gueltig: boolean; annotation?: Record<string, unknown>; fehler?: string;
+  }> => api.post("/annotationen/validate", a).then((r) => r.data),
+  annotationListeValidieren: (annotationen: Array<Record<string, unknown>>): Promise<{
+    gueltig: boolean;
+    annotationen: Array<Record<string, unknown>>;
+    fehler: Array<{ index: number; fehler: string }>;
+  }> => api.post("/annotationen/validate-liste", { annotationen }).then((r) => r.data),
+  annotationenZuOperationen: (
+    annotationen: Array<Record<string, unknown>>,
+    werkzeug_ids?: string[],
+  ): Promise<{
+    operationen: Array<{ id: string; name: string; typ: string; parameter: Record<string, unknown> }>;
+    hinweise: string[];
+  }> => api.post("/annotationen/zu-operationen", {
+    annotationen, werkzeug_ids,
+  }).then((r) => r.data),
+
+  // Quick-CAM
+  quickcamTemplates: (): Promise<Array<{
+    id: string; name: string; kurzbeschreibung: string; icon: string;
+    operation_typ: string;
+    parameter: Array<{
+      name: string; label: string; typ: string;
+      default: unknown; einheit?: string; hinweis?: string;
+    }>;
+  }>> => api.get("/quickcam/templates").then((r) => r.data),
+
+  quickcamErzeugen: (
+    template_id: string,
+    eingaben: Record<string, unknown>,
+    maschine_id: string,
+    werkzeug_id: string,
+    material_id: string,
+    projekt_name?: string,
+  ): Promise<{ projekt: unknown }> =>
+    api.post("/quickcam/erzeugen", {
+      template_id, eingaben, maschine_id, werkzeug_id, material_id, projekt_name,
+    }).then((r) => r.data),
+
+  // CuttingPresets
+  cuttingPresets: (filter?: {
+    material_id?: string; werkzeug_id?: string; operation_typ?: string;
+  }): Promise<Array<{
+    id: string; name: string; material_id: string; werkzeug_id: string;
+    operation_typ: string;
+    rpm: number; vorschub: number; plunge: number;
+    stepdown: number; stepover_prozent: number;
+    notizen?: string;
+  }>> => api.get("/cutting-presets/", { params: filter }).then((r) => r.data),
+  cuttingPresetSpeichern: (preset: Record<string, unknown>) =>
+    api.post("/cutting-presets/", preset).then((r) => r.data),
+  cuttingPresetLoeschen: (id: string) =>
+    api.delete(`/cutting-presets/${id}`).then((r) => r.data),
+
   // Workflow
   workflowPruefen: (variante: unknown): Promise<{
     hat_blocker: boolean;
@@ -194,6 +420,31 @@ export const camwosaApi = {
       variante, projekt_name, maschine_id, format: "pdf",
     }, { responseType: "blob" });
     return r.data as Blob;
+  },
+
+  // --- Projekt-Persistenz (Master-Plan D4) ---
+
+  projektNeu: (
+    name: string,
+    maschine_id: string,
+    rohmaterial: unknown,
+    autor: string = "",
+  ): Promise<unknown> =>
+    api.post("/projects/new", { name, maschine_id, rohmaterial, autor })
+       .then((r) => r.data),
+
+  projektSpeichern: async (projekt: unknown): Promise<Blob> => {
+    const r = await api.post("/projects/save", projekt, { responseType: "blob" });
+    return r.data as Blob;
+  },
+
+  projektLaden: async (datei: File): Promise<unknown> => {
+    const fd = new FormData();
+    fd.append("datei", datei);
+    const r = await api.post("/projects/load", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return r.data;
   },
 };
 

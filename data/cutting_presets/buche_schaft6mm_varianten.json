@@ -1,0 +1,31 @@
+[
+  {
+    "id": "buche__schaft_6mm_2s_hm__schruppen",
+    "name": "Buche + 6mm-Fraeser — Schruppen",
+    "material_id": "buche_massiv",
+    "werkzeug_id": "schaft_6mm_2s_hm",
+    "operation_typ": "schruppen",
+    "rpm": 18000,
+    "vorschub": 2400,
+    "plunge": 500,
+    "stepdown": 3.0,
+    "stepover_prozent": 50,
+    "quelle": "user",
+    "notizen": "Aggressives Schruppen — kuehlung Luft, Spanabnahme erlaubt sichtbare Rillen."
+  },
+  {
+    "id": "buche__schaft_6mm_2s_hm__schlichten",
+    "name": "Buche + 6mm-Fraeser — Schlichten",
+    "material_id": "buche_massiv",
+    "werkzeug_id": "schaft_6mm_2s_hm",
+    "operation_typ": "schlichten",
+    "rpm": 20000,
+    "vorschub": 1200,
+    "plunge": 250,
+    "stepdown": 0.5,
+    "stepover_prozent": 15,
+    "rampen_winkel_grad": 3,
+    "quelle": "user",
+    "notizen": "Saubere Oberflaeche, flacher Eintauchwinkel."
+  }
+]

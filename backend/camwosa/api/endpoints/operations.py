@@ -10,6 +10,13 @@ from camwosa.cam import (
     erzeuge_kontur_toolpath,
     erzeuge_tasche_toolpath,
 )
+from camwosa.cam.drechseln import erzeuge_drechsel_toolpath
+from camwosa.cam.parameter import DrechselParameter
+from camwosa.cam.wrap import (
+    WrapParameter,
+    erzeuge_wrap_toolpath,
+    pruefe_design_fuer_radius,
+)
 from camwosa.cam.overrides import (
     BohrOverrides,
     GravurOverrides,
@@ -88,6 +95,69 @@ def gravur():
     param = GravurParameter.model_validate(data["parameter"])
     tp = erzeuge_gravur_toolpath(geo, werkzeug, param)
     return jsonify(_serialize_toolpath(tp))
+
+
+@bp.post("/drechseln")
+def drechseln():
+    """Drechsel-Operation auf der Rotary-Achse.
+
+    Body: ``{ werkzeug_id, parameter }`` — Parameter enthaelt das Profil
+    (Liste von [laenge_x_mm, radius_mm]), Strategie, Rohmaterial-Radius etc.
+    """
+    data = request.get_json() or {}
+    werkzeuge = {t.id: t for t in lade_werkzeuge()}
+    werkzeug_id = data.get("werkzeug_id")
+    if werkzeug_id not in werkzeuge:
+        return jsonify({"fehler": f"Werkzeug {werkzeug_id} unbekannt"}), 404
+    try:
+        param = DrechselParameter.model_validate(data["parameter"])
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    try:
+        tp = erzeuge_drechsel_toolpath(
+            werkzeug_id, param, werkzeug=werkzeuge[werkzeug_id],
+        )
+    except ValueError as e:
+        return jsonify({"fehler": str(e)}), 422
+    return jsonify(_serialize_toolpath(tp))
+
+
+@bp.post("/wrap")
+def wrap():
+    """Wrap-Operation: 2D-Pfad auf einen rotierenden Zylinder wickeln.
+
+    Body: ``{ werkzeug_id, punkte_xy: [[x, y], ...], parameter }``.
+    Y wird per Postprozessor zu Y-in-Grad = A-Achsen-Winkel.
+    """
+    data = request.get_json() or {}
+    werkzeuge = {t.id: t for t in lade_werkzeuge()}
+    werkzeug_id = data.get("werkzeug_id")
+    if werkzeug_id not in werkzeuge:
+        return jsonify({"fehler": f"Werkzeug {werkzeug_id} unbekannt"}), 404
+    try:
+        param = WrapParameter(**(data.get("parameter") or {}))
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    punkte_xy = [(float(p[0]), float(p[1])) for p in data.get("punkte_xy", [])]
+    # Sicherheits-Pruefung
+    warnungen = pruefe_design_fuer_radius(punkte_xy, param.werkstueck_radius_mm)
+    try:
+        tp = erzeuge_wrap_toolpath(punkte_xy, werkzeuge[werkzeug_id], param)
+    except ValueError as e:
+        return jsonify({"fehler": str(e), "warnungen": warnungen}), 422
+    out = _serialize_toolpath(tp)
+    out["warnungen"] = warnungen
+    return jsonify(out)
+
+
+@bp.post("/wrap/pruefe")
+def wrap_pruefe():
+    """Nur Design-Pruefung ohne Toolpath-Generierung."""
+    data = request.get_json() or {}
+    punkte_xy = [(float(p[0]), float(p[1])) for p in data.get("punkte_xy", [])]
+    radius = float(data.get("werkstueck_radius_mm", 20.0))
+    warnungen = pruefe_design_fuer_radius(punkte_xy, radius)
+    return jsonify({"gueltig": not warnungen, "warnungen": warnungen})
 
 
 @bp.post("/aufloesen")

@@ -16,6 +16,8 @@ import type {
 import { useAktiveMaschine, useAppStore } from "../state/store";
 import OverrideOperationForm from "../components/OverrideOperationForm";
 import FeedsSpeedsPanel from "../components/FeedsSpeedsPanel";
+import OperationPreview3D, { VorschauModusToggle, istHeavy } from "../components/OperationPreview3D";
+import { useUIPrefs } from "../state/uiPrefs";
 
 const OP_LABELS: Record<OperationsTyp, string> = {
   kontur: "Kontur",
@@ -295,12 +297,124 @@ export default function OperationenView() {
               <SicherheitsZusammenfassung bericht={aktiveOp.sicherheits_bericht} />
             )}
 
+            <LivePreviewPanel op={aktiveOp} geometrien={geometrien} />
+
             {aktiveOp.toolpath && <ToolpathStats toolpath={aktiveOp.toolpath} />}
           </>
         )}
       </main>
     </div>
   );
+}
+
+/**
+ * Live-3D-Vorschau der aktiven Operation — reagiert auf Parameter-Aenderungen
+ * (max_tiefe, geometrie) ohne Toolpath-Berechnung.
+ *
+ * Wechselbar: Aus / Vereinfacht / Komplett. Default kommt aus UIPrefs,
+ * pro Operation ueberschreibbar im Header. Bei „heavy" Vorschauen (viele
+ * Punkte) gibt es einen Performance-Hint.
+ */
+function LivePreviewPanel({
+  op, geometrien,
+}: { op: OperationEintrag; geometrien: GeometrieObjekt[] }) {
+  const standardModus = useUIPrefs((s) => s.vorschauModusDefault);
+  const [override, setOverride] = useState<"aus" | "vereinfacht" | "komplett" | null>(null);
+  const modus = override ?? standardModus;
+
+  const p = op.parameter as unknown as Record<string, unknown>;
+  const tiefe = typeof p.max_tiefe === "number" ? p.max_tiefe : 5;
+
+  // Werkstueck-Defaults — wenn kein Projekt-Rohmaterial bekannt ist
+  const werkstueck = { laenge: 200, breite: 200, hoehe: Math.max(tiefe + 2, 12) };
+
+  // Vorschau aus der ersten passenden Geometrie ableiten
+  const vorschau = useVorschau(op, geometrien, tiefe);
+  const heavy = istHeavy(vorschau);
+
+  return (
+    <section className="rounded border border-gray-700 bg-camwosa-surface p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-sm font-semibold">
+          Live-Vorschau
+          <span className="ml-2 text-xs font-normal text-camwosa-muted">
+            reagiert auf Parameter-Aenderungen
+          </span>
+        </h3>
+        <VorschauModusToggle
+          modus={modus}
+          onChange={(m) => setOverride(m)}
+          hint={heavy ? 'viele Punkte — „Vereinfacht" empfohlen' : undefined}
+        />
+      </div>
+      <OperationPreview3D
+        werkstueck={werkstueck}
+        vorschau={vorschau}
+        modus={modus}
+        hoehe={260}
+      />
+    </section>
+  );
+}
+
+function useVorschau(
+  op: OperationEintrag,
+  geometrien: GeometrieObjekt[],
+  tiefe: number,
+):
+  | { typ: "tasche"; breite: number; hoehe: number; tiefe: number; x?: number; y?: number }
+  | { typ: "bohrloecher"; punkte: [number, number][]; tiefe: number; durchmesser: number }
+  | { typ: "kontur"; pfad: [number, number][]; tiefe: number }
+  | { typ: "gravur"; pfade: [number, number][][]; tiefe: number }
+  | null
+{
+  if (op.typ === "tasche") {
+    const geo = geometrien.find((g) => g.geschlossen) ?? geometrien[0];
+    if (!geo) return null;
+    const bbox = bboxOf(geo);
+    if (!bbox) return null;
+    return {
+      typ: "tasche", tiefe,
+      breite: bbox.w, hoehe: bbox.h, x: bbox.x, y: bbox.y,
+    };
+  }
+  if (op.typ === "bohren") {
+    const punkte: [number, number][] = bohrpunkte(geometrien);
+    if (!punkte.length) return null;
+    const w = op.werkzeug_id;
+    // Werkzeug-Durchmesser zur Hand haben waere besser; fallback 3 mm.
+    return { typ: "bohrloecher", punkte, tiefe, durchmesser: 3 };
+  }
+  if (op.typ === "kontur") {
+    const geo = geometrien[0];
+    if (!geo || geo.typ === "kreis" || geo.typ === "punkt") return null;
+    return { typ: "kontur", pfad: geo.punkte as [number, number][], tiefe };
+  }
+  if (op.typ === "gravur") {
+    const pfade: [number, number][][] = [];
+    for (const g of geometrien) {
+      if (g.typ !== "kreis" && g.typ !== "punkt") {
+        pfade.push(g.punkte as [number, number][]);
+      }
+    }
+    if (!pfade.length) return null;
+    return { typ: "gravur", pfade, tiefe };
+  }
+  return null;
+}
+
+function bboxOf(geo: GeometrieObjekt): { x: number; y: number; w: number; h: number } | null {
+  if (geo.typ === "kreis") {
+    const r = (geo.attribute?.radius as number) ?? 0;
+    return { x: geo.punkte[0][0] - r, y: geo.punkte[0][1] - r, w: r * 2, h: r * 2 };
+  }
+  if (!geo.punkte.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [x, y] of geo.punkte) {
+    if (x < minX) minX = x; if (y < minY) minY = y;
+    if (x > maxX) maxX = x; if (y > maxY) maxY = y;
+  }
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
 
 function anzahlOverrides(op: OperationEintrag): number {

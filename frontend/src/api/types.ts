@@ -73,6 +73,14 @@ export type WerkzeugTyp =
   | "v_bit" | "gravierstichel" | "bohrer"
   | "einschneider" | "fischschwanz" | "schruppfraeser" | "diamantgravierer";
 
+export interface WerkzeugSegment {
+  z_unten: number;
+  z_oben: number;
+  durchmesser_unten: number;
+  durchmesser_oben: number;
+  ist_schneide: boolean;
+}
+
 export interface Werkzeug {
   id: string;
   name: string;
@@ -84,8 +92,15 @@ export interface Werkzeug {
   schneidlaenge: number;
   gesamtlaenge: number;
   schneiden: number;
+  segmente?: WerkzeugSegment[];
+  halter_segmente?: WerkzeugSegment[];
   spitzenwinkel?: number | null;
   spitzenradius?: number | null;
+  spitzendurchmesser?: number | null;
+  max_arbeitstiefe_mm?: number | null;
+  standzeit_max_minuten?: number | null;
+  drehrichtung?: "cw" | "ccw";
+  steigung?: "upcut" | "downcut" | "compression" | "neutral";
   notizen?: string;
 }
 
@@ -203,7 +218,44 @@ export interface GravurParameter extends OperationParameterBasis {
 // --- Toolpath ---
 
 export type BewegungsTyp = "eilgang" | "linear" | "bogen_cw" | "bogen_ccw" | "plunge";
-export type OperationsTyp = "kontur" | "tasche" | "bohren" | "gravur" | "relief" | "eilgang";
+export type OperationsTyp = "kontur" | "tasche" | "bohren" | "gravur" | "relief" | "drechseln" | "eilgang";
+
+export type DrechselStrategie =
+  | "laengs_schruppen" | "profil_schlichten" | "schrupp_und_schlicht" | "helix";
+
+export interface WrapParameter {
+  werkzeug_id: string;
+  spindel_rpm: number;
+  vorschub: number;
+  eintauch_vorschub: number;
+  sicherheitshoehe?: number;
+  werkstueck_radius_mm: number;
+  max_tiefe: number;
+  stepdown?: number;
+  geschlossen?: boolean;
+  aufmass_y_mm?: number;
+}
+
+export interface DrechselParameter {
+  werkzeug_id: string;
+  spindel_rpm: number;
+  vorschub: number;
+  eintauch_vorschub: number;
+  sicherheitshoehe: number;
+  max_tiefe: number;
+  stepdown: number;
+  strategie: DrechselStrategie;
+  rohmaterial_radius_mm: number;
+  aufmass_schlichten_mm: number;
+  schlicht_zustellung_mm: number;
+  drehzahl_werkstueck_upm: number;
+  profil: Array<[number, number]>;
+  helix_steigung_mm_pro_umdrehung?: number;
+  helix_tiefe_mm?: number;
+  helix_anzahl_passes?: number;
+  helix_x_start_mm?: number | null;
+  helix_x_ende_mm?: number | null;
+}
 
 export interface Bewegung {
   typ: BewegungsTyp;

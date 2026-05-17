@@ -15,71 +15,81 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [Glossar](Glossar.md) — Begriffe aus CAM, CNC und CAMWOSA-spezifisch
 - [Contribution-Guide](Contribution.md) — Wie man am Projekt mitarbeitet
 
-### Funktionen (werden befüllt sobald implementiert)
+### Aktueller Stand
+- [**STATUS.md**](../../STATUS.md) — Live-Snapshot was läuft, was offen ist (Modul-Tabelle, Test-Stand, nächste Schritte)
 
-#### Kern (Backend)
+### Funktionen
+
+#### Daten & Stammdaten
 - [Datenmodell](Datenmodell.md) — Maschinen, Werkzeuge, Material, Projekt
-- [Spindel](Spindel.md) — Spindel-System mit Multi-Spindel + Sharing
-- [Maschinenprofil-Format](Maschinenprofil-Format.md) — JSON-Schema + Sharing
-- [Maschine-ProVerXL-4030-V2](Maschine-ProVerXL-4030-V2.md) — Test-Maschine
-- [CAD-Import](CAD-Import.md) — DXF, SVG, STL, STEP + Plugin-System fuer Maker-CAD
-- [DXF-Import](DXF-Import.md) — DXF-Parsing mit ezdxf
-- [STL-Import](STL-Import.md) — STL für 2.5D-Relief
-- [GRBL-Postprozessor](Postprozessor-GRBL.md) — G-Code für GRBL-Maschinen
-- [GRBL-Postprozessor (Genmitsu)](Postprozessor-GRBL-Genmitsu.md) — Genmitsu-Spezialitäten
-- [GRBL-Postprozessor (Rotary)](Postprozessor-GRBL-Rotary.md) — Y-Achse als Rotationsachse
-- [Postprozessor-Plugin-System](Postprozessor-Plugins.md) — Erweiterbarkeit für eigene Postprozessoren
-- [CAM-Operation: Kontur](Operation-Kontur.md) — Innen-/Außenkontur, Tabs, Lead-In/Out
-- [CAM-Operation: Tasche](Operation-Tasche.md) — Pocketing-Strategien
-- [CAM-Operation: Bohren](Operation-Bohren.md) — Drilling-Zyklen
-- [CAM-Operation: Gravur](Operation-Gravur.md) — Einfache Gravur und V-Carving
-- [CAM-Operation: Relief](Operation-Relief.md) — 2.5D-Relief aus STL
-- [Feeds & Speeds Rechner](Feeds-Speeds.md) — Berechnung optimaler Schnittparameter
-- [Per-Feature-Override](Per-Feature-Override.md) — pro Operation einzelne Parameter ueberschreiben/zuruecksetzen
-- [Bohrbild-Erkennung](Bohrbild-Erkennung.md) — Raster/Polar aus DXF-Kreisen
+- [Spindel](Spindel.md) — Multi-Spindel + Sharing
+- [Maschinenprofil-Format](Maschinenprofil-Format.md) — JSON-Schema
+- [CuttingPreset](CuttingPreset.md) — Schnittparameter als Top-Level-Entitaet
+- [CRUD-API](CRUD-API.md) — POST/PUT/DELETE für alle Stammdaten
+- [Werkzeug-Format](Werkzeug-Format.md) / [Werkzeug-Typen](Werkzeug-Typen.md)
+- [Material-Holz](Material-Holz.md) · [Holzwerkstoffe](Material-Holzwerkstoffe.md) · [Kunststoffe](Material-Kunststoffe.md) · [NE-Metalle](Material-NE-Metalle.md) · [Sonstiges](Material-Sonstiges.md)
+
+#### CAD-Import + Zeichnen
+- [CAD-Import](CAD-Import.md) — Plugin-System für DXF/SVG/STL/STEP
+- [DXF-Import](DXF-Import.md) · [STL-Import](STL-Import.md)
+- [Integriertes Zeichnen](Zeichnen.md) — Konva, 2D-CAD
+- [Geometrie-Annotationen](Geometrie-Annotationen.md) — Anschlagbohrungen, Refpunkte, Auto-Op-Generator
+
+#### CAM-Operationen
+- [Operation Kontur](Operation-Kontur.md) — Innen-/Außenkontur, Tabs, Lead
+- [Operation Tasche](Operation-Tasche.md) — Pocketing-Strategien
+- [Operation Bohren](Operation-Bohren.md) — Drilling-Zyklen
+- [Operation Gravur](Operation-Gravur.md) — Gravur + V-Carving
+- [Operation Relief](Operation-Relief.md) — 2.5D-Relief aus STL
+- [Drechseln](Drechseln.md) — Continuous-Lathe-Mode, rotationssymmetrische Werkstuecke (Vasen, Schalen, Drechsel-Saeulen)
+- [Wrap-Mode](Wrap-Mode.md) — 2D-Design auf Zylinder wickeln (Schriftzug/Logo/Kontur auf Rundmaterial)
+- [Bild-zu-Relief](Bild-zu-Relief.md) ✅ Phase A+B+C+D+E — Bild→Heightmap, Wrap auf Zylinder, 6 Bearbeitungsfilter, optional AI-Tiefenschaetzung
+- [Text-zu-Pfad](Text-zu-Pfad.md) ✅ — Font → Outline-Polygone fuer Beschriftung/Wrap/Gravur
 - [Spezial-Operationen](Spezial-Operationen.md) — T-Nut, Schwalbenschwanz, Fase
-- [PCB-Fraesen](PCB-Fraesen.md) — Isolationsfraesen
-- [Adaptive-Clearing](Adaptive-Clearing.md) — Trochoidales Fraesen
-- [Standzeit-Tracking](Standzeit-Tracking.md) — Werkzeug-Standzeit
+- [PCB-Fraesen](PCB-Fraesen.md) — Isolation
+- [Adaptive-Clearing](Adaptive-Clearing.md) — Trochoidal
+- [Bohrbild-Erkennung](Bohrbild-Erkennung.md) — Raster/Polar
 - [Operations-Plugins](Operations-Plugins.md) — eigene Operations-Typen
-- [Sicherheits-Checks](Sicherheits-Checks.md) — Crash-Vermeidung
-- [Multi-Setup Workflow](Workflow-Modul.md) — Mehrere Aufspannungen + Arbeitsplan
-- [Nesting / Verschnittoptimierung](Nesting.md) — Mehrere Teile auf einer Platte
-- [Projekt-Format (.cwp)](Projekt-Format.md) — Speichern, Laden, Varianten
-- [Flask-API](API.md) — REST-Endpoints (lokal)
+- [Per-Feature-Override](Per-Feature-Override.md) — pro Operation überschreiben
+- [Feeds & Speeds Rechner](Feeds-Speeds.md)
+
+#### Workflow
+- [Multi-Setup Workflow](Workflow-Modul.md) — mehrere Aufspannungen + Arbeitsplan
+- [ArbeitsSchritt](ArbeitsSchritt.md) — flexible Workflow-Schritte
+- [Multi-Werkzeug-Setup](Multi-Werkzeug-Setup.md) — Schruppen + Schlichten mit G-Code-Strategie
+- [QuickCAM](QuickCAM.md) — Schnellstart-Templates
+- [Standzeit-Tracking](Standzeit-Tracking.md)
+
+#### G-Code
+- [GRBL-Postprozessor](Postprozessor-GRBL.md) · [Genmitsu-Spezial](Postprozessor-GRBL-Genmitsu.md) · [Rotary](Postprozessor-GRBL-Rotary.md)
+- [Postprozessor-Plugins](Postprozessor-Plugins.md)
+- [G-Code-Editor](GCode-Editor.md) — Monaco
+- [Sicherheits-Checks](Sicherheits-Checks.md)
 
 #### Frontend
-- [Electron-App](Electron-App.md) — Desktop-Wrapper
-- [React-Frontend](Frontend.md) — Aufbau, State, i18n
-- [2D-Toolpath-Preview](Preview-2D.md) — Konva-basierte Vorschau
-- [3D-Simulation](Simulation-3D.md) — Three.js-basierte Simulation
-- [Integriertes Zeichnen](Zeichnen.md) — LightBurn-inspiriertes 2D-CAD
-- [G-Code-Editor](GCode-Editor.md) — Monaco-basierter Editor
+- [Electron-App](Electron-App.md) · [React-Frontend](Frontend.md)
+- [Design-System](Design-System.md) — Tokens, Theme, Density 10"–34", Vorschau-Modi
+- [UI-Integration](UI-Integration.md) — welcher Editor in welcher View
+- [First-Run-Wizard](First-Run-Wizard.md) — 4-Schritt-Onboarding
+- [Tooltip-System](Tooltip-System.md) — 3 Stufen (Wert / Fachbegriff / Coach-Mark)
+- [2D-Toolpath-Preview](Preview-2D.md) · [3D-Simulation](Simulation-3D.md)
+- [Material-Abtrag-Simulation](Material-Abtrag-Simulation.md) — Voxel-basiert, zeigt fertiges Werkstueck
 
-#### Integration
-- [MCP-Server](MCP-Server.md) — Claude-Integration als zweite Bedienoberfläche
-- [Installer](Installer.md) — Cross-Platform-Installation
-
-### Maschinen-Profile
-- [Genmitsu ProVerXL 4030 V2](Maschine-ProVerXL-4030-V2.md) — Markus' Test-Maschine
-- [Maschinen-Profil-Format](Maschinenprofil-Format.md) — Aufbau und Felder
-
-### Material-Datenbank
-- [Holz](Material-Holz.md)
-- [Holzwerkstoffe](Material-Holzwerkstoffe.md)
-- [Kunststoffe](Material-Kunststoffe.md)
-- [NE-Metalle](Material-NE-Metalle.md)
-- [Sonstiges](Material-Sonstiges.md)
-
-### Werkzeug-Bibliothek
-- [Werkzeug-Typen](Werkzeug-Typen.md)
-- [Werkzeug-Format](Werkzeug-Format.md)
+#### Sonstiges
+- [Maschine ProVerXL 4030 V2](Maschine-ProVerXL-4030-V2.md) — Markus' Setup
+- [Nesting](Nesting.md) — Verschnittoptimierung
+- [Projekt-Format (.cwp)](Projekt-Format.md) — ZIP-Container
+- [Varianten](Varianten.md) — mehrere Strategien pro Projekt (geteilte Geometrie, eigene Operationen/Setups/Rohmaterial)
+- [Flask-API](API.md)
+- [MCP-Server](MCP-Server.md) — Claude-Integration (40+ Tools)
+- [MCP-AutoCAM](MCP-AutoCAM.md) — `auto_cam_erstellen`: Claude erzeugt komplette Bearbeitung aus High-Level-Aufgabe
+- [Installer](Installer.md)
 
 ---
 
 ## Status der Implementierung
 
-Den aktuellen Stand pro Funktion findest du im [Master-Plan](Master-Plan.md). Jede dort aufgelistete Funktion hat im Status-Feld einen Hinweis ob sie geplant, in Arbeit oder fertig ist. Sobald eine Funktion fertig ist, ersetzt der zugehörige Wiki-Eintrag den Stub.
+Den aktuellen Stand pro Funktion findest du in [STATUS.md](../../STATUS.md) (Live-Snapshot) oder im [Master-Plan](Master-Plan.md) (langfristige Roadmap).
 
 ---
 

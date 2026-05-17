@@ -29,6 +29,7 @@ class OperationsTyp(str, Enum):
     BOHREN = "bohren"
     GRAVUR = "gravur"
     RELIEF = "relief"
+    DRECHSELN = "drechseln"
     EILGANG = "eilgang"
 
 
