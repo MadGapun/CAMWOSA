@@ -59,6 +59,7 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | A36 | Bild-zu-Relief — Phase E (`[ai]`-Extra): AI-Tiefenschaetzung Scaffolding (Depth-Anything-V2 + MiDaS via HuggingFace transformers, Lazy-Import, 3 Modelle, API `/aus-bild-ai` + `/ai/modelle`, 422+Hinweis ohne Extra, 9 Tests + 1 Integration-Smoke) | [#18](https://github.com/MadGapun/CAMWOSA/issues/18) | [Bild-zu-Relief](Bild-zu-Relief.md#stufe-3-ai-basierte-tiefenbild-generierung-anspruchsvoll) | ✅ |
 | A37 | Text-zu-Pfad-Konverter (fontTools-basiert, System-Font-Fallback, Loch-Erkennung via Contains-Hierarchie, integriert in `auto_cam_erstellen.beschriftung_wrap`, 2 API-Endpoints + 18 Tests) | [#19](https://github.com/MadGapun/CAMWOSA/issues/19) | [Text-zu-Pfad](Text-zu-Pfad.md) · [Wrap-Mode](Wrap-Mode.md) | ✅ |
 | A38 | DXF-Import in Wrap-Editor: Backend-Skalierungs-Helper `skaliere_pattern_fuer_werkstueck` (3 Modi: feste/auf_werkstueck/wiederholen) + Batch-Toolpath fuer Polygon-Listen + 2 API-Endpoints + 18 Tests. Frontend-Integration ist D24/Wrap-View | [#20](https://github.com/MadGapun/CAMWOSA/issues/20) | [Wrap-Mode](Wrap-Mode.md#pattern-skalierung-master-plan-a38) | ✅ |
+| A39 | Werkzeug-Typen-Erweiterung: V-Bit-Spitzenwinkel-Range 1-179° (statt nur 30/60/90), neuer Typ `BALLNOSE_V_BIT` mit `spitzendurchmesser` Feld, Default-Werkzeuge ergaenzen (V-Bits 10°/15°/20°/45° + 2 Ballnose-Defaults). cam/gravur.py + cam/relief.py muessen BALLNOSE_V_BIT korrekt handhaben. Aus Markus' Relief-Workflow. | [#24](https://github.com/MadGapun/CAMWOSA/issues/24) | [Werkzeug-Typen](Werkzeug-Typen.md) | ⬜ |
 
 ## Teil B — REST-API + MCP
 
@@ -113,6 +114,8 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | D23 | Wrap-Preview3D (Three.js-Komponente: 2D-Pfad auf Zylinder gewickelt anzeigen mit Pattern-Skalierung) | — | [Wrap-Mode](Wrap-Mode.md) | ✅ |
 | D24 | Operation-Preview3D (Three.js-Komponente: Toolpath einer einzelnen Operation in 3D) | — | [Simulation-3D](Simulation-3D.md) | ✅ |
 | D25 | Bild-Relief-Filterpanel — Frontend zu Phase D: `HeightmapFilterStack`-Komponente mit Filter-Liste (6 Filter), Reorder ↑↓, Toggle, Reset, Live-Anwendung gegen Backend-Endpoints + AI-Toggle in `BildReliefView` (Phase E). Three.js-3D-Preview folgt als spaetere Iteration. | [#17](https://github.com/MadGapun/CAMWOSA/issues/17) | [Bild-zu-Relief](Bild-zu-Relief.md) | ✅ |
+| D26 | First-Run-Wizard: Maschine + Spindel im Wizard direkt anlegen statt nur aus Default-Liste waehlen. Quick-Add-Inline-Form mit Pflichtfeldern, reuse Backend-CRUD-Validierung. Aus Markus' Alpha-0-Feedback. | [#22](https://github.com/MadGapun/CAMWOSA/issues/22) | [First-Run-Wizard](First-Run-Wizard.md) | ⬜ |
+| D27 | First-Run-Wizard: Werkzeug im Wizard direkt anlegen + optional Werkzeug-Set-Import (JSON-Bundle). Quick-Add mit dynamischen Feldern je Typ (V-Bit braucht Spitzenwinkel, Ballnose-V-Bit braucht zusaetzlich Spitzendurchmesser). | [#23](https://github.com/MadGapun/CAMWOSA/issues/23) | [First-Run-Wizard](First-Run-Wizard.md) | ⬜ |
 
 ## Teil E — Polish und Pro-Features
 
