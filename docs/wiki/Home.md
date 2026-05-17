@@ -46,6 +46,8 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [Bild-zu-Relief](Bild-zu-Relief.md) ✅ Phase A+B+C+D+E — Bild→Heightmap, Wrap auf Zylinder, 6 Bearbeitungsfilter, optional AI-Tiefenschaetzung
 - [Text-zu-Pfad](Text-zu-Pfad.md) ✅ — Font → Outline-Polygone fuer Beschriftung/Wrap/Gravur
 - [Spezial-Operationen](Spezial-Operationen.md) — Uebersicht ueber T-Nut/Schwalbenschwanz/Fase + Module unten
+- [Dogbone-Slots](Dogbone-Slots.md) — Innenecken aufweiten fuer Steckverbindungen
+- [Lithophane](Lithophane.md) — durchscheinendes Bild im Material (Backlight-Effekt)
 - [Drag-Engraving](Drag-Engraving.md) — Diamantgravierer/Schleppgravierer mit Spindel-AUS + Ecken-Dwell
 - [Auto-Inlay](Auto-Inlay.md) — Tasche+Plug aus EINER Kontur (Einlegearbeit)
 - [Thread-Milling](Thread-Milling.md) — Gewindefraesen mit Helix-Bewegung
@@ -70,6 +72,8 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [G-Code-Editor](GCode-Editor.md) — Monaco
 - [Sicherheits-Checks](Sicherheits-Checks.md)
 - [Z-Grid-Diagnose](Z-Grid-Diagnose.md) — Werkstuecks-Ebenheit aus Z-Probing-Daten analysieren
+- [Spannmittel](Spannmittel.md) — 8 Spannmittel-Typen mit strukturierten Sperrzonen
+- [Run-Lock + Dependency-Graph](Run-Lock.md) — "Im Zweifel laeuft das Programm nicht"
 
 #### Frontend
 - [Electron-App](Electron-App.md) · [React-Frontend](Frontend.md)
