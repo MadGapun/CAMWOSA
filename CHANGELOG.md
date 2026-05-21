@@ -4,6 +4,67 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.6] — 2026-05-21
+
+**3D-Frässtrategien-Auftakt + Fusion-CAM-Analyse.** Markus' Wunsch, Fusion
+360 CAM als Industrie-Referenz auszuwerten und CAMWOSA Richtung echtes
+3D-Schlichten auszubauen. Live gegen die Fusion-CAM-API verifiziert.
+
+### Fusion-CAM-Analyse (neu: `docs/FUSION-CAM-VERGLEICH.md`)
+
+Vollständiger Vergleich Fusion-CAM ↔ CAMWOSA: 16 Fusion-Strategien, Setup/
+Stock-Modell, GAP-Tabelle, Master-Plan-Kandidaten. Live gegen die echte
+Fusion-CAM-API geprüft (Strategien-IDs, ~250-400 Parameter pro Operation, der
+fräsrelevante Kern davon gefiltert). Ergebnis: neuer **Cluster I — Echte
+3D-Frässtrategien** (Issue #45, Master-Plan I1–I6).
+
+**Fachliche Einordnung:** Für 3-Achs (ProVerXL) ist die STL-Heightmap-Basis
+korrekt — Hinterschnitte kann die Maschine eh nicht. STL-Input ist damit voll
+abgedeckt (STL → Heightmap → 3D-Strategie). Der Hebel ist die Strategie-
+Qualität auf Fusion-Niveau, nicht das Geometrie-Format.
+
+### Cluster I1 — Planfräsen (`cam/planfraesen.py`, 11 Tests)
+
+✅ Eigene Op zum Ebnen rechteckiger Flächen (Spoilboard-Surfacing, Stock-Top).
+- Zickzack-Bahnen in N Z-Pässen, konfigurierbarer Überstand
+- **Synergie mit Z-Grid-Diagnose:** `aus_z_grid_befund()` leitet den Abtrag
+  aus der gemessenen Z-Spreizung ab — die Diagnose-Empfehlung „Werkstück
+  planen" hat jetzt eine Op dahinter
+- `POST /api/spezial-ops/planfraesen`
+
+### Cluster I2 — 3D-Parallel-Schlichten (`cam/strategie_3d.py`, 14 Tests)
+
+✅ Echtes 3D-Schlichten auf STL-Heightmap mit Fusion-Niveau-Parametern:
+- **Werkzeug-Form-Kompensation** via morphologischer Dilation (Kugel-,
+  Schaft-, Torusfräser-Profil) — der Werkzeug-Mittelpunkt folgt der Oberfläche
+  korrekt ohne Eindringen. numpy-vektorisiert, kein scipy.
+- **Beliebiger Bahn-Winkel** (passAngle), nicht nur X/Y
+- **Scallop-Stepover** — Bahnabstand aus gewünschter Riefenhöhe berechnet
+  (`stepover = 2·√(2·r·h − h²)`), oder fester Distanz-Stepover
+- **StockToLeave** (Aufmaß), **Toleranz**-basierte Bahn-Vereinfachung
+  (Douglas-Peucker), Zickzack-Modus
+- `POST /api/spezial-ops/3d-parallel` (Heightmap als base64)
+
+### Frontend
+
+- Client-Bindings `planfraesen` + `dreiDParallel` in `api/client.ts`.
+  UI-Views folgen wenn Markus die Backend-Strategien getestet hat.
+
+### Test-Status
+
+- Backend: **706 Tests grün** (+28 für alpha.6)
+- Frontend: vite build OK
+- Master-Plan: I1 + I2 ✅, I3–I6 dokumentiert (Issue #45)
+
+### Live-Verifikation gegen Fusion
+
+Bestätigt: MCP-CAM-Wrapper sind fragil bei Workspace-Wechseln (CAM-Produkt
+muss erst via Manufacture-Workspace initialisiert werden). `execute_code` mit
+direkter `adsk.cam`-API ist zuverlässiger. Strategie-IDs `parallel_new`,
+`scallop_new`, `face` verifiziert. Test-Artefakte in Fusion wieder aufgeräumt.
+
+---
+
 ## [0.0.1-alpha.5] — 2026-05-17
 
 **Backend-Erweiterungs-Release.** 5 neue CAM-Backend-Module + Diagnose-Tool

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "camwosa"
-version = "0.0.1a5"
+version = "0.0.1a6"
 description = "CAMWOSA Backend — 2.5D CAM für GRBL-Maschinen"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -33,9 +33,20 @@ from camwosa.cam.thread_milling import (
     ThreadMillingParameter,
     erzeuge_thread_milling_toolpath,
 )
+from camwosa.cam.planfraesen import (
+    PlanfraesFehler,
+    PlanfraesParameter,
+    erzeuge_planfraes_toolpath,
+)
+from camwosa.cam.strategie_3d import (
+    Strategie3DFehler,
+    Strategie3DParameter,
+    erzeuge_3d_parallel_toolpath,
+)
 from camwosa.api.endpoints.operations import _serialize_toolpath
 from camwosa.db.loader import lade_werkzeuge
 from camwosa.dxf.parser import GeometrieObjekt, GeometrieTyp, Punkt2D
+from camwosa.stl.heightmap import Heightmap
 
 bp = Blueprint("spezial_ops", __name__, url_prefix="/api/spezial-ops")
 
@@ -152,3 +163,71 @@ def radial_pfade_endpoint():
         return jsonify({"fehler": str(e)}), 422
     pfade = radial_pocket_pfade(parameter)
     return jsonify({"pfade": pfade, "anzahl": len(pfade)})
+
+
+@bp.post("/planfraesen")
+def planfraesen():
+    """Planfraesen (Cluster I1) — Spoilboard/Stock-Top ebnen."""
+    data = request.get_json() or {}
+    try:
+        parameter = PlanfraesParameter.model_validate(data["parameter"])
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    werkzeug, fehler = _werkzeug_oder_404(parameter.werkzeug_id)
+    if fehler:
+        return fehler
+    try:
+        tp = erzeuge_planfraes_toolpath(werkzeug, parameter)
+    except PlanfraesFehler as e:
+        return jsonify({"fehler": str(e)}), 422
+    return jsonify(_serialize_toolpath(tp))
+
+
+def _heightmap_aus_payload(daten: dict) -> Heightmap:
+    """Dekodiert eine Heightmap aus dem base64-Payload-Format (siehe /api/heightmap)."""
+    import base64
+
+    import numpy as np
+
+    shape = tuple(daten["shape"])
+    dtype = daten.get("z_values_dtype", "float32")
+    buf = base64.b64decode(daten["z_values_base64"])
+    z = np.frombuffer(buf, dtype=dtype).reshape(shape).astype(float)
+    return Heightmap(
+        z_values=z,
+        aufloesung=float(daten["aufloesung"]),
+        x_min=float(daten.get("x_min", 0.0)),
+        y_min=float(daten.get("y_min", 0.0)),
+        z_max=float(daten.get("z_max", float(z.max()))),
+    )
+
+
+@bp.post("/3d-parallel")
+def dreid_parallel():
+    """3D-Parallel-Schlichten (Cluster I2) auf einer STL-Heightmap.
+
+    Body:
+    {
+      "parameter": { Strategie3DParameter-Felder },
+      "heightmap": { shape, aufloesung, x_min, y_min, z_max, z_values_base64, z_values_dtype }
+    }
+    """
+    data = request.get_json() or {}
+    try:
+        parameter = Strategie3DParameter.model_validate(data["parameter"])
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    werkzeug, fehler = _werkzeug_oder_404(parameter.werkzeug_id)
+    if fehler:
+        return fehler
+    if "heightmap" not in data:
+        return jsonify({"fehler": "heightmap fehlt"}), 422
+    try:
+        hm = _heightmap_aus_payload(data["heightmap"])
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": f"Heightmap ungueltig: {e}"}), 422
+    try:
+        tp = erzeuge_3d_parallel_toolpath(hm, werkzeug, parameter)
+    except Strategie3DFehler as e:
+        return jsonify({"fehler": str(e)}), 422
+    return jsonify(_serialize_toolpath(tp))

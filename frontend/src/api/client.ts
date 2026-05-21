@@ -428,6 +428,21 @@ export const camwosaApi = {
   ): Promise<{ pfade: Array<Array<[number, number]>>; anzahl: number }> =>
     api.post("/spezial-ops/radial-pocket-pfade", parameter).then((r) => r.data),
 
+  // 3D-Frässtrategien (alpha.6, Cluster I)
+  planfraesen: (
+    parameter: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> =>
+    api.post("/spezial-ops/planfraesen", { parameter }).then((r) => r.data),
+  dreiDParallel: (
+    parameter: Record<string, unknown>,
+    heightmap: {
+      shape: [number, number]; aufloesung: number;
+      x_min: number; y_min: number; z_max: number;
+      z_values_dtype: string; z_values_base64: string;
+    },
+  ): Promise<Record<string, unknown>> =>
+    api.post("/spezial-ops/3d-parallel", { parameter, heightmap }).then((r) => r.data),
+
   // Geometrie-Annotationen
   annotationTypen: (): Promise<string[]> =>
     api.get("/annotationen/typen").then((r) => r.data),

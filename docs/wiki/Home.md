@@ -52,6 +52,8 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [Auto-Inlay](Auto-Inlay.md) — Tasche+Plug aus EINER Kontur (Einlegearbeit)
 - [Thread-Milling](Thread-Milling.md) — Gewindefraesen mit Helix-Bewegung
 - [Circular+Radial Pocketing](Circular-Radial-Pocketing.md) — Spiral- und Strahlen-Tasche
+- [Planfräsen](Planfraesen.md) — Spoilboard/Stock-Top ebnen (Cluster I1)
+- [3D-Frässtrategien](3D-Strategien.md) — echtes 3D-Schlichten auf STL-Heightmap (Cluster I)
 - [PCB-Fraesen](PCB-Fraesen.md) — Isolation
 - [Adaptive-Clearing](Adaptive-Clearing.md) — Trochoidal
 - [Bohrbild-Erkennung](Bohrbild-Erkennung.md) — Raster/Polar

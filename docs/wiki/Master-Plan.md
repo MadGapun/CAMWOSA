@@ -71,6 +71,19 @@ Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge
 | A48 | Projekt-Modell Dirty-Tracking — `OperationStatus` Enum (NEU/OK/DIRTY/BROKEN), `input_hash` + `letzte_berechnung` + `fehler_text` pro Operation. `workflow/run_lock.py` mit `darf_gcode_generieren()` + `pruefe_projekt()` + `markiere_abhaengige_dirty()` + `operation_input_hash()`. API-Endpoint `POST /api/workflow/run-lock`. **Markus' Regel: „Im Zweifel laeuft das Programm nicht."** 22 neue Tests. Schema-Version v2. Frontend-Visualisierung folgt in D35. | [#43](https://github.com/MadGapun/CAMWOSA/issues/43) | [Projekt-Format](Projekt-Format.md) · [Workflow-Modul](Workflow-Modul.md) | ✅ |
 | A49 | Multi-Setup mit **Werkstueck-Transformation** (Rotation/Spiegelung zwischen Setups, nicht nur Nullpunkt-Verschiebung) + **Maschinen-Umbau als eigener Pause-Typ** (Standard XYZ <-> Rotary) + strukturiertes Spannmittel pro Setup + Stabilitaets-Heuristik (letzter Setup = Boden-Setup) + optional Rest-Material-Tracking via Voxel zwischen Setups. Aus Markus' realen Workflows: 5-Sided Teelicht-Halter + Schale-mit-Rotary. Wizard „N-Sided Manual Flip". | [#44](https://github.com/MadGapun/CAMWOSA/issues/44) | [Workflow-Modul](Workflow-Modul.md) · [Multi-Werkzeug-Setup](Multi-Werkzeug-Setup.md) | ⬜ |
 
+### Cluster I — Echte 3D-Frässtrategien (aus Fusion-CAM-Analyse)
+
+Quelle: `docs/FUSION-CAM-VERGLEICH.md` (live gegen Fusion-CAM-API verifiziert). Basis ist die STL-Heightmap (`stl/heightmap.py`) — fuer 3-Achs fachlich korrekt (keine Hinterschnitte moeglich). Modul `cam/strategie_3d.py`.
+
+| Nr | Funktion | Issue | Wiki | Status |
+|----|----------|-------|------|--------|
+| I1 | **Planfräsen (`face`)** als eigene Op — Spoilboard/Stock-Top ebnen. stepover, passAngle, maximumStepdown, stockOffset, bothSides. Synergie mit Z-Grid-Diagnose („Werkstueck planen"-Empfehlung). `cam/planfraesen.py` + 11 Tests + API. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [Planfraesen](Planfraesen.md) | ✅ |
+| I2 | **3D-Parallel-Schlichten** auf STL-Heightmap — Werkzeug-Form-Dilation (Kugel/Schaft/Torus), beliebiger Bahn-Winkel, Scallop- + Distanz-Stepover, StockToLeave, tolerance-Bahn-Vereinfachung, Zickzack. `cam/strategie_3d.py` + 14 Tests + API. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [3D-Strategien](3D-Strategien.md) | ✅ |
+| I3 | **Steilheits-Trennung** — slope angle from/to + machineSteepAreas. Flach = Parallel, steil = Waterline/Contour. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+| I4 | **3D-Scallop-Schlichten** — konstante Riefenhoehe entlang Surface-Offset (nicht nur projiziert). Mathematisch aufwaendig. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+| I5 | **3D-Adaptive-Schruppen** — 3D mit konstantem Werkzeug-Eingriff (trochoidal, Z-Level). Erweitert 2D-Adaptive. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+| I6 | **Rest-Material-Tracking** zwischen Operationen (Stock = Voxel-Ergebnis vorheriger Pass). Verschraenkt mit A49. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+
 ## Teil B — REST-API + MCP
 
 | Nr | Funktion | Issue | Wiki | Status |

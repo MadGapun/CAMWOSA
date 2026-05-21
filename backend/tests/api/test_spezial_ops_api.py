@@ -127,3 +127,62 @@ class TestRadialPocketPfade:
         assert rv.status_code == 200
         data = rv.get_json()
         assert data["anzahl"] == 12
+
+
+class TestPlanfraesen:
+    def test_planfraesen(self, client, fraeser_werkzeug_id):
+        rv = client.post("/api/spezial-ops/planfraesen", json={
+            "parameter": {
+                "werkzeug_id": fraeser_werkzeug_id,
+                "spindel_rpm": 18000, "vorschub": 2000, "eintauch_vorschub": 600,
+                "x_min": 0, "y_min": 0, "x_max": 100, "y_max": 80,
+                "z_start": 0, "abtrag": 1.0, "maximaler_stepdown": 0.5,
+            },
+        })
+        assert rv.status_code == 200, rv.get_json()
+        data = rv.get_json()
+        assert data["metadaten"]["strategie"] == "planfraesen"
+
+
+class TestDreiDParallel:
+    def _heightmap_payload(self):
+        import base64
+        import numpy as np
+        z = np.zeros((20, 20), dtype="float32")
+        return {
+            "shape": [20, 20],
+            "aufloesung": 1.0,
+            "x_min": 0.0, "y_min": 0.0, "z_max": 0.0,
+            "z_values_dtype": "float32",
+            "z_values_base64": base64.b64encode(z.tobytes()).decode("ascii"),
+        }
+
+    def test_3d_parallel(self, client, isolierte_daten):
+        # Kugelfraeser anlegen
+        client.post("/api/tools/", json={
+            "id": "user_kugel_test", "name": "Kugel 3mm",
+            "typ": "kugelfraeser", "durchmesser": 3.0, "schaft_durchmesser": 3.0,
+            "schneidlaenge": 12, "gesamtlaenge": 40, "schneiden": 2,
+        })
+        rv = client.post("/api/spezial-ops/3d-parallel", json={
+            "parameter": {
+                "werkzeug_id": "user_kugel_test",
+                "spindel_rpm": 18000, "vorschub": 1500, "eintauch_vorschub": 400,
+                "stepover_modus": "distanz", "stepover_distanz_mm": 2.0,
+                "bahn_winkel_grad": 0, "aufmass_mm": 0, "toleranz_mm": 0.01,
+            },
+            "heightmap": self._heightmap_payload(),
+        })
+        assert rv.status_code == 200, rv.get_json()
+        data = rv.get_json()
+        assert data["metadaten"]["strategie"] == "3d_parallel"
+        client.delete("/api/tools/user_kugel_test")
+
+    def test_3d_parallel_fehlende_heightmap_422(self, client, fraeser_werkzeug_id):
+        rv = client.post("/api/spezial-ops/3d-parallel", json={
+            "parameter": {
+                "werkzeug_id": fraeser_werkzeug_id,
+                "spindel_rpm": 18000, "vorschub": 1500, "eintauch_vorschub": 400,
+            },
+        })
+        assert rv.status_code == 422

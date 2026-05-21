@@ -720,6 +720,119 @@ def spindel_loeschen(spindel_id: str) -> dict:
     return _delete(f"/api/spindles/{spindel_id}")
 
 
+# ---------------------------------------------------------------------------
+# Spezial-Operationen (alpha.5) + 3D-Frässtrategien (alpha.6, Cluster I)
+# MCP-Paritaet zur REST-API.
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def operation_drag_engraving(parameter: dict, geometrie) -> dict:
+    """Drag-Engraving / Schleppgravur mit Diamantgravierer (Spindel AUS).
+
+    Werkzeug muss Typ DRAG_GRAVIERER oder DIAMANTGRAVIERER sein.
+    Pflicht in ``parameter``: werkzeug_id. Optional: vorschub, eintauch_vorschub,
+    tiefe, dwell_an_ecken_sekunden, ecken_winkel_schwelle_grad,
+    lead_in_tangential_mm.
+
+    ``geometrie``: einzelnes GeometrieObjekt-dict oder Liste davon
+    (typ, layer, punkte, geschlossen)."""
+    return _post("/api/spezial-ops/drag-engraving", {
+        "parameter": parameter,
+        "geometrie": geometrie,
+    })
+
+
+@mcp.tool()
+def operation_auto_inlay(parameter: dict, geometrie: dict) -> dict:
+    """Auto-Inlay: erzeugt Tasche + passenden Plug aus EINER geschlossenen Kontur.
+
+    Pflicht in ``parameter``: werkzeug_radius_mm. Optional: spiel_mm,
+    tasche_tiefe_mm, plug_uebermass_oben_mm.
+
+    Liefert tasche_geometrie + plug_geometrie (als Polylinien) + Flaechen."""
+    return _post("/api/spezial-ops/auto-inlay", {
+        "parameter": parameter,
+        "geometrie": geometrie,
+    })
+
+
+@mcp.tool()
+def operation_thread_milling(parameter: dict) -> dict:
+    """Thread-Milling / Gewindefraesen mit Helix-Bewegung.
+
+    Pflicht in ``parameter``: werkzeug_id, spindel_rpm, vorschub,
+    eintauch_vorschub, nenn_durchmesser, gewinde_steigung, gewinde_tiefe.
+    Optional: art (innen/aussen), richtung (rechts/links), mittelpunkt_x/y,
+    z_oberkante, segmente_pro_umdrehung."""
+    return _post("/api/spezial-ops/thread-milling", {"parameter": parameter})
+
+
+@mcp.tool()
+def circular_pocket_pfade(parameter: dict) -> dict:
+    """Circular-Pocketing: konzentrische Kreis-Spiralen.
+
+    Pflicht in ``parameter``: aussen_radius, werkzeug_durchmesser.
+    Optional: mittelpunkt_x/y, stepover_prozent, von_aussen_nach_innen,
+    fertigungs_aufmass."""
+    return _post("/api/spezial-ops/circular-pocket-pfade", parameter)
+
+
+@mcp.tool()
+def radial_pocket_pfade(parameter: dict) -> dict:
+    """Radial-Pocketing: Sonnenstrahlen vom Mittelpunkt.
+
+    Pflicht in ``parameter``: aussen_radius, werkzeug_durchmesser.
+    Optional: mittelpunkt_x/y, anzahl_speichen, fertigungs_aufmass."""
+    return _post("/api/spezial-ops/radial-pocket-pfade", parameter)
+
+
+@mcp.tool()
+def diagnose_z_grid(messpunkte: list[dict], werkzeug_typ: str = "schaftfraeser") -> dict:
+    """Z-Grid-Diagnose: ist das Werkstueck eben aufgespannt?
+
+    ``messpunkte``: Liste von {x, y, z} aus Z-Probing.
+    ``werkzeug_typ``: beeinflusst die Schwellwerte (Schlicht-Werkzeuge strenger).
+
+    Liefert Befund (eben_ok/leichte_neigung/starke_neigung/unebene_oberflaeche)
+    + Klartext + Empfehlung + Neigung."""
+    return _post("/api/diagnostics/z-grid", {
+        "messpunkte": messpunkte,
+        "werkzeug_typ": werkzeug_typ,
+    })
+
+
+@mcp.tool()
+def operation_planfraesen(parameter: dict) -> dict:
+    """Planfraesen / Face-Milling — rechteckige Flaeche ebnen (Cluster I1).
+
+    Pflicht in ``parameter``: werkzeug_id, spindel_rpm, vorschub,
+    eintauch_vorschub, x_max, y_max, abtrag. Optional: x_min, y_min, z_start,
+    maximaler_stepdown, richtung (x/y), stepover_prozent, ueberstand_mm.
+
+    Synergie mit Z-Grid-Diagnose: bei „unebene_oberflaeche" diese Op zum Planen."""
+    return _post("/api/spezial-ops/planfraesen", {"parameter": parameter})
+
+
+@mcp.tool()
+def operation_3d_parallel(parameter: dict, heightmap: dict) -> dict:
+    """3D-Parallel-Schlichten auf STL-Heightmap (Cluster I2).
+
+    Pflicht in ``parameter``: werkzeug_id, spindel_rpm, vorschub,
+    eintauch_vorschub. Optional: stepover_modus (distanz/scallop),
+    stepover_distanz_mm, scallop_hoehe_mm, bahn_winkel_grad, aufmass_mm,
+    toleranz_mm, zickzack.
+
+    ``heightmap``: {shape, aufloesung, x_min, y_min, z_max, z_values_dtype,
+    z_values_base64} — z.B. aus dem STL-Import oder Bild-zu-Heightmap.
+
+    Werkzeug-Form wird beruecksichtigt (Kugel/Schaft/Torus)."""
+    return _post("/api/spezial-ops/3d-parallel", {
+        "parameter": parameter,
+        "heightmap": heightmap,
+    })
+
+
 def main() -> None:
     """Startet den MCP-Server (stdio)."""
     mcp.run()

@@ -7,14 +7,15 @@ Detaillierte Begründungen + Beispiele liegen im [Wiki](docs/wiki/).
 
 | Bereich | Stand |
 |---------|-------|
-| Backend pytest | **678 / 678** grün (+ 1 skipped Integration-Smoke fuer [ai]) — Stand alpha.5 |
-| Frontend vite build | OK, 1.66 MB / 957 Module |
-| Bundle Smoke-Test | PASS (body=15123 B, root=1 child) — Renderer rendert |
+| Backend pytest | **706 / 706** grün (+ 1 skipped Integration-Smoke fuer [ai]) — Stand alpha.6 |
+| Frontend vite build | OK |
+| Bundle Smoke-Test | PASS (Renderer rendert) |
 | MCP-Server | Syntax-OK, smoke nicht ausgeführt |
 | Frontend vitest | `varianteStore.test.ts` mit 14 Tests angelegt — nicht ausgeführt mangels `node_modules` |
 
 **Releases:**
 
+- **v0.0.1-alpha.6** (3D-Frässtrategien-Auftakt) — Fusion-CAM-Analyse (`docs/FUSION-CAM-VERGLEICH.md`) + Cluster I1 Planfräsen + I2 3D-Parallel-Schlichten auf STL-Heightmap (Werkzeug-Form-Dilation, Scallop-Stepover, Bahn-Winkel, StockToLeave). +28 Tests. **Frontend hat nur Client-Bindings, UI folgt.**
 - **v0.0.1-alpha.5** (Backend-Erweiterungs-Release) — Z-Grid-Diagnose + Drag-Engraving + Auto-Inlay + Thread-Milling + Circular/Radial Pocketing. +65 Tests. **Frontend hat nur Client-Bindings, UI folgt in alpha.6+.**
 - **v0.0.1-alpha.4** (Workflow + Onboarding) — D31 Geometrie→Op-Verknuepfung + Wizard kann anlegen statt nur waehlen. Closes #22/#23/#28.
 - **v0.0.1-alpha.3** (Backend-Master-Plan-Push) — 10 Master-Plan-Positionen (A39, A41, A43-tlw, A45-tlw, A46, A47-tlw, A48, D32, D36-tlw).
@@ -60,6 +61,8 @@ Detaillierte Begründungen + Beispiele liegen im [Wiki](docs/wiki/).
 | `cam/circular_radial.py` | Circular + Radial Pocketing-Pfade (alpha.5) | ✅ Backend + API + Client-Binding |
 | `stl/lithophane.py` | Bild-zu-3D fuer Backlight-Effekt mit Min/Max-Dicke | ✅ Backend |
 | `diagnostics/z_grid.py` | Werkstuecks-Ebenheit aus Z-Probing analysieren (alpha.5) | ✅ Backend + API + Client-Binding |
+| `cam/planfraesen.py` | Planfraesen / Face-Milling, Z-Grid-Synergie (alpha.6, I1) | ✅ Backend + API + Client-Binding |
+| `cam/strategie_3d.py` | 3D-Parallel-Schlichten auf STL-Heightmap, Werkzeug-Form-Dilation (alpha.6, I2) | ✅ Backend + API + Client-Binding |
 | `api/` | Flask-Endpoints, alles über REST + alles CRUD | ✅ |
 
 ## Frontend — Views & Editoren
