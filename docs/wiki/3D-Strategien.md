@@ -75,6 +75,32 @@ tp = erzeuge_3d_parallel_toolpath(hm, werkzeug, p)
 | `aufmass_mm` | stockToLeave | Material das stehen bleibt (für Schlicht-Pass danach) |
 | `toleranz_mm` | tolerance | Bahn-Vereinfachung — gröber = weniger G-Code |
 | `zickzack` | direction | Zickzack (schnell) vs. eine Richtung (saubere Oberfläche) |
+| `slope_min_grad` / `slope_max_grad` | slopeAngleFrom/To | Steilheits-Fenster (I3) — nur Bereiche in diesem Steigungs-Bereich bearbeiten |
+
+## Steilheits-Trennung (I3)
+
+Fusion trennt 3D-Schlichten nach Oberflächen-**Steigung**: flache Bereiche
+werden mit Parallel sauber, steile mit Waterline/Contour. CAMWOSA bildet das
+über das **Slope-Fenster** `slope_min_grad` / `slope_max_grad` ab — die
+3D-Parallel-Bahnen bearbeiten nur Punkte, deren lokale Oberflächen-Steigung
+im Fenster liegt. Außerhalb wird die Bahn unterbrochen (Werkzeug hebt ab).
+
+Typischer Zwei-Operationen-Workflow:
+
+```python
+# 1. Flache Bereiche mit Parallel (sauber)
+flach = Strategie3DParameter(..., slope_min_grad=0, slope_max_grad=30)
+tp_flach = erzeuge_3d_parallel_toolpath(hm, kugelfraeser, flach)
+
+# 2. Steile Bereiche separat (engerer Stepover oder Waterline)
+steil = Strategie3DParameter(..., slope_min_grad=30, slope_max_grad=90,
+                             scallop_hoehe_mm=0.005)  # feiner für steile Wände
+tp_steil = erzeuge_3d_parallel_toolpath(hm, kugelfraeser, steil)
+```
+
+Der Steigungswinkel wird auf der Original-Oberfläche berechnet
+(`berechne_steigungswinkel`, aus dem numpy-Gradienten): flach = 0°,
+senkrechte Wand = 90°. Voll-Fenster (0–90°) = keine Filterung (kein Overhead).
 
 ### Scallop-Formel
 
@@ -108,7 +134,7 @@ aus dem STL-Import.
 |---|---|---|
 | I1 | Planfräsen ([eigene Seite](Planfraesen)) | ✅ alpha.6 |
 | I2 | 3D-Parallel | ✅ alpha.6 |
-| I3 | Steilheits-Trennung (flach=Parallel, steil=Waterline) | ⬜ |
+| I3 | Steilheits-Trennung (Slope-Fenster slope_min/max_grad) | ✅ alpha.7 |
 | I4 | 3D-Scallop (konstante Riefenhöhe entlang Surface-Offset) | ⬜ |
 | I5 | 3D-Adaptive-Schruppen (konstanter Eingriff, trochoidal) | ⬜ |
 | I6 | Rest-Material-Tracking zwischen Operationen | ⬜ |

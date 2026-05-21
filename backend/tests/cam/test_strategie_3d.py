@@ -11,6 +11,7 @@ from camwosa.cam.strategie_3d import (
     StepoverModus,
     Strategie3DFehler,
     Strategie3DParameter,
+    berechne_steigungswinkel,
     erzeuge_3d_parallel_toolpath,
     scallop_zu_stepover,
 )
@@ -158,6 +159,76 @@ class TestToleranz:
         grob = erzeuge_3d_parallel_toolpath(hm, _kugelfraeser(2), _param(toleranz_mm=0.5))
         # Gröbere Toleranz → kollineare Punkte entfernt → weniger Bewegungen
         assert len(grob.bewegungen) <= len(fein.bewegungen)
+
+
+class TestSteigungswinkel:
+    def test_flache_ebene_null_grad(self):
+        z = np.zeros((10, 10))
+        slope = berechne_steigungswinkel(z, 1.0)
+        assert np.allclose(slope, 0.0)
+
+    def test_45_grad_rampe(self):
+        # Z steigt 1mm pro 1mm in X → 45°
+        z = np.zeros((10, 10))
+        for i in range(10):
+            z[i, :] = i * 1.0
+        slope = berechne_steigungswinkel(z, 1.0)
+        # Innen (nicht am Rand) sollte ~45° sein
+        assert slope[5, 5] == pytest.approx(45.0, abs=1.0)
+
+    def test_steilere_rampe_groesserer_winkel(self):
+        z = np.zeros((10, 10))
+        for i in range(10):
+            z[i, :] = i * 3.0  # 3mm pro 1mm → arctan(3) ≈ 71.6°
+        slope = berechne_steigungswinkel(z, 1.0)
+        assert slope[5, 5] == pytest.approx(math.degrees(math.atan(3.0)), abs=1.0)
+
+
+class TestSteilheitsTrennung:
+    def _stufenflaeche(self):
+        # Linke Haelfte flach (z=0), rechte Haelfte steile Rampe
+        nx, ny = 40, 20
+        z = np.zeros((nx, ny))
+        for i in range(nx):
+            if i < nx // 2:
+                z[i, :] = 0.0
+            else:
+                z[i, :] = (i - nx // 2) * 2.0  # steil
+        return Heightmap(z_values=z, aufloesung=1.0, x_min=0.0, y_min=0.0, z_max=float(z.max()))
+
+    def test_nur_flache_bereiche(self):
+        hm = self._stufenflaeche()
+        # slope 0-20: nur die flache linke Haelfte
+        tp = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(2),
+            _param(bahn_winkel_grad=0, slope_min_grad=0, slope_max_grad=20),
+        )
+        schnitt = [b for b in tp.bewegungen if b.typ == BewegungsTyp.LINEAR]
+        # Alle Schnittpunkte sollten in der flachen Haelfte liegen (x < ~20)
+        assert all(b.x < 25 for b in schnitt)
+        assert tp.metadaten["slope_max_grad"] == 20
+
+    def test_nur_steile_bereiche(self):
+        hm = self._stufenflaeche()
+        tp = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(2),
+            _param(bahn_winkel_grad=0, slope_min_grad=20, slope_max_grad=90),
+        )
+        schnitt = [b for b in tp.bewegungen if b.typ == BewegungsTyp.LINEAR]
+        # Schnittpunkte nur in der steilen Haelfte (x > ~18)
+        assert len(schnitt) > 0
+        assert all(b.x > 15 for b in schnitt)
+
+    def test_volles_fenster_wie_ohne_maske(self):
+        hm = self._stufenflaeche()
+        ohne = erzeuge_3d_parallel_toolpath(hm, _kugelfraeser(2), _param())
+        voll = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(2), _param(slope_min_grad=0, slope_max_grad=90),
+        )
+        # 0-90° = alles → gleiche Anzahl Schnittbewegungen
+        s_ohne = len([b for b in ohne.bewegungen if b.typ == BewegungsTyp.LINEAR])
+        s_voll = len([b for b in voll.bewegungen if b.typ == BewegungsTyp.LINEAR])
+        assert s_ohne == s_voll
 
 
 class TestWerkzeugKompensation:

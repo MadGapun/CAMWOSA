@@ -98,6 +98,18 @@ class Strategie3DParameter(BaseModel):
         description="True = Zickzack (schneller). False = nur eine Richtung (sauberer).",
     )
 
+    # --- Steilheits-Trennung (Fusion: slopeAngleFrom/To + machineSteepAreas, I3) ---
+    slope_min_grad: float = Field(
+        default=0.0, ge=0, le=90,
+        description="Nur Bereiche mit Oberflaechen-Steigung >= diesem Winkel bearbeiten. "
+                    "0 = flach. Fuer 'nur flache Bereiche' z.B. 0-30.",
+    )
+    slope_max_grad: float = Field(
+        default=90.0, ge=0, le=90,
+        description="Nur Bereiche mit Oberflaechen-Steigung <= diesem Winkel bearbeiten. "
+                    "90 = senkrecht. Fuer 'nur steile Bereiche' z.B. 30-90.",
+    )
+
 
 class Strategie3DFehler(Exception):
     """Vorbedingung verletzt (z.B. Werkzeug ungeeignet)."""
@@ -111,6 +123,20 @@ def scallop_zu_stepover(scallop_hoehe: float, werkzeug_radius: float) -> float:
     """
     h = min(scallop_hoehe, werkzeug_radius)  # h kann nicht groesser als r
     return 2.0 * math.sqrt(max(0.0, 2.0 * werkzeug_radius * h - h * h))
+
+
+def berechne_steigungswinkel(z: np.ndarray, aufloesung: float) -> np.ndarray:
+    """Lokaler Oberflaechen-Steigungswinkel pro Rasterpunkt (Grad).
+
+    slope = arctan(|gradient|), gradient = sqrt((dz/dx)² + (dz/dy)²).
+    Flach = 0°, senkrechte Wand = 90°. Wird fuer die Steilheits-Trennung (I3)
+    verwendet: flache Bereiche → 3D-Parallel, steile → Waterline/Contour.
+    """
+    if aufloesung <= 0:
+        raise Strategie3DFehler("Aufloesung muss > 0 sein.")
+    gx, gy = np.gradient(z, aufloesung)
+    betrag = np.sqrt(gx * gx + gy * gy)
+    return np.degrees(np.arctan(betrag))
 
 
 def _werkzeug_kernel_offsets(
@@ -270,6 +296,11 @@ def erzeuge_3d_parallel_toolpath(
     offsets = _werkzeug_kernel_offsets(werkzeug, aufl)
     z_center = _dilatiere(z, offsets) + parameter.aufmass_mm
 
+    # I3: Steilheits-Maske (auf der Original-Oberflaeche, vor Dilation).
+    # Nur aktiv wenn der User das Slope-Fenster eingeschraenkt hat.
+    slope_aktiv = parameter.slope_min_grad > 0.0 or parameter.slope_max_grad < 90.0
+    slope = berechne_steigungswinkel(z, aufl) if slope_aktiv else None
+
     # 3: Stepover bestimmen
     if parameter.stepover_modus == StepoverModus.SCALLOP:
         stepover = scallop_zu_stepover(parameter.scallop_hoehe_mm, r)
@@ -304,39 +335,51 @@ def erzeuge_3d_parallel_toolpath(
     ))
 
     n_bahnen = max(1, int(math.ceil((n_hi - n_lo) / stepover)) + 1)
-    erste_bahn = True
     for b in range(n_bahnen):
         n_off = n_lo + b * stepover
         if n_off > n_hi + 1e-9:
             break
-        # Punkte entlang dieser Bahn sampeln
+        # Punkte entlang dieser Bahn sampeln — bei aktiver Slope-Maske in
+        # Segmente unterteilen (Luecken wo die Steigung ausserhalb des Fensters liegt).
         n_steps = max(2, int(math.ceil((d_hi - d_lo) / schrittweite_entlang)) + 1)
-        roh: list[tuple[float, float, float]] = []
+        segmente: list[list[tuple[float, float, float]]] = []
+        aktuell: list[tuple[float, float, float]] = []
         for s in range(n_steps):
             d_off = d_lo + s * (d_hi - d_lo) / (n_steps - 1)
             x = n_off * nrm_x + d_off * dir_x
             y = n_off * nrm_y + d_off * dir_y
-            # Index in Heightmap
             fi = (x - x_min) / aufl
             fj = (y - y_min) / aufl
             if fi < 0 or fi > nx - 1 or fj < 0 or fj > ny - 1:
+                # ausserhalb → Segment beenden
+                if len(aktuell) >= 2:
+                    segmente.append(aktuell)
+                aktuell = []
                 continue
+            if slope is not None:
+                s_winkel = _bilinear_sample(slope, fi, fj)
+                if not (parameter.slope_min_grad <= s_winkel <= parameter.slope_max_grad):
+                    if len(aktuell) >= 2:
+                        segmente.append(aktuell)
+                    aktuell = []
+                    continue
             zc = _bilinear_sample(z_center, fi, fj)
-            roh.append((x, y, zc))
-        if len(roh) < 2:
+            aktuell.append((x, y, zc))
+        if len(aktuell) >= 2:
+            segmente.append(aktuell)
+        if not segmente:
             continue
-        # Zickzack: jede zweite Bahn umdrehen
-        if parameter.zickzack and not erste_bahn and b % 2 == 1:
-            roh.reverse()
-        elif not parameter.zickzack:
-            # Einrichtungsbahn: immer in derselben Richtung → Rueckzug am Ende
-            pass
 
-        bahn = _vereinfache_kollinear(roh, parameter.toleranz_mm)
+        # Zickzack: jede zweite Bahn umdrehen (Segment-Reihenfolge + Punkte)
+        if parameter.zickzack and b % 2 == 1:
+            segmente.reverse()
+            for seg in segmente:
+                seg.reverse()
 
-        # Anfahrt zum Bahn-Start
-        x0, y0, zc0 = bahn[0]
-        if erste_bahn or not parameter.zickzack:
+        for seg in segmente:
+            bahn = _vereinfache_kollinear(seg, parameter.toleranz_mm)
+            x0, y0, zc0 = bahn[0]
+            # Jedes Segment: anfahren + plunge (Werkzeug muss ueber Luecken heben)
             bewegungen.append(Bewegung(
                 typ=BewegungsTyp.EILGANG, x=x0, y=y0, z=z_safe,
             ))
@@ -344,22 +387,14 @@ def erzeuge_3d_parallel_toolpath(
                 typ=BewegungsTyp.PLUNGE, x=x0, y=y0, z=zc0,
                 feed=parameter.eintauch_vorschub,
             ))
-        else:
-            # Zickzack: direkt zum naechsten Bahn-Start fahren (Werkzeug bleibt unten)
-            bewegungen.append(Bewegung(
-                typ=BewegungsTyp.LINEAR, x=x0, y=y0, z=zc0, feed=parameter.vorschub,
-            ))
-        # Bahn abfahren
-        for (x, y, zc) in bahn[1:]:
-            bewegungen.append(Bewegung(
-                typ=BewegungsTyp.LINEAR, x=x, y=y, z=zc, feed=parameter.vorschub,
-            ))
-        if not parameter.zickzack:
+            for (x, y, zc) in bahn[1:]:
+                bewegungen.append(Bewegung(
+                    typ=BewegungsTyp.LINEAR, x=x, y=y, z=zc, feed=parameter.vorschub,
+                ))
             xe, ye, _ = bahn[-1]
             bewegungen.append(Bewegung(
                 typ=BewegungsTyp.EILGANG, x=xe, y=ye, z=z_safe,
             ))
-        erste_bahn = False
 
     # Abschluss-Rueckzug
     if bewegungen:
@@ -386,6 +421,8 @@ def erzeuge_3d_parallel_toolpath(
             "stepover_mm": stepover,
             "aufmass_mm": parameter.aufmass_mm,
             "toleranz_mm": parameter.toleranz_mm,
+            "slope_min_grad": parameter.slope_min_grad,
+            "slope_max_grad": parameter.slope_max_grad,
         },
     )
 
@@ -394,6 +431,7 @@ __all__ = [
     "Strategie3DFehler",
     "Strategie3DParameter",
     "StepoverModus",
+    "berechne_steigungswinkel",
     "erzeuge_3d_parallel_toolpath",
     "scallop_zu_stepover",
 ]

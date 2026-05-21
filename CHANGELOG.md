@@ -4,6 +4,23 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [Unreleased]
+
+### Cluster I3 — Steilheits-Trennung (3D-Parallel)
+
+✅ `Strategie3DParameter` um `slope_min_grad` / `slope_max_grad` erweitert.
+Die 3D-Parallel-Bahnen bearbeiten nur Bereiche, deren lokale Oberflächen-
+Steigung im Slope-Fenster liegt — außerhalb wird die Bahn unterbrochen
+(Werkzeug hebt ab, Segment-Logik). Ermöglicht den klassischen Zwei-Pass-
+Workflow „flach mit Parallel, steil separat (feiner/Waterline)".
+- `berechne_steigungswinkel()` aus numpy-Gradient (0°=flach, 90°=Wand)
+- Voll-Fenster 0–90° = keine Filterung (kein Overhead)
+- Fließt automatisch durch die bestehende `/api/spezial-ops/3d-parallel` +
+  das MCP-Tool `operation_3d_parallel` (neue optionale Parameter-Felder)
+- 6 neue Tests (Steigungswinkel + Steilheits-Trennung), 712 grün gesamt
+
+---
+
 ## [0.0.1-alpha.6] — 2026-05-21
 
 **3D-Frässtrategien-Auftakt + Fusion-CAM-Analyse.** Markus' Wunsch, Fusion
