@@ -52,7 +52,9 @@ from camwosa.stl.heightmap import Heightmap
 class StepoverModus(str, Enum):
     """Wie der radiale Versatz zwischen Bahnen bestimmt wird."""
     DISTANZ = "distanz"        # fester Abstand in mm
-    SCALLOP = "scallop"        # aus gewuenschter Riefenhoehe (Cusp-Height)
+    SCALLOP = "scallop"        # aus Riefenhoehe, auf XY projiziert (I2)
+    SCALLOP_3D = "scallop_3d"  # konstante Riefenhoehe auf der 3D-Oberflaeche (I4)
+    #                            → Bahnabstand skaliert mit cos(lokale Steigung)
 
 
 class Strategie3DParameter(BaseModel):
@@ -296,13 +298,15 @@ def erzeuge_3d_parallel_toolpath(
     offsets = _werkzeug_kernel_offsets(werkzeug, aufl)
     z_center = _dilatiere(z, offsets) + parameter.aufmass_mm
 
-    # I3: Steilheits-Maske (auf der Original-Oberflaeche, vor Dilation).
-    # Nur aktiv wenn der User das Slope-Fenster eingeschraenkt hat.
+    # I3: Steilheits-Maske + I4: 3D-Scallop brauchen das Steigungs-Feld
+    # (auf der Original-Oberflaeche, vor Dilation).
     slope_aktiv = parameter.slope_min_grad > 0.0 or parameter.slope_max_grad < 90.0
-    slope = berechne_steigungswinkel(z, aufl) if slope_aktiv else None
+    ist_scallop_3d = parameter.stepover_modus == StepoverModus.SCALLOP_3D
+    slope = berechne_steigungswinkel(z, aufl) if (slope_aktiv or ist_scallop_3d) else None
 
-    # 3: Stepover bestimmen
-    if parameter.stepover_modus == StepoverModus.SCALLOP:
+    # 3: Stepover bestimmen. Bei SCALLOP_3D ist `stepover` der Basis-Wert
+    # (auf flacher Flaeche); pro Bahn wird er adaptiv mit cos(Steigung) skaliert.
+    if parameter.stepover_modus in (StepoverModus.SCALLOP, StepoverModus.SCALLOP_3D):
         stepover = scallop_zu_stepover(parameter.scallop_hoehe_mm, r)
         stepover = max(stepover, aufl)  # nicht feiner als das Raster
     else:
@@ -334,16 +338,19 @@ def erzeuge_3d_parallel_toolpath(
         kommentar="3D-Parallel Anfahrt",
     ))
 
-    n_bahnen = max(1, int(math.ceil((n_hi - n_lo) / stepover)) + 1)
-    for b in range(n_bahnen):
-        n_off = n_lo + b * stepover
-        if n_off > n_hi + 1e-9:
-            break
+    # Bahn-Schleife. Bei SCALLOP_3D adaptiver Stepover (Abstand ~ cos(Steigung)),
+    # sonst fester Stepover. While-Loop weil der naechste Offset von der gerade
+    # gefraesten Bahn abhaengen kann.
+    n_off = n_lo
+    b = 0
+    max_bahnen = int(math.ceil((n_hi - n_lo) / max(stepover * 0.2, 1e-6))) + 10  # Sicherheits-Limit
+    while n_off <= n_hi + 1e-9 and b < max_bahnen:
         # Punkte entlang dieser Bahn sampeln — bei aktiver Slope-Maske in
         # Segmente unterteilen (Luecken wo die Steigung ausserhalb des Fensters liegt).
         n_steps = max(2, int(math.ceil((d_hi - d_lo) / schrittweite_entlang)) + 1)
         segmente: list[list[tuple[float, float, float]]] = []
         aktuell: list[tuple[float, float, float]] = []
+        slope_werte: list[float] = []
         for s in range(n_steps):
             d_off = d_lo + s * (d_hi - d_lo) / (n_steps - 1)
             x = n_off * nrm_x + d_off * dir_x
@@ -358,7 +365,10 @@ def erzeuge_3d_parallel_toolpath(
                 continue
             if slope is not None:
                 s_winkel = _bilinear_sample(slope, fi, fj)
-                if not (parameter.slope_min_grad <= s_winkel <= parameter.slope_max_grad):
+                slope_werte.append(s_winkel)
+                if slope_aktiv and not (
+                    parameter.slope_min_grad <= s_winkel <= parameter.slope_max_grad
+                ):
                     if len(aktuell) >= 2:
                         segmente.append(aktuell)
                     aktuell = []
@@ -367,11 +377,9 @@ def erzeuge_3d_parallel_toolpath(
             aktuell.append((x, y, zc))
         if len(aktuell) >= 2:
             segmente.append(aktuell)
-        if not segmente:
-            continue
 
         # Zickzack: jede zweite Bahn umdrehen (Segment-Reihenfolge + Punkte)
-        if parameter.zickzack and b % 2 == 1:
+        if segmente and parameter.zickzack and b % 2 == 1:
             segmente.reverse()
             for seg in segmente:
                 seg.reverse()
@@ -395,6 +403,18 @@ def erzeuge_3d_parallel_toolpath(
             bewegungen.append(Bewegung(
                 typ=BewegungsTyp.EILGANG, x=xe, y=ye, z=z_safe,
             ))
+
+        # Naechsten Bahn-Offset bestimmen.
+        if ist_scallop_3d and slope_werte:
+            # Konstante 3D-Riefenhoehe: Bahnabstand ~ cos(mittlere Steigung).
+            # Steile Flaeche → kleinerer XY-Stepover → engere Bahnen.
+            mittlere_steigung = sum(slope_werte) / len(slope_werte)
+            faktor = max(0.15, math.cos(math.radians(mittlere_steigung)))
+            naechster = max(stepover * faktor, aufl)
+        else:
+            naechster = stepover
+        n_off += naechster
+        b += 1
 
     # Abschluss-Rueckzug
     if bewegungen:

@@ -231,6 +231,70 @@ class TestSteilheitsTrennung:
         assert s_ohne == s_voll
 
 
+class TestScallop3D:
+    def _rampe(self, steigung_pro_mm: float, aufl=0.5, nx=80, ny=20):
+        # feines Raster, damit der Scallop-Stepover groesser als aufl ist
+        # und die cos-Skalierung sichtbar wird.
+        z = np.zeros((nx, ny))
+        for i in range(nx):
+            z[i, :] = i * aufl * steigung_pro_mm
+        return Heightmap(z_values=z, aufloesung=aufl, x_min=0.0, y_min=0.0, z_max=float(z.max()))
+
+    def _flach_fein(self, aufl=0.5, n=80):
+        return Heightmap(
+            z_values=np.zeros((n, n)), aufloesung=aufl, x_min=0.0, y_min=0.0, z_max=0.0,
+        )
+
+    def test_scallop_3d_auf_flach_wie_scallop(self):
+        # Auf flacher Flaeche: cos(0)=1 → SCALLOP_3D ~ SCALLOP (gleiche Bahn-Anzahl)
+        hm = self._flach_fein()
+        s2d = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(4),
+            _param(stepover_modus=StepoverModus.SCALLOP, scallop_hoehe_mm=0.1, bahn_winkel_grad=0),
+        )
+        s3d = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(4),
+            _param(stepover_modus=StepoverModus.SCALLOP_3D, scallop_hoehe_mm=0.1, bahn_winkel_grad=0),
+        )
+        n2d = len([b for b in s2d.bewegungen if b.typ == BewegungsTyp.PLUNGE])
+        n3d = len([b for b in s3d.bewegungen if b.typ == BewegungsTyp.PLUNGE])
+        assert abs(n2d - n3d) <= max(2, n2d // 10)
+
+    def test_scallop_3d_auf_steil_mehr_bahnen(self):
+        # Rampe steigt in X (bahn_winkel 90 = Bahnen entlang Y, Stepover in X).
+        hm = self._rampe(steigung_pro_mm=2.0)  # arctan(2) ≈ 63° steil
+        s2d = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(4),
+            _param(stepover_modus=StepoverModus.SCALLOP, scallop_hoehe_mm=0.1, bahn_winkel_grad=90),
+        )
+        s3d = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(4),
+            _param(stepover_modus=StepoverModus.SCALLOP_3D, scallop_hoehe_mm=0.1, bahn_winkel_grad=90),
+        )
+        # 3D-Scallop macht auf der steilen Rampe engere Bahnen → mehr Bahnen
+        n2d = len([b for b in s2d.bewegungen if b.typ == BewegungsTyp.PLUNGE])
+        n3d = len([b for b in s3d.bewegungen if b.typ == BewegungsTyp.PLUNGE])
+        assert n3d > n2d
+
+    def test_scallop_3d_metadaten(self):
+        hm = self._flach_fein()
+        tp = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(4),
+            _param(stepover_modus=StepoverModus.SCALLOP_3D, scallop_hoehe_mm=0.1),
+        )
+        assert tp.metadaten["strategie"] == "3d_parallel"
+
+    def test_scallop_3d_terminiert_bei_steiler_flaeche(self):
+        # Sicherheits-Limit: auch bei sehr steiler Flaeche darf die Schleife
+        # nicht unendlich laufen (cos→0 wird auf 0.15 geklemmt).
+        hm = self._rampe(steigung_pro_mm=10.0)  # ~84° fast senkrecht
+        tp = erzeuge_3d_parallel_toolpath(
+            hm, _kugelfraeser(4),
+            _param(stepover_modus=StepoverModus.SCALLOP_3D, scallop_hoehe_mm=0.1, bahn_winkel_grad=90),
+        )
+        assert 0 < len(tp.bewegungen) < 100000
+
+
 class TestWerkzeugKompensation:
     def test_kugelfraeser_auf_rampe_folgt_oberflaeche(self):
         # Auf einer Rampe sollte der Z-Wert der Bahn entlang X ansteigen

@@ -69,7 +69,7 @@ tp = erzeuge_3d_parallel_toolpath(hm, werkzeug, p)
 
 | Parameter | Fusion-Pendant | Was es tut |
 |---|---|---|
-| `stepover_modus` | stepover / cuspHeightStepover | Bahnabstand fest (DISTANZ) oder aus Riefenhöhe (SCALLOP) |
+| `stepover_modus` | stepover / cuspHeightStepover | DISTANZ (fest) / SCALLOP (Riefenhöhe, XY-projiziert) / SCALLOP_3D (Riefenhöhe auf 3D-Oberfläche) |
 | `scallop_hoehe_mm` | cuspHeightStepover | gewünschte Riefenhöhe bei SCALLOP |
 | `bahn_winkel_grad` | passAngle | Richtung der parallelen Bahnen (0–180°) |
 | `aufmass_mm` | stockToLeave | Material das stehen bleibt (für Schlicht-Pass danach) |
@@ -101,6 +101,30 @@ tp_steil = erzeuge_3d_parallel_toolpath(hm, kugelfraeser, steil)
 Der Steigungswinkel wird auf der Original-Oberfläche berechnet
 (`berechne_steigungswinkel`, aus dem numpy-Gradienten): flach = 0°,
 senkrechte Wand = 90°. Voll-Fenster (0–90°) = keine Filterung (kein Overhead).
+
+## 3D-Scallop — konstante Riefenhöhe (I4)
+
+Beim normalen `SCALLOP`-Stepover (I2) wird der Bahnabstand auf die XY-Ebene
+projiziert. Auf **steilen Flächen** liegen die Bahnen entlang der geneigten
+Oberfläche dann weiter auseinander → der Grat (Scallop) wird größer als
+gewünscht.
+
+`SCALLOP_3D` hält die Riefenhöhe auf der **echten 3D-Oberfläche** konstant:
+der XY-Bahnabstand wird mit `cos(lokale Steigung)` skaliert. Steile Flächen →
+engere Bahnen → gleichmäßige Oberflächengüte überall.
+
+```python
+p = Strategie3DParameter(
+    ...,
+    stepover_modus=StepoverModus.SCALLOP_3D,
+    scallop_hoehe_mm=0.01,   # gilt jetzt auf der 3D-Oberflaeche
+)
+```
+
+Implementierung: adaptive Bahn-Schleife (while statt fester Schrittzahl). Nach
+jeder Bahn wird aus der mittleren Steigung der nächste Offset bestimmt:
+`stepover_xy = scallop_stepover · cos(θ)`, geklemmt auf min. Rasterauflösung
+und `cos θ ≥ 0.15` (verhindert Endlos-Schleife an fast senkrechten Wänden).
 
 ### Scallop-Formel
 
@@ -135,7 +159,7 @@ aus dem STL-Import.
 | I1 | Planfräsen ([eigene Seite](Planfraesen)) | ✅ alpha.6 |
 | I2 | 3D-Parallel | ✅ alpha.6 |
 | I3 | Steilheits-Trennung (Slope-Fenster slope_min/max_grad) | ✅ alpha.7 |
-| I4 | 3D-Scallop (konstante Riefenhöhe entlang Surface-Offset) | ⬜ |
+| I4 | 3D-Scallop (StepoverModus.SCALLOP_3D, Stepover ∝ cos θ) | ✅ alpha.7 |
 | I5 | 3D-Adaptive-Schruppen (konstanter Eingriff, trochoidal) | ⬜ |
 | I6 | Rest-Material-Tracking zwischen Operationen | ⬜ |
 
