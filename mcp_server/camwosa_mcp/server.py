@@ -130,6 +130,28 @@ def feeds_speeds_berechnen(
     })
 
 
+@mcp.tool()
+def spanausduennung_faktor(
+    stepover_mm: float,
+    werkzeug_durchmesser_mm: float,
+    vorschub_mm_min: float | None = None,
+) -> dict:
+    """Spanausduennung / Chip Thinning (J3): Vorschub-Korrekturfaktor bei kleinem
+    radialen Eingriff (ae < d/2, z.B. Adaptiv/Schlichten).
+
+    Bei kleinem Stepover wird die reale Spandicke kleiner als der Zahnvorschub
+    vermuten laesst → Vorschub muss erhoeht werden um die Soll-Spandicke (und
+    damit Standzeit + Oberflaeche) zu halten. Liefert faktor (>=1.0) und, wenn
+    vorschub_mm_min angegeben, den korrigierten Vorschub."""
+    payload = {
+        "stepover_mm": stepover_mm,
+        "werkzeug_durchmesser_mm": werkzeug_durchmesser_mm,
+    }
+    if vorschub_mm_min is not None:
+        payload["vorschub_mm_min"] = vorschub_mm_min
+    return _post("/api/feeds/chip-thinning", payload)
+
+
 # ---------------------------------------------------------------------------
 # Postprozessoren
 # ---------------------------------------------------------------------------
@@ -265,13 +287,21 @@ def gcode_erzeugen(
     werkzeug_id: str,
     toolpaths: list,
     postprozessor_id: str | None = None,
+    arc_fitting: bool = False,
+    arc_toleranz_mm: float = 0.05,
 ) -> dict:
-    """Postprocesst eine Liste von Toolpaths zu G-Code."""
+    """Postprocesst eine Liste von Toolpaths zu G-Code.
+
+    arc_fitting (J1): wenn True, werden lineare Punktfolgen auf Kreisboegen
+    vor dem Postprozessor zu G2/G3 zusammengefasst (kompakterer G-Code,
+    ruhigerer Lauf). arc_toleranz_mm steuert die max. Abweichung."""
     return _post("/api/operations/postprocess", {
         "maschine_id": maschine_id,
         "werkzeug_id": werkzeug_id,
         "toolpaths": toolpaths,
         "postprozessor_id": postprozessor_id,
+        "arc_fitting": arc_fitting,
+        "arc_toleranz_mm": arc_toleranz_mm,
     })
 
 

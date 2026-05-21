@@ -227,6 +227,11 @@ def postprocess():
     post = registry().get(post_id)()
     ctx = PostKontext(maschine=maschine, werkzeug=werkzeug)
     toolpaths = [_deserialize_toolpath(tp) for tp in data["toolpaths"]]
+    # J1: optionales Arc-Fitting (G1-Folgen → G2/G3) vor dem Postprozessor
+    if data.get("arc_fitting"):
+        from camwosa.gcode.arc_fitting import fitte_toolpath
+        tol = float(data.get("arc_toleranz_mm", 0.05))
+        toolpaths = [fitte_toolpath(tp, toleranz_mm=tol) for tp in toolpaths]
     zeilen = post.post_alle(ctx, toolpaths)
     return jsonify({"gcode": "\n".join(zeilen) + "\n", "zeilen": len(zeilen)})
 

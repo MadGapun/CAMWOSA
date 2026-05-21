@@ -216,9 +216,57 @@ def _default_rpm(maschine: Maschine, material: Material) -> float:
     return mid
 
 
+# ---------------------------------------------------------------------------
+# Spanausduennung / Radial Chip Thinning (Cluster J3, Issue #46)
+# ---------------------------------------------------------------------------
+
+
+def chip_thinning_faktor(stepover_mm: float, werkzeug_durchmesser_mm: float) -> float:
+    """Radialer Spanausduennungs-Faktor (RCTF).
+
+    Bei radialem Eingriff ae < d/2 (kleiner Stepover, z.B. Adaptiv/Schlichten)
+    ist die mittlere Spandicke kleiner als der Zahnvorschub fz vermuten laesst —
+    das Werkzeug "rutscht" mehr als es schneidet. Um die Soll-Spandicke (und
+    damit Werkzeug-Standzeit + Oberflaeche) zu halten, muss der Vorschub um
+    diesen Faktor erhoeht werden.
+
+    Formel: RCTF = 1 / sqrt(1 - (1 - 2·ae/d)²)   fuer ae < d/2
+            RCTF = 1                              fuer ae >= d/2 (Voll-Eingriff)
+
+    Args:
+        stepover_mm: radialer Eingriff ae (mm).
+        werkzeug_durchmesser_mm: Werkzeug-Durchmesser d (mm).
+
+    Returns:
+        Faktor >= 1.0. Geklemmt auf max. 4.0 (sehr kleiner Eingriff → sonst
+        explodiert der Vorschub unrealistisch).
+    """
+    d = werkzeug_durchmesser_mm
+    ae = stepover_mm
+    if d <= 0:
+        return 1.0
+    ae = max(0.0, min(ae, d))  # ae in [0, d]
+    if ae >= d / 2.0:
+        return 1.0
+    rest = 1.0 - (1.0 - 2.0 * ae / d) ** 2
+    if rest <= 1e-9:
+        return 4.0  # ae→0: theoretisch unendlich → praktisch klemmen
+    faktor = 1.0 / math.sqrt(rest)
+    return min(faktor, 4.0)
+
+
+def korrigiere_vorschub_spanausduennung(
+    vorschub_mm_min: float, stepover_mm: float, werkzeug_durchmesser_mm: float,
+) -> float:
+    """Wendet den Spanausduennungs-Faktor auf einen Basis-Vorschub an."""
+    return vorschub_mm_min * chip_thinning_faktor(stepover_mm, werkzeug_durchmesser_mm)
+
+
 __all__ = [
     "FeedsSpeedsErgebnis",
     "FeedsSpeedsWarnung",
     "WarnungsStufe",
     "berechne_feeds_speeds",
+    "chip_thinning_faktor",
+    "korrigiere_vorschub_spanausduennung",
 ]

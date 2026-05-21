@@ -4,6 +4,47 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.8] — 2026-05-21
+
+**CAM-Qualität & Toolpath-Infrastruktur (Cluster J1-J3).** GAP-Analyse „was
+fehlt noch fürs CAM" → die Strategien sind breit, aber bei Toolpath-Qualität
+klafften Lücken. Neuer Cluster J (Issue #46).
+
+### J1 — Arc-Fitting (G2/G3) (`gcode/arc_fitting.py`, 10 Tests)
+
+✅ Lineare Punktfolgen, die auf einem Kreisbogen liegen, werden zu `BOGEN_CW/
+CCW` (G2/G3) zusammengefasst. Der Postprozessor konnte G2/G3 schon, aber die
+Generatoren sampelten Kreise/Helix/Circular-Pocket in hunderte G1.
+- Greedy-Bogen-Erkennung (Umkreis durch 3 Punkte, Toleranz + Drehrichtung)
+- nur bei konstantem Z + Feed (echte 2D-Bögen), endpunkt-treu, Vollkreis-Schutz
+- massive G-Code-Reduktion + ruhigerer Maschinenlauf
+- optional im postprocess-Endpoint (`arc_fitting:true`) + MCP `gcode_erzeugen`
+
+### J2 — Bohr-Zyklen erweitern (`cam/bohren.py`, 8 Tests)
+
+✅ Drei neue `BohrStrategie`-Werte:
+- **ANBOHREN** — Zentrier-Spot auf kleine Tiefe (vermeidet Verlaufen)
+- **SENKEN** — zylindrisch (Counterbore, ausgefräst) oder konisch (Countersink,
+  Plunge-Tiefe aus `senk_winkel_grad` + `senk_durchmesser`)
+- **GEWINDEBOHREN** — synchroner Vorschub = RPM × Steigung, rein + raus mit
+  Spindel-Reverse-Hinweis (rigid tapping)
+- via `operation_bohren`-MCP automatisch verfügbar
+
+### J3 — Spanausdünnung / Chip Thinning (`feeds/rechner.py`, 12 Tests)
+
+✅ Vorschub-Korrektur bei kleinem radialen Eingriff (ae < d/2). Bei
+Adaptiv/Schlichten mit kleinem Stepover wird die reale Spandicke kleiner →
+Vorschub muss hoch um Standzeit + Oberfläche zu halten.
+- `f_korr = f / sqrt(1-(1-2·ae/d)²)`, geklemmt ≤ 4
+- API `/api/feeds/chip-thinning` + MCP `spanausduennung_faktor`
+
+### Test-Status
+
+- Backend: **746 Tests grün** (+30 für alpha.8)
+- Cluster J: J1–J3 ✅, J4–J8 dokumentiert (Issue #46)
+
+---
+
 ## [0.0.1-alpha.7] — 2026-05-21
 
 **3D-Strategien-Ausbau (Cluster I3 + I4).** Steilheits-Trennung + echtes

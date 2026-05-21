@@ -47,6 +47,9 @@ class BohrStrategie(str, Enum):
     TIEF_PECK = "tief_peck"
     HELIX = "helix"
     REIB = "reib"
+    ANBOHREN = "anbohren"          # J2: Spot/Center-Drill — kurzes Zentrier-Anbohren
+    SENKEN = "senken"             # J2: Counterbore (zylindr.) / Countersink (konisch)
+    GEWINDEBOHREN = "gewindebohren"  # J2: Tapping — synchroner Vorschub aus Steigung
 
 
 class GravurStrategie(str, Enum):
@@ -133,6 +136,24 @@ class BohrParameter(OperationParameter):
     helix_steigung: float = Field(
         default=0.5, gt=0,
         description="Steigung pro Helix-Umdrehung in mm (HELIX-Strategie)",
+    )
+    # J2: Anbohren / Senken / Gewindebohren
+    anbohr_tiefe: float = Field(
+        default=1.0, gt=0,
+        description="Bei ANBOHREN: Zentrier-Tiefe in mm (klein, z.B. 0.5-2)",
+    )
+    senk_durchmesser: float | None = Field(
+        default=None, gt=0,
+        description="Bei SENKEN: Soll-Durchmesser der Senkung (>= Werkzeug-Durchmesser)",
+    )
+    senk_winkel_grad: float = Field(
+        default=0.0, ge=0, le=180,
+        description="Bei SENKEN: 0 = zylindrisch (Counterbore), >0 = konisch "
+                    "(Countersink, z.B. 90 fuer Senkkopfschrauben)",
+    )
+    gewinde_steigung: float = Field(
+        default=1.0, gt=0,
+        description="Bei GEWINDEBOHREN: Steigung in mm/Umdrehung (M6=1.0, M3=0.5)",
     )
 
 

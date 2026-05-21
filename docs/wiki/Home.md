@@ -72,6 +72,7 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [GRBL-Postprozessor](Postprozessor-GRBL.md) · [Genmitsu-Spezial](Postprozessor-GRBL-Genmitsu.md) · [Rotary](Postprozessor-GRBL-Rotary.md)
 - [Postprozessor-Plugins](Postprozessor-Plugins.md)
 - [G-Code-Editor](GCode-Editor.md) — Monaco
+- [Arc-Fitting](Arc-Fitting.md) — G1-Folgen zu G2/G3 zusammenfassen (kompakterer G-Code)
 - [Sicherheits-Checks](Sicherheits-Checks.md)
 - [Z-Grid-Diagnose](Z-Grid-Diagnose.md) — Werkstuecks-Ebenheit aus Z-Probing-Daten analysieren
 - [Spannmittel](Spannmittel.md) — 8 Spannmittel-Typen mit strukturierten Sperrzonen

@@ -84,6 +84,21 @@ Quelle: `docs/FUSION-CAM-VERGLEICH.md` (live gegen Fusion-CAM-API verifiziert). 
 | I5 | **3D-Adaptive-Schruppen** — 3D mit konstantem Werkzeug-Eingriff (trochoidal, Z-Level). Erweitert 2D-Adaptive. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [3D-Strategien](3D-Strategien.md) | ⬜ |
 | I6 | **Rest-Material-Tracking** zwischen Operationen (Stock = Voxel-Ergebnis vorheriger Pass). Verschraenkt mit A49. | [#45](https://github.com/MadGapun/CAMWOSA/issues/45) | [3D-Strategien](3D-Strategien.md) | ⬜ |
 
+### Cluster J — CAM-Qualität & Toolpath-Infrastruktur (GAP-Analyse 2026-05-21)
+
+Lücken bei Toolpath-Qualität/Infrastruktur (nicht bei Strategien). Quelle: GAP-Analyse + `docs/FUSION-CAM-VERGLEICH.md`.
+
+| Nr | Funktion | Issue | Wiki | Status |
+|----|----------|-------|------|--------|
+| J1 | **Arc-Fitting (G2/G3)** — `gcode/arc_fitting.py`: greedy Bogen-Erkennung (Umkreis durch 3 Punkte, Toleranz + Drehrichtung), nur konstantes Z+Feed, endpunkt-treu. Optional im postprocess-Endpoint (`arc_fitting:true`) + MCP. 10 Tests. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [Arc-Fitting](Arc-Fitting.md) | ✅ |
+| J2 | **Bohr-Zyklen erweitern** — ANBOHREN (Zentrier-Spot), SENKEN (zylindrisch/konisch aus Winkel), GEWINDEBOHREN (synchron-Vorschub aus Steigung × RPM). Erweitert `BohrStrategie` + `BohrParameter` + `cam/bohren.py`. 8 Tests. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [Operation-Bohren](Operation-Bohren.md) | ✅ |
+| J3 | **Spanausduennung (Chip Thinning)** — `chip_thinning_faktor()` + `korrigiere_vorschub_spanausduennung()` in `feeds/rechner.py`, `f_korr = f / sqrt(1-(1-2·ae/d)²)`, geklemmt ≤4. API `/api/feeds/chip-thinning` + MCP `spanausduennung_faktor`. 12 Tests. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [Feeds-Speeds](Feeds-Speeds.md) | ✅ |
+| J4 | **Linking / Stay-Down-Optimierung** — Werkzeug unten lassen wo der direkte Weg frei + kurz ist (stayDownDistance). Weniger Luftbewegungen. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | — | ⬜ |
+| J5 | **Lead-in/out + Rampe fuer 3D-Strategien** — sanftes Bogen/Rampen-Eintauchen statt senkrechtem Plunge. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+| J6 | **Flat-Area-Detection** — flache 3D-Bereiche (slope≈0) erkennen + separat plan-schlichten. Nutzt `berechne_steigungswinkel()`. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+| J7 | **Pencil / Kehlnaht-Cleanup** — Tal-Linien mit kleinem Werkzeug nachfahren (3D-Pencil). Grosser Brocken. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+| J8 | **Trochoidales Nutenfraesen** — Slot mit kreisender Bahn fuer tiefe schmale Nuten (konstante Last). | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | — | ⬜ |
+
 ## Teil B — REST-API + MCP
 
 | Nr | Funktion | Issue | Wiki | Status |

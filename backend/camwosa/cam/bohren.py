@@ -199,6 +199,68 @@ def _bohrung_bewegungen(
                 BewegungsTyp.LINEAR, px, py, z_unten, feed=parameter.vorschub,
                 kommentar="Reib-Schlicht" if i == 1 else "",
             ))
+    elif parameter.strategie == BohrStrategie.ANBOHREN:
+        # J2: Spot/Center-Drill — kurzes Zentrier-Anbohren (vor dem Hauptbohren),
+        # damit der spaetere Bohrer nicht verlaeuft.
+        z_spot = -abs(parameter.anbohr_tiefe)
+        bewegungen.append(Bewegung(
+            BewegungsTyp.PLUNGE, x, y, z_spot,
+            feed=parameter.eintauch_vorschub, kommentar="Anbohren (Zentrierung)",
+        ))
+    elif parameter.strategie == BohrStrategie.SENKEN:
+        senk_d = parameter.senk_durchmesser or (werkzeug.durchmesser * 2.0)
+        if parameter.senk_winkel_grad > 0:
+            # Countersink (konisch): V-Senker plunged so tief, dass an der
+            # Oberflaeche der gewuenschte Senk-Durchmesser entsteht.
+            halbwinkel = math.radians(parameter.senk_winkel_grad / 2.0)
+            tan_h = math.tan(halbwinkel)
+            tiefe = (senk_d / 2.0) / tan_h if tan_h > 1e-6 else abs(parameter.max_tiefe)
+            bewegungen.append(Bewegung(
+                BewegungsTyp.PLUNGE, x, y, -tiefe,
+                feed=parameter.eintauch_vorschub,
+                kommentar=f"Senken konisch {parameter.senk_winkel_grad:.0f}° -> Ø{senk_d:.1f}",
+            ))
+        else:
+            # Counterbore (zylindrisch): Loch auf senk_durchmesser ausfraesen.
+            z_senk = -abs(parameter.max_tiefe)
+            bahn_radius = max(0.0, (senk_d - werkzeug.durchmesser) / 2.0)
+            if bahn_radius < 0.05:
+                bewegungen.append(Bewegung(
+                    BewegungsTyp.PLUNGE, x, y, z_senk,
+                    feed=parameter.eintauch_vorschub, kommentar="Senken zylindr.",
+                ))
+            else:
+                # Vor-Plunge Mitte, dann Kreis auf Bahn-Radius (Schlicht)
+                bewegungen.append(Bewegung(
+                    BewegungsTyp.PLUNGE, x, y, z_senk,
+                    feed=parameter.eintauch_vorschub, kommentar="Senken Vor-Plunge",
+                ))
+                n = 32
+                for i in range(1, n + 1):
+                    w = 2 * math.pi * i / n
+                    bewegungen.append(Bewegung(
+                        BewegungsTyp.LINEAR,
+                        x + bahn_radius * math.cos(w), y + bahn_radius * math.sin(w),
+                        z_senk, feed=parameter.vorschub,
+                        kommentar="Senken-Schlicht" if i == 1 else "",
+                    ))
+                bewegungen.append(Bewegung(BewegungsTyp.LINEAR, x, y, z_senk, feed=parameter.vorschub))
+    elif parameter.strategie == BohrStrategie.GEWINDEBOHREN:
+        # J2: Tapping — synchroner Vorschub aus Steigung × RPM. Bei rigid tapping
+        # dreht die Spindel beim Rueckzug rueckwaerts (G84). Wir erzeugen Plunge
+        # rein + Plunge raus mit Synchron-Vorschub; Postprozessor/User setzt
+        # Spindel-Reverse (Hinweis im Kommentar).
+        sync_feed = parameter.spindel_rpm * parameter.gewinde_steigung
+        bewegungen.append(Bewegung(
+            BewegungsTyp.PLUNGE, x, y, z_unten,
+            feed=sync_feed,
+            kommentar=f"Gewindebohren rein (sync {sync_feed:.0f} mm/min, M3)",
+        ))
+        bewegungen.append(Bewegung(
+            BewegungsTyp.LINEAR, x, y, parameter.sicherheitshoehe,
+            feed=sync_feed,
+            kommentar="Gewindebohren raus (Spindel-Reverse M4)",
+        ))
     else:
         raise NotImplementedError(
             f"Bohr-Strategie {parameter.strategie} noch nicht implementiert"

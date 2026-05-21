@@ -8,6 +8,10 @@ from camwosa.db.loader import (
     lade_maschinen, lade_materialien, lade_werkzeuge, spindel_index,
 )
 from camwosa.feeds import berechne_feeds_speeds
+from camwosa.feeds.rechner import (
+    chip_thinning_faktor,
+    korrigiere_vorschub_spanausduennung,
+)
 
 bp = Blueprint("feeds", __name__, url_prefix="/api/feeds")
 
@@ -59,3 +63,25 @@ def berechnen():
             {"stufe": w.stufe.value, "text": w.text} for w in erg.warnungen
         ],
     })
+
+
+@bp.post("/chip-thinning")
+def chip_thinning():
+    """Spanausduennung (J3): Vorschub-Korrekturfaktor bei kleinem radialen Eingriff.
+
+    Body: { stepover_mm, werkzeug_durchmesser_mm, vorschub_mm_min? }
+    Response: { faktor, vorschub_korrigiert? }
+    """
+    data = request.get_json() or {}
+    try:
+        ae = float(data["stepover_mm"])
+        d = float(data["werkzeug_durchmesser_mm"])
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"fehler": "stepover_mm + werkzeug_durchmesser_mm noetig"}), 422
+    faktor = chip_thinning_faktor(ae, d)
+    out = {"faktor": faktor}
+    if "vorschub_mm_min" in data:
+        out["vorschub_korrigiert"] = korrigiere_vorschub_spanausduennung(
+            float(data["vorschub_mm_min"]), ae, d,
+        )
+    return jsonify(out)
