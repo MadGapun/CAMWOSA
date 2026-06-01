@@ -148,7 +148,7 @@ class TestKontur:
         """Kleines Quadrat + grosser Fraeser + INNEN -> kein Toolpath moeglich."""
         klein = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
         kontur_param.seite = KonturSeite.INNEN
-        with pytest.raises(ValueError, match="Werkzeug zu gross"):
+        with pytest.raises(ValueError, match="zu gross"):
             erzeuge_kontur_toolpath(klein, schaftfraeser_6mm, kontur_param)
 
     def test_backplot_annotation_in_bewegungen(

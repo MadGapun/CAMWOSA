@@ -56,6 +56,26 @@ toolpath = erzeuge_kontur_toolpath(geometrie, werkzeug, param)
 
 - `ValueError("Werkzeug zu gross fuer Innen-Offset")`: Wenn Polygon kleiner ist als der Werkzeug-Durchmesser.
 
+## Einstellbare Parameter (Grundfunktions-Audit alpha.11)
+
+Jeder dieser Parameter **wirkt tatsächlich** auf den Toolpath (geprüft in
+`tests/cam/test_grundfunktionen.py`):
+
+| Parameter | Wirkung |
+|---|---|
+| `seite` | innen / außen / auf_linie — Offset-Richtung |
+| `max_tiefe` + `stepdown` | Tiefe + Anzahl Z-Pässe (stepdown wird auf max_tiefe geklemmt) |
+| `vorschub` | Feed auf alle Schnittbahnen (G1) |
+| `eintauch_vorschub` | Feed auf Plunge-Bewegungen |
+| `spindel_rpm` | Drehzahl im Toolpath |
+| **`fraes_richtung`** | **Gleichlauf/Gegenlauf — kehrt die Bahn-Umlaufrichtung um** (Climb außen = im Uhrzeigersinn, innen umgekehrt). *Seit alpha.11 wirksam.* |
+| **`aufmass`** | **Schlicht-Material das stehen bleibt** — Bahn hält `aufmass` Abstand zur Sollkontur. *Seit alpha.11 wirksam.* |
+| **`schlichtgang`** | **zusätzlicher sauberer Pass** auf der Sollkontur (Aufmass=0) bei voller Tiefe, ohne Tabs. *Seit alpha.11 wirksam.* |
+| `tabs_anzahl` / `_hoehe` / `_breite` | Haltestege im letzten Pass |
+
+> Noch nicht wirksam (geplant): `lead_in_laenge` / `lead_out_laenge`
+> (tangentiales Ein-/Ausfahren), `eintauch_strategie` (Rampe/Helix).
+
 ## Verwandt
 
 - [Geometrie](Geometrie.md)

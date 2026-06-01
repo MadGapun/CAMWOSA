@@ -21,8 +21,10 @@ import math
 
 from shapely.geometry import LineString, MultiPolygon, Polygon
 
-from camwosa.cam.geometry import OffsetSeite, objekt_zu_shapely, offset_kontur
-from camwosa.cam.parameter import KonturParameter, KonturSeite
+from camwosa.cam.geometry import (
+    OffsetSeite, objekt_zu_shapely, offset_kontur, orientiere_bahn,
+)
+from camwosa.cam.parameter import FraesRichtung, KonturParameter, KonturSeite
 from camwosa.db.models import Werkzeug
 from camwosa.dxf.parser import GeometrieObjekt
 from camwosa.gcode.toolpath import (
@@ -44,10 +46,14 @@ def erzeuge_kontur_toolpath(
     geo = _als_shapely(geometrie)
 
     if isinstance(geo, Polygon):
-        offset = offset_kontur(geo, werkzeug.durchmesser, _seiten_map(parameter.seite))
+        # Aufmass (Schlicht-Material) wird auf den Werkzeug-Radius aufgeschlagen:
+        # effektiver Durchmesser = durchmesser + 2*aufmass → Bahn bleibt um aufmass
+        # von der Sollkontur entfernt.
+        eff_durchmesser = werkzeug.durchmesser + 2.0 * abs(parameter.aufmass)
+        offset = offset_kontur(geo, eff_durchmesser, _seiten_map(parameter.seite))
         if offset is None:
             raise ValueError(
-                "Werkzeug zu gross fuer Innen-Offset: kein Toolpath moeglich."
+                "Werkzeug (+ Aufmass) zu gross fuer Innen-Offset: kein Toolpath moeglich."
             )
         konturen = _polygone_zu_konturen(offset)
     elif isinstance(geo, LineString):
@@ -56,7 +62,35 @@ def erzeuge_kontur_toolpath(
     else:
         raise ValueError(f"Geometrie-Typ nicht unterstuetzt: {type(geo)}")
 
+    # Fraes-Richtung (Gleichlauf/Gegenlauf) → Umlaufrichtung der geschlossenen
+    # Konturen. Konvention: Gleichlauf (Climb) aussen = im Uhrzeigersinn,
+    # innen = gegen. (Nur fuer geschlossene Polygon-Konturen, nicht Auf-Linie.)
+    if isinstance(geo, Polygon):
+        ist_climb = parameter.fraes_richtung == FraesRichtung.GLEICHLAUF
+        if parameter.seite == KonturSeite.INNEN:
+            im_uzs = not ist_climb
+        else:
+            im_uzs = ist_climb
+        konturen = [orientiere_bahn(k, im_uzs) for k in konturen]
+
     bewegungen = _generiere_bewegungen(konturen, werkzeug, parameter)
+
+    # Schlichtgang: zusaetzlicher sauberer Pass auf der Soll-Kontur (Aufmass=0)
+    # bei voller Tiefe — nur wenn Aufmass stehen gelassen wurde.
+    if parameter.schlichtgang and isinstance(geo, Polygon) and parameter.aufmass > 0:
+        schlicht_offset = offset_kontur(
+            geo, werkzeug.durchmesser, _seiten_map(parameter.seite),
+        )
+        if schlicht_offset is not None:
+            schlicht_konturen = _polygone_zu_konturen(schlicht_offset)
+            schlicht_konturen = [orientiere_bahn(k, im_uzs) for k in schlicht_konturen]
+            schlicht_param = parameter.model_copy(update={
+                "stepdown": abs(parameter.max_tiefe),  # in einem Zug
+                "tabs_anzahl": 0,                       # Schlichtgang ohne Tabs
+            })
+            bewegungen.extend(
+                _generiere_bewegungen(schlicht_konturen, werkzeug, schlicht_param)
+            )
 
     return Toolpath(
         operation_id=operation_id,

@@ -21,8 +21,10 @@ import math
 
 from shapely.geometry import LineString, MultiPolygon, Polygon
 
-from camwosa.cam.geometry import objekt_zu_shapely, offset_polygon
-from camwosa.cam.parameter import TaschenParameter, TaschenStrategie
+from camwosa.cam.geometry import (
+    objekt_zu_shapely, offset_polygon, orientiere_bahn,
+)
+from camwosa.cam.parameter import FraesRichtung, TaschenParameter, TaschenStrategie
 from camwosa.db.models import Werkzeug
 from camwosa.dxf.parser import GeometrieObjekt
 from camwosa.gcode.toolpath import (
@@ -53,7 +55,36 @@ def erzeuge_tasche_toolpath(
     else:
         bahnen = _parallel_bahnen(geo, werkzeug, parameter)
 
+    # Fraes-Richtung: Tasche schneidet INNEN ins Material → Gleichlauf (Climb)
+    # = gegen den Uhrzeigersinn. Nur geschlossene Bahnen umorientieren.
+    ist_climb = parameter.fraes_richtung == FraesRichtung.GLEICHLAUF
+    im_uzs = not ist_climb
+    bahnen = [
+        orientiere_bahn(b, im_uzs) if len(b) >= 3 else b
+        for b in bahnen
+    ]
+
     bewegungen = _generiere_bewegungen(bahnen, werkzeug, parameter)
+
+    # Schlichtgang Wand: sauberer Pass entlang der Soll-Wand (Aufmass=0) bei
+    # voller Tiefe — nur wenn Wand-Aufmass stehen gelassen wurde.
+    if parameter.schlichtgang_wand and parameter.aufmass_wand > 0:
+        r = werkzeug.durchmesser / 2.0
+        wand = offset_polygon(geo, -r)
+        schlicht_bahnen: list[list[tuple[float, float]]] = []
+        if isinstance(wand, Polygon) and not wand.is_empty:
+            schlicht_bahnen.append(orientiere_bahn(list(wand.exterior.coords), im_uzs))
+        elif isinstance(wand, MultiPolygon):
+            for p in wand.geoms:
+                schlicht_bahnen.append(orientiere_bahn(list(p.exterior.coords), im_uzs))
+        if schlicht_bahnen:
+            schlicht_param = parameter.model_copy(update={
+                "stepdown": abs(parameter.max_tiefe),
+                "aufmass_boden": 0.0,
+            })
+            bewegungen.extend(
+                _generiere_bewegungen(schlicht_bahnen, werkzeug, schlicht_param)
+            )
 
     return Toolpath(
         operation_id=operation_id,
@@ -63,7 +94,11 @@ def erzeuge_tasche_toolpath(
         sicherheitshoehe=parameter.sicherheitshoehe,
         bewegungen=bewegungen,
         kommentar=f"Tasche ({parameter.strategie.value})",
-        metadaten={"strategie": parameter.strategie.value},
+        metadaten={
+            "strategie": parameter.strategie.value,
+            "fraes_richtung": parameter.fraes_richtung.value,
+            "schlichtgang_wand": parameter.schlichtgang_wand,
+        },
     )
 
 

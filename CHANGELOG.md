@@ -4,6 +4,54 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.11] — 2026-05-21
+
+**Grundfunktions-Audit + Härtung.** Bevor weitere Profi-Features kommen, wurden
+die Kern-Operationen (Kontur, Gravur, Tasche) systematisch geprüft und gehärtet.
+**Befund:** mehrere Parameter waren im Modell/UI einstellbar, hatten aber
+**keine Wirkung** auf den Toolpath. Das ist jetzt behoben — „einstellbar" heißt
+wieder „wirkt".
+
+### Behoben: einstellbare-aber-wirkungslose Parameter
+
+- **`fraes_richtung` (Gleichlauf/Gegenlauf)** stand nur in den Metadaten, kehrte
+  aber die Bahn nie um. Jetzt wirksam in **Kontur + Tasche**: die Umlaufrichtung
+  der geschlossenen Bahnen wird gedreht (Climb außen = im Uhrzeigersinn, innen/
+  Tasche = gegen den Uhrzeigersinn). Neuer Helfer `orientiere_bahn()` +
+  `signierte_flaeche()` in `cam/geometry.py`.
+- **`aufmass` (Kontur)** wurde komplett ignoriert. Jetzt als zusätzlicher Offset
+  angewendet — wichtig für Markus' Schruppen+Schlichten-in-einer-Aufspannung.
+- **`schlichtgang`** (Kontur) + **`schlichtgang_wand`** (Tasche) hatten keinen
+  Effekt. Jetzt: zusätzlicher sauberer Pass auf der Sollkontur/-wand (Aufmaß=0)
+  bei voller Tiefe, ohne Tabs.
+
+### Verifiziert: 30 neue Grundfunktions-Tests (`test_grundfunktionen.py`)
+
+Decken genau die angefragten Punkte ab:
+- **Geschwindigkeiten** — `vorschub` landet auf Schnittbahnen, `eintauch_vorschub`
+  auf Plunges, Eilgang ohne Feed (war nie geprüft!)
+- **Tiefen** — max_tiefe erreicht, Z-Pässe aus stepdown, stepdown>max_tiefe → 1 Pass
+- **Climb/Gegenlauf** — kehrt die Bahn um (gleiche Geometrie, andere Reihenfolge)
+- **Aufmaß** — Bahn hält Abstand; Boden-Aufmaß reduziert Tiefe
+- **Schlichtgang** — fügt Pass hinzu (no-op ohne Aufmaß)
+- **Taschen mit Ecken (L-Form) und ohne (Kreis)** — Gouge-Check über alle
+  Strategien: keine Schnittbahn schneidet über die Tasche hinaus
+- **Gravur** — konstante Tiefe, Feed wirkt, Tiefe einstellbar
+- **Einstellbarkeit** — Stepover, Seite innen/außen, Tabs-Anzahl ändern den Output
+
+### Doku
+
+- `Operation-Kontur.md` + `Operation-Tasche.md` um „Einstellbare Parameter"-
+  Tabellen erweitert (was wirkt, was noch geplant ist — ehrlich).
+
+### Test-Status
+
+- Backend: **816 Tests grün** (+30 Grundfunktions-Härtung)
+- Noch nicht wirksam (ehrlich dokumentiert, geplant): Lead-In/Out, Eintauch-
+  Strategie Rampe/Helix, schlichtgang_boden.
+
+---
+
 ## [0.0.1-alpha.10] — 2026-05-21
 
 **Dual-Audience-Prinzip + Power-User-Schicht (Cluster M1 + M2).** Markus'

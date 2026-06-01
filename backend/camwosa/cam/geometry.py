@@ -261,6 +261,36 @@ def skaliere_inch_zu_mm(obj: GeometrieObjekt) -> GeometrieObjekt:
     )
 
 
+def signierte_flaeche(coords: list[tuple[float, float]]) -> float:
+    """Shoelace-Flaeche eines Polygonzugs. >0 = CCW (gegen Uhrzeiger), <0 = CW."""
+    n = len(coords)
+    if n < 3:
+        return 0.0
+    s = 0.0
+    for i in range(n):
+        x1, y1 = coords[i][0], coords[i][1]
+        x2, y2 = coords[(i + 1) % n][0], coords[(i + 1) % n][1]
+        s += x1 * y2 - x2 * y1
+    return s / 2.0
+
+
+def orientiere_bahn(
+    coords: list[tuple[float, float]], im_uhrzeigersinn: bool,
+) -> list[tuple[float, float]]:
+    """Dreht einen geschlossenen Polygonzug in die gewuenschte Umlaufrichtung.
+
+    Wird fuer Gleichlauf/Gegenlauf-Fraesen verwendet: die Umlaufrichtung der
+    Bahn bestimmt, auf welcher Seite die Schneide ins Material greift.
+    """
+    flaeche = signierte_flaeche(coords)
+    if abs(flaeche) < 1e-12:
+        return coords
+    ist_cw = flaeche < 0.0
+    if ist_cw != im_uhrzeigersinn:
+        return list(reversed(coords))
+    return coords
+
+
 __all__ = [
     "BoundingBox",
     "INCH_ZU_MM",
@@ -272,6 +302,8 @@ __all__ = [
     "objekt_zu_shapely",
     "offset_kontur",
     "offset_polygon",
+    "orientiere_bahn",
+    "signierte_flaeche",
     "skaliere_inch_zu_mm",
 ]
 

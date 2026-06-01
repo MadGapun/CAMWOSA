@@ -60,7 +60,32 @@ Polygone mit Loechern (Inseln) sind unterstuetzt — die Inseln werden ausgespar
 
 - `ValueError("nicht unterstuetzt")`: Eingabe ist keine geschlossene Kontur.
 
+## Einstellbare Parameter + Ecken-Verhalten (Grundfunktions-Audit alpha.11)
+
+Geprüft in `tests/cam/test_grundfunktionen.py` (inkl. Gouge-Check für Taschen
+**mit Innenecken** (L-Form) und **ohne Ecken** (Kreis) über alle Strategien):
+
+| Parameter | Wirkung |
+|---|---|
+| `strategie` | parallel / spiral_außen / spiral_innen / offset_kontur / adaptive |
+| `stepover_prozent` | Bahnabstand → Anzahl Bahnen |
+| `max_tiefe` + `stepdown` | Tiefe + Z-Pässe |
+| `vorschub` / `eintauch_vorschub` | Feed Schnitt / Plunge |
+| `aufmass_wand` | Wand-Material das stehen bleibt (Bahn weiter von der Wand) |
+| `aufmass_boden` | Boden-Material (geringere Tiefe) |
+| **`fraes_richtung`** | **Gleichlauf/Gegenlauf** — Tasche schneidet innen → Climb = gegen den Uhrzeigersinn. *Seit alpha.11 wirksam.* |
+| **`schlichtgang_wand`** | **Schlicht-Pass entlang der Soll-Wand** (Aufmass=0) bei voller Tiefe. *Seit alpha.11 wirksam.* |
+
+**Ecken:** Innenecken (konkav, z.B. L-Form) hinterlassen werkzeug-bedingt einen
+Radius — der Fräser kann nicht in die scharfe Ecke. Für scharfe Steck-Ecken:
+[Dogbone-Slots](Dogbone-Slots.md). Der Audit stellt sicher, dass **keine Bahn
+über die Tasche hinaus schneidet** (kein Gouge), mit und ohne Ecken.
+
+> Noch nicht wirksam (geplant): `eintauch_strategie` (Rampe/Helix statt
+> senkrechtem Plunge), `schlichtgang_boden`.
+
 ## Verwandt
 
 - [Operation-Kontur](Operation-Kontur.md)
+- [Dogbone-Slots](Dogbone-Slots.md)
 - [Geometrie](Geometrie.md)
