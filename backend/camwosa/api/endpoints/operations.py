@@ -236,6 +236,55 @@ def postprocess():
     return jsonify({"gcode": "\n".join(zeilen) + "\n", "zeilen": len(zeilen)})
 
 
+@bp.post("/zeitschaetzung")
+def zeitschaetzung():
+    """Schätzt die Bearbeitungszeit einer Operation oder eines ganzen Jobs (K5).
+
+    Body:
+    {
+      "toolpaths": [ ...serialisierte Toolpaths... ],
+      "maschine_id": "..."  ODER  "eilgang_mm_min": 3000,
+      "overhead_faktor": 1.15 (optional),
+      "werkzeugwechsel_sekunden": 45 (optional)
+    }
+    Response: { schnitt_sekunden, eilgang_sekunden, pausen_sekunden,
+                gesamt_sekunden, gesamt_minuten, klartext }
+    """
+    from camwosa.gcode.zeit_schaetzung import schaetze_job_zeit
+
+    data = request.get_json() or {}
+    eilgang = data.get("eilgang_mm_min")
+    if eilgang is None and data.get("maschine_id"):
+        from camwosa.db.loader import lade_maschinen
+        maschinen = {m.id: m for m in lade_maschinen()}
+        m = maschinen.get(data["maschine_id"])
+        if m is None:
+            return jsonify({"fehler": "Maschine nicht gefunden"}), 404
+        eilgang = m.eilgang
+    if not eilgang or eilgang <= 0:
+        return jsonify({"fehler": "eilgang_mm_min oder gueltige maschine_id noetig"}), 422
+
+    try:
+        toolpaths = [_deserialize_toolpath(tp) for tp in data.get("toolpaths", [])]
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": f"Toolpath ungueltig: {e}"}), 422
+
+    erg = schaetze_job_zeit(
+        toolpaths,
+        eilgang_mm_min=float(eilgang),
+        werkzeugwechsel_sekunden=float(data.get("werkzeugwechsel_sekunden", 45.0)),
+        overhead_faktor=float(data.get("overhead_faktor", 1.15)),
+    )
+    return jsonify({
+        "schnitt_sekunden": erg.schnitt_sekunden,
+        "eilgang_sekunden": erg.eilgang_sekunden,
+        "pausen_sekunden": erg.pausen_sekunden,
+        "gesamt_sekunden": erg.gesamt_sekunden,
+        "gesamt_minuten": erg.gesamt_minuten,
+        "klartext": erg.klartext,
+    })
+
+
 def _serialize_toolpath(tp) -> dict:
     return {
         "operation_id": tp.operation_id,

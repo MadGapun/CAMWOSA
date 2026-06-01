@@ -68,6 +68,17 @@ def _delete(pfad: str) -> Any:
         return r.json()
 
 
+def _post_datei(pfad: str, datei_pfad: str, form: dict) -> Any:
+    """POST multipart/form-data mit einer Datei (fuer Bild-Uploads)."""
+    with open(datei_pfad, "rb") as fh:
+        files = {"datei": (datei_pfad.rsplit("/", 1)[-1], fh)}
+        data = {k: str(v) for k, v in form.items() if v is not None}
+        with httpx.Client(timeout=120) as c:
+            r = c.post(f"{BACKEND_URL}{pfad}", files=files, data=data)
+            r.raise_for_status()
+            return r.json()
+
+
 # ---------------------------------------------------------------------------
 # Maschinen / Werkzeuge / Material
 # ---------------------------------------------------------------------------
@@ -860,6 +871,57 @@ def operation_3d_parallel(parameter: dict, heightmap: dict) -> dict:
     return _post("/api/spezial-ops/3d-parallel", {
         "parameter": parameter,
         "heightmap": heightmap,
+    })
+
+
+@mcp.tool()
+def zeitschaetzung(
+    toolpaths: list,
+    maschine_id: str | None = None,
+    eilgang_mm_min: float | None = None,
+    overhead_faktor: float = 1.15,
+    werkzeugwechsel_sekunden: float = 45.0,
+) -> dict:
+    """Schaetzt die Bearbeitungszeit einer Operation oder eines ganzen Jobs (K5).
+
+    Schnitt- und Eilgang-Zeit getrennt, Werkzeugwechsel-Pausen, Beschleunigungs-
+    Overhead. Liefert gesamt_sekunden/minuten + Klartext (z.B. "23 Min 12 Sek").
+
+    Entweder maschine_id (nutzt deren Eilgang) ODER eilgang_mm_min angeben."""
+    return _post("/api/operations/zeitschaetzung", {
+        "toolpaths": toolpaths,
+        "maschine_id": maschine_id,
+        "eilgang_mm_min": eilgang_mm_min,
+        "overhead_faktor": overhead_faktor,
+        "werkzeugwechsel_sekunden": werkzeugwechsel_sekunden,
+    })
+
+
+@mcp.tool()
+def bitmap_trace(
+    datei_pfad: str,
+    schwelle: float = 0.5,
+    invertieren: bool = False,
+    pixel_pro_mm: float = 4.0,
+    ziel_breite_mm: float | None = None,
+    glaettung_toleranz_mm: float = 0.2,
+    min_flaeche_mm2: float = 1.0,
+) -> dict:
+    """Bitmap → Vektor-Schneid-Kontur (L1). Ein PNG/JPG-Logo (s/w) in 2D-Outlines
+    zum Ausschneiden/Aushoehlen/Gravieren umwandeln.
+
+    Anders als Bild-zu-Relief (3D-Heightmap) liefert dies 2D-Vektoren.
+    schwelle: Graustufen-Schwelle 0-1. invertieren: helle statt dunkle Bereiche.
+    ziel_breite_mm: skaliert die Ausgabe (None = aus Aufloesung).
+
+    Liefert geschlossene Polylinien als GeometrieObjekte."""
+    return _post_datei("/api/cad/bitmap-trace", datei_pfad, {
+        "schwelle": schwelle,
+        "invertieren": invertieren,
+        "pixel_pro_mm": pixel_pro_mm,
+        "ziel_breite_mm": ziel_breite_mm,
+        "glaettung_toleranz_mm": glaettung_toleranz_mm,
+        "min_flaeche_mm2": min_flaeche_mm2,
     })
 
 

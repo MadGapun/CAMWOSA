@@ -129,6 +129,37 @@ export const camwosaApi = {
       .then((r) => r.data);
   },
 
+  // Bitmap → Vektor-Trace (alpha.9, Cluster L1)
+  bitmapTrace: (
+    datei: File,
+    optionen?: {
+      schwelle?: number; invertieren?: boolean; pixel_pro_mm?: number;
+      ziel_breite_mm?: number; glaettung_toleranz_mm?: number; min_flaeche_mm2?: number;
+    },
+  ): Promise<{
+    anzahl: number;
+    objekte: Array<{ typ: string; layer: string; geschlossen: boolean; punkte: Array<[number, number]> }>;
+  }> => {
+    const fd = new FormData();
+    fd.append("datei", datei);
+    for (const [k, v] of Object.entries(optionen ?? {})) {
+      if (v !== null && v !== undefined) fd.append(k, String(v));
+    }
+    return api
+      .post("/cad/bitmap-trace", fd, { headers: { "Content-Type": "multipart/form-data" } })
+      .then((r) => r.data);
+  },
+
+  // Zeit-/Aufwand-Schätzung (alpha.9, Cluster K5)
+  zeitschaetzung: (
+    toolpaths: Array<Record<string, unknown>>,
+    optionen: { maschine_id?: string; eilgang_mm_min?: number; overhead_faktor?: number; werkzeugwechsel_sekunden?: number },
+  ): Promise<{
+    schnitt_sekunden: number; eilgang_sekunden: number; pausen_sekunden: number;
+    gesamt_sekunden: number; gesamt_minuten: number; klartext: string;
+  }> =>
+    api.post("/operations/zeitschaetzung", { toolpaths, ...optionen }).then((r) => r.data),
+
   // Operations
   opKontur: (
     werkzeug_id: string,

@@ -109,7 +109,7 @@ Die **geführte Schicht über dem starken Backend** — das mächtige CAM für M
 | K2 | **Intent-basierter Operations-Picker** — „Was soll mit dieser Form passieren?" mit Bildern (durchschneiden/aushöhlen/gravieren/Relief/bohren) → Operations-Typ + Defaults. | 2 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
 | K3 | **Mystery-Bit-Helfer + Starter-Sets** — Messschieber-Werte + Form-Bild → Werkzeug-Vorschlag (unbeschrifteter Bit-Beutel = häufigstes Anfänger-Problem) + Ein-Klick-Bibliothek pro Hobby-Maschine. | 0 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
 | K4 | **Konfidenz-Ampel + Klartext-Sicherheit** — Feeds-Vertrauenssignal (🟢/🟡) + Safety-Checks in Menschensprache. | 3,5 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
-| K5 | **Zeit-/Aufwand-Schätzung** — Toolpath-Länge + Vorschub → „~23 Min". Daten existieren (`gesamtlaenge`/`schnittlaenge`/`feed`), nur aggregieren. Kleiner Aufwand. | 5 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K5 | **Zeit-/Aufwand-Schätzung** — `gcode/zeit_schaetzung.py`: Schnitt/Eilgang getrennt, Werkzeugwechsel-Pausen, Beschleunigungs-Overhead (1.15), Klartext („23 Min 12 Sek"). API `/api/operations/zeitschaetzung` + MCP. 15 Tests. | 5 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ✅ |
 | K6 | **Animierte Schnitt-Wiedergabe** — Cutter fährt Pfad ab + Speed-Slider (Anteil D35, hier als Anfänger-Vertrauens-Feature). | 5 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
 | K7 | **„Was jetzt?"-Übergabe-Guide** — Datei → Sender → Null → Play, druckbar; + Sender-Empfehlung nach Controller (neutral, ohne Push). | 6 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
 | K8 | **Troubleshooting-Assistent** — Ergebnis-Diagnose (verbrannt/ausgefranst/…) → Korrektur + Neuberechnung. Lern-Schleife. | 7 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
@@ -125,7 +125,7 @@ Design leicht reinbekommen (Phase 1). Verwandt zu D28–D30, aber: Cluster L ist
 
 | Nr | Funktion | Issue | Status |
 |----|----------|-------|--------|
-| L1 | **Bitmap → Vektor-Trace** — PNG/JPG-Logo (s/w) → 2D-Schneid-Outline + Centerline (Ausschneiden/Gravieren). Anders als Bild-zu-Relief (Heightmap). Marching-Squares-Basis in `cam/waterline.py`. Der große fehlende Input-Weg. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
+| L1 | **Bitmap → Vektor-Trace** — `cad/bitmap_trace.py`: Schwellwert → Marching-Squares-Kontur (nutzt `waterline.py`) → Douglas-Peucker → GeometrieObjekt. Skalierung + Flecken-Filter. Outline-Trace (Centerline folgt). API `/api/cad/bitmap-trace` + MCP. 11 Tests. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ✅ |
 | L2 | **Clipart / Form-Bibliothek** — parametrische Standardformen (Herz, Stern, Zahnrad, Rahmen, Pfeil, abgerundetes Rechteck, N-Eck) → GeometrieObjekt. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
 | L3 | **Bemaßung + Lineale im Zeichnen** — sichtbare Maße/Maßketten + Canvas-Lineale. Verschränkt mit D28. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
 

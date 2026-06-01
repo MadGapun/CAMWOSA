@@ -32,6 +32,7 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 #### CAD-Import + Zeichnen
 - [CAD-Import](CAD-Import.md) — Plugin-System für DXF/SVG/STL/STEP
 - [DXF-Import](DXF-Import.md) · [STL-Import](STL-Import.md)
+- [Bitmap-Trace](Bitmap-Trace.md) — Logo/Bild → 2D-Schneid-Kontur (Cluster L1)
 - [Integriertes Zeichnen](Zeichnen.md) — Konva, 2D-CAD
 - [Geometrie-Annotationen](Geometrie-Annotationen.md) — Anschlagbohrungen, Refpunkte, Auto-Op-Generator
 
@@ -74,6 +75,7 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [G-Code-Editor](GCode-Editor.md) — Monaco
 - [Arc-Fitting](Arc-Fitting.md) — G1-Folgen zu G2/G3 zusammenfassen (kompakterer G-Code)
 - [Sicherheits-Checks](Sicherheits-Checks.md)
+- [Bearbeitungszeit-Schätzung](Zeitschaetzung.md) — „wie lange dauert das?" (Cluster K5)
 - [Z-Grid-Diagnose](Z-Grid-Diagnose.md) — Werkstuecks-Ebenheit aus Z-Probing-Daten analysieren
 - [Spannmittel](Spannmittel.md) — 8 Spannmittel-Typen mit strukturierten Sperrzonen
 - [Run-Lock + Dependency-Graph](Run-Lock.md) — "Im Zweifel laeuft das Programm nicht"

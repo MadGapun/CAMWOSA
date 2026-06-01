@@ -4,6 +4,50 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.9] — 2026-05-21
+
+**Anfänger-Schicht-Auftakt (Cluster K5 + L1).** Aus der Hobby-CAM-Tiefenanalyse
+(`docs/HOBBY-CAM-ANALYSE.md`) + Vergleich gegen 5 Hobby-Tools (EstlCAM,
+DeskProto, MillMage/LightBurn, Carbide Create). Kernerkenntnis: CAMWOSAs Backend
+ist auf Industrie-Niveau, die Lücke ist die anfänger-zugewandte Bedien-Schicht.
+Cluster K (Anfänger-Erlebnis) + L (Design-Eingabe) dokumentiert; erste zwei
+Backend-Wins umgesetzt.
+
+### K5 — Bearbeitungszeit-Schätzung (`gcode/zeit_schaetzung.py`, 15 Tests)
+
+✅ „Wie lange dauert das?" — Standard-Feature jedes Hobby-Tools.
+- Schnitt- vs. Eilgang-Zeit getrennt, Werkzeugwechsel-Pausen, Beschleunigungs-
+  Overhead (Default 1.15 — reale Maschinen bremsen an Ecken)
+- Klartext („1 Std 23 Min" / „4 Min 12 Sek")
+- Job-Aggregation über mehrere Operationen
+- API `/api/operations/zeitschaetzung` (per `maschine_id` oder `eilgang_mm_min`)
+  + MCP `zeitschaetzung`
+
+### L1 — Bitmap → Vektor-Trace (`cad/bitmap_trace.py`, 11 Tests)
+
+✅ PNG/JPG-Logo (s/w) → 2D-Schneid-Kontur zum Ausschneiden/Aushöhlen/Gravieren.
+**Anders als Bild-zu-Relief** (Heightmap/3D) — hier 2D-Vektoren.
+- Schwellwert → Marching-Squares-Kontur (nutzt `cam/waterline.py`, kein potrace)
+  → Douglas-Peucker-Vereinfachung → GeometrieObjekt
+- Skalierung auf Ziel-Breite, Flecken-Filter, invertierbar
+- API `/api/cad/bitmap-trace` (multipart) + MCP `bitmap_trace`
+- Outline-Trace; Centerline (Strich-Gravur) als Folge-Schritt dokumentiert
+
+### Analyse + Master-Plan
+
+- `docs/HOBBY-CAM-ANALYSE.md` — Persona, Ziel- vs. Fertigungs-Modell, 7-Phasen-
+  Arbeitsweise, Tool-Vergleich §6b mit 9 übertragbaren Mustern
+- Master-Plan Cluster K (K1–K13, Issue #47) + L (L1–L3, Issue #48)
+- Wichtigste Erkenntnis aus §6b: LightBurn-„Cuts/Layers"-Modell (K13) als
+  größter UX-Hebel — nutzt Markus' LightBurn-Erfahrung direkt
+
+### Test-Status
+
+- Backend: **778 Tests grün** (+32 für alpha.9)
+- Frontend-Client-Bindings `bitmapTrace` + `zeitschaetzung`
+
+---
+
 ## [0.0.1-alpha.8] — 2026-05-21
 
 **CAM-Qualität & Toolpath-Infrastruktur (Cluster J1-J3).** GAP-Analyse „was
