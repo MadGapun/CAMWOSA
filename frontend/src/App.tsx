@@ -135,34 +135,40 @@ function ChromeToggleBar({
   onToggleFokus: () => void;
 }) {
   return (
-    <div className="pointer-events-none absolute right-2 top-2 z-50 flex gap-1 opacity-30 transition-opacity hover:opacity-100">
+    // #51: container faengt keine Klicks ab (pointer-events-none); nur die
+    // Buttons selbst. Im Normalfall ist nur der Fokus-Button sichtbar (kleine
+    // Klick-Flaeche in der Ecke), die drei Chrome-Toggles klappen erst beim
+    // Hover nach links auf — so liegt nichts Klickbares ueber den View-Buttons.
+    <div className="group pointer-events-none absolute right-2 top-2 z-50 flex items-start gap-1">
+      <div className="hidden gap-1 opacity-30 transition-opacity group-hover:flex group-hover:opacity-100">
+        <Btn
+          title={`Sidebar ${sidebar ? "ausblenden" : "einblenden"} (B)`}
+          aktiv={sidebar}
+          onClick={onToggleSidebar}
+        >
+          ▤
+        </Btn>
+        <Btn
+          title={`Topbar ${topbar ? "ausblenden" : "einblenden"} (T)`}
+          aktiv={topbar}
+          onClick={onToggleTopbar}
+        >
+          ▔
+        </Btn>
+        <Btn
+          title={`Statusbar ${statusbar ? "ausblenden" : "einblenden"}`}
+          aktiv={statusbar}
+          onClick={onToggleStatusbar}
+        >
+          ▁
+        </Btn>
+      </div>
       <Btn
-        title={fokus ? "Fokus verlassen (F oder Esc)" : "Fokus-Modus: alle Leisten aus (F)"}
+        title={fokus ? "Fokus verlassen (F oder Esc)" : "Fokus-Modus: alle Leisten aus (F) — hover fuer mehr"}
         aktiv={fokus}
         onClick={onToggleFokus}
       >
         {fokus ? "◰" : "▣"}
-      </Btn>
-      <Btn
-        title={`Sidebar ${sidebar ? "ausblenden" : "einblenden"} (B)`}
-        aktiv={sidebar}
-        onClick={onToggleSidebar}
-      >
-        ▤
-      </Btn>
-      <Btn
-        title={`Topbar ${topbar ? "ausblenden" : "einblenden"} (T)`}
-        aktiv={topbar}
-        onClick={onToggleTopbar}
-      >
-        ▔
-      </Btn>
-      <Btn
-        title={`Statusbar ${statusbar ? "ausblenden" : "einblenden"}`}
-        aktiv={statusbar}
-        onClick={onToggleStatusbar}
-      >
-        ▁
       </Btn>
     </div>
   );

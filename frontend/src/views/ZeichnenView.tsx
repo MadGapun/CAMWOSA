@@ -261,7 +261,7 @@ export default function ZeichnenView() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pr-10">
         <h1 className="text-xl font-bold">Integriertes Zeichnen</h1>
         <div className="flex items-center gap-2 text-xs">
           <label>
