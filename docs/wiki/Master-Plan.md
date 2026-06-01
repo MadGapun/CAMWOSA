@@ -99,6 +99,35 @@ Lücken bei Toolpath-Qualität/Infrastruktur (nicht bei Strategien). Quelle: GAP
 | J7 | **Pencil / Kehlnaht-Cleanup** — Tal-Linien mit kleinem Werkzeug nachfahren (3D-Pencil). Grosser Brocken. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [3D-Strategien](3D-Strategien.md) | ⬜ |
 | J8 | **Trochoidales Nutenfraesen** — Slot mit kreisender Bahn fuer tiefe schmale Nuten (konstante Last). | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | — | ⬜ |
 
+### Cluster K — Anfänger-Erlebnis / Zero-to-Cut (Tiefenanalyse 2026-05-21)
+
+Die **geführte Schicht über dem starken Backend** — das mächtige CAM für Menschen ohne CNC-Vorwissen bedienbar machen. Quelle: `docs/HOBBY-CAM-ANALYSE.md`. Kernerkenntnis: die Lücke ist fast vollständig die anfänger-zugewandte Bedien-Schicht, nicht das Backend. Sortiert nach Anfänger-Nutzen.
+
+| Nr | Funktion | Phase | Issue | Status |
+|----|----------|-------|-------|--------|
+| K1 | **Geführter End-to-End-Assistent** — roter Faden „von der Idee zur fertigen Datei" durch alle 7 Phasen; verbindet QuickCAM + Auto-CAM statt Template-Inseln. | alle | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K2 | **Intent-basierter Operations-Picker** — „Was soll mit dieser Form passieren?" mit Bildern (durchschneiden/aushöhlen/gravieren/Relief/bohren) → Operations-Typ + Defaults. | 2 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K3 | **Mystery-Bit-Helfer + Starter-Sets** — Messschieber-Werte + Form-Bild → Werkzeug-Vorschlag (unbeschrifteter Bit-Beutel = häufigstes Anfänger-Problem) + Ein-Klick-Bibliothek pro Hobby-Maschine. | 0 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K4 | **Konfidenz-Ampel + Klartext-Sicherheit** — Feeds-Vertrauenssignal (🟢/🟡) + Safety-Checks in Menschensprache. | 3,5 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K5 | **Zeit-/Aufwand-Schätzung** — Toolpath-Länge + Vorschub → „~23 Min". Daten existieren (`gesamtlaenge`/`schnittlaenge`/`feed`), nur aggregieren. Kleiner Aufwand. | 5 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K6 | **Animierte Schnitt-Wiedergabe** — Cutter fährt Pfad ab + Speed-Slider (Anteil D35, hier als Anfänger-Vertrauens-Feature). | 5 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K7 | **„Was jetzt?"-Übergabe-Guide** — Datei → Sender → Null → Play, druckbar; + Sender-Empfehlung nach Controller (neutral, ohne Push). | 6 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K8 | **Troubleshooting-Assistent** — Ergebnis-Diagnose (verbrannt/ausgefranst/…) → Korrektur + Neuberechnung. Lern-Schleife. | 7 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K9 | **Beispielprojekte mitliefern** — 3–5 fertige .cwp (Untersetzer, Namensschild, Box) zum Öffnen + Lernen. | alle | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K10 | **Anfänger-Modus / Jargon-Brücke** — Begriffe in Alltagssprache + jedes Feld mit Hover-Hilfe (vollendet D36). | alle | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K11 | **Innen/Außen-Linie + Tabs-Aufklärung visuell** — Bilder statt Dropdown; proaktiver „dein Teil fliegt weg"-Hinweis. | 2,4 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K12 | **Nullpunkt-Erklär-Guide** — visuelle Standard-Empfehlung (vorne-links-oben) + „warum". | 4 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+
+### Cluster L — Design-Eingabe für Hobby (Tiefenanalyse 2026-05-21)
+
+Design leicht reinbekommen (Phase 1). Verwandt zu D28–D30, aber: Cluster L ist **Design-Inhalt reinbekommen**, nicht Zeichnen-Bedienung. Quelle: `docs/HOBBY-CAM-ANALYSE.md`.
+
+| Nr | Funktion | Issue | Status |
+|----|----------|-------|--------|
+| L1 | **Bitmap → Vektor-Trace** — PNG/JPG-Logo (s/w) → 2D-Schneid-Outline + Centerline (Ausschneiden/Gravieren). Anders als Bild-zu-Relief (Heightmap). Marching-Squares-Basis in `cam/waterline.py`. Der große fehlende Input-Weg. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
+| L2 | **Clipart / Form-Bibliothek** — parametrische Standardformen (Herz, Stern, Zahnrad, Rahmen, Pfeil, abgerundetes Rechteck, N-Eck) → GeometrieObjekt. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
+| L3 | **Bemaßung + Lineale im Zeichnen** — sichtbare Maße/Maßketten + Canvas-Lineale. Verschränkt mit D28. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
+
 ## Teil B — REST-API + MCP
 
 | Nr | Funktion | Issue | Wiki | Status |
