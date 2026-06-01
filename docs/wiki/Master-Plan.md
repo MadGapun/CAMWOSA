@@ -117,6 +117,7 @@ Die **geführte Schicht über dem starken Backend** — das mächtige CAM für M
 | K10 | **Anfänger-Modus / Jargon-Brücke** — Begriffe in Alltagssprache + jedes Feld mit Hover-Hilfe (vollendet D36). | alle | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
 | K11 | **Innen/Außen-Linie + Tabs-Aufklärung visuell** — Bilder statt Dropdown; proaktiver „dein Teil fliegt weg"-Hinweis. | 2,4 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
 | K12 | **Nullpunkt-Erklär-Guide** — visuelle Standard-Empfehlung (vorne-links-oben) + „warum". | 4 | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
+| K13 | **LightBurn-vertraute „Cuts/Layers"-Bedienung** 🔴 — Form + Operation farbcodiert zusammen (wie LightBurn/MillMage), die Ebenen-Liste *ist* die Operations-Liste mit Modus/Werkzeug/Tiefe/anzeigen-Toggle. Vereint Geometrie + Operationen statt zwei getrennter Tabs. **Größter UX-Hebel** — nutzt Markus' LightBurn-Erfahrung direkt + spricht die Laser-Crossover-Zielgruppe an. (Tool-Vergleich: `docs/HOBBY-CAM-ANALYSE.md` §6b, Muster 2.) | alle | [#47](https://github.com/MadGapun/CAMWOSA/issues/47) | ⬜ |
 
 ### Cluster L — Design-Eingabe für Hobby (Tiefenanalyse 2026-05-21)
 

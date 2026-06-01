@@ -309,6 +309,99 @@ Design leicht reinbekommen (verwandt zu, aber nicht überlappend mit D28–D30):
 
 ---
 
+## 6b. Wie lösen es andere Hobby-Tools? (EstlCAM, DeskProto, MillMage, LightBurn, Carbide Create)
+
+Recherche 2026-05-21. Diese fünf Tools decken das Hobby-Spektrum ab — CAMWOSA
+will EstlCAM (2.5D) und DeskProto (Rotary) ablösen, und Markus arbeitet täglich
+mit **LightBurn** im Laser-Bereich. (Tool-Namen nur in diesem internen Analyse-
+Dok — **nie in README oder UI**, gemäß Projekt-Regel.)
+
+### Vergleich auf den Anfänger-Dimensionen
+
+| Dimension | EstlCAM | DeskProto | MillMage (LightBurn) | LightBurn (Laser) | Carbide Create | CAMWOSA heute |
+|---|---|---|---|---|---|---|
+| Geführter Einstieg | Klick-pro-Linie | **Wizard ↔ Full (dual)** | „bring dein LightBurn-Wissen" | Beginner-Tour | Free-Vollversion | First-Run-Wizard + QuickCAM |
+| Operation zuweisen | **Linie klicken → Op** | Wizard | Cuts/Layers | Cuts/Layers | Op-Liste | Op-Liste + Quick-Create (D31) |
+| Zeit-Schätzung | **✅ in Sim** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Halte­stege | **✅ visuell klicken** | ✅ | ✅ | — | ✅ | Backend ✅, UI nackt |
+| Bild→Vektor-Trace | **✅** | (nur Relief) | ✅ | ✅ | **✅ image trace** | ❌ |
+| Werkzeug-Presets | viele | — | Library | Layer-Settings | **50+ + Material-Feeds** | CuttingPreset ✅ |
+| Maschinensteuerung | integriert | nein | **integriert (jog/zero/send)** | integriert | via Carbide Motion | **bewusst nein (nur Datei)** |
+| Numerik immer sichtbar | ✅ | ✅ | ✅ | **✅ X/Y/W/H/Rot + 9-Punkt** | ✅ | ❌ (D28 offen) |
+
+### Die 9 übertragbaren Muster
+
+1. **Dual-Interface (DeskProto): Wizard für Anfänger ↔ Full-Control für Profis —
+   gleiches Datenmodell.** „Novice users follow the wizard, experienced users
+   directly change any setting." **Das ist der Master-Pattern für Cluster K.**
+   CAMWOSA hat die Profi-Schicht schon (alles UI-editierbar) — es fehlt die
+   Wizard-Schicht *darüber*, nicht *statt*. Der Wizard schreibt ins selbe
+   Projekt-Modell, das der Profi editiert. → validiert K1 + K10.
+
+2. **LightBurn „Cuts & Layers"-Modell (LightBurn/MillMage): Form + Operation
+   leben zusammen, farbcodiert.** In LightBurn zeichnest du Formen, weist jede
+   einer farbigen Ebene zu, und jede Ebene trägt ihre Schnitt-Einstellungen
+   (Modus/Speed/Power, anzeigen/senden-Toggle). Die Ebenen-Liste *ist* die
+   Operations-Liste. **Für Markus (und die Laser-Crossover-Zielgruppe) wäre ein
+   „Cuts/Layers"-Panel sofort vertraut.** CAMWOSA trennt heute Geometrie
+   (ZeichnenView) und Operationen (OperationenView) in zwei Tabs — LightBurn
+   vereint sie. → **neuer Master-Plan-Punkt K13** (der größte UX-Hebel, direkt
+   auf Markus' Erfahrung aufbauend).
+
+3. **Geometrie-zuerst, Klick-zum-Zuweisen (EstlCAM):** „click the line → pick
+   operation" statt „create operation → assign geometry". Intuitiver für
+   Anfänger. CAMWOSAs D31 (Quick-Create-Buttons auf selektierter Geometrie)
+   geht schon die Richtung; K2 (Intent-Picker mit Bildern) vollendet es.
+
+4. **Numerik immer sichtbar (LightBurn): X/Y/B/H/Rotation + Seitenverhältnis-
+   Lock + 9-Punkt-Ursprung.** Eine kompakte, dauernd sichtbare Zahlen-Leiste.
+   → genau D28, und LightBurns Form ist das bewährte Vorbild.
+
+5. **Reiche Werkzeug-Bibliothek + Material-Feeds (Carbide Create): „50+
+   Cutter + material-spezifische Speeds → 70 % weniger Setup-Fehler bei
+   Anfängern."** CAMWOSA hat das System (CuttingPreset) — die Lehre: **mehr**
+   Presets ausliefern, organisiert nach den Bits, die Leute wirklich haben.
+   → validiert K3 (Starter-Sets).
+
+6. **Zeit-Schätzung in der Simulation (EstlCAM, alle):** Standard-Feature.
+   → validiert K5 (heute der einzige Tool-übergreifende Punkt, den CAMWOSA
+   nicht hat — bestätigt höchste Priorität).
+
+7. **Bild-Trace (EstlCAM, Carbide Create):** Beide haben „image trace" —
+   Bitmap → Schneid-Vektor. CAMWOSA macht nur Heightmap. → validiert L1 als
+   Standard-Hobby-Feature, das fehlt.
+
+8. **Visuelle Haltesteg-Platzierung (EstlCAM): „click on the holding-tab image
+   and place your tabs."** → validiert K11.
+
+9. **Tile & Stamp (EstlCAM):** Elemente einfach kacheln/duplizieren. →
+   ergänzt L2 (Clipart) um ein Array/Muster-Werkzeug.
+
+### Bewusste Divergenz: Maschinensteuerung
+
+EstlCAM, MillMage und Carbide (via Carbide Motion) integrieren Maschinen-
+steuerung (jog/zero/send). **CAMWOSA tut das bewusst NICHT** (Markus' Regel —
+nur Datei). Das ist eine bewusste Positionierung, keine Lücke. K7 („Was jetzt?"-
+Guide) ist CAMWOSAs Antwort: die Übergabe erklären, statt sie zu tun.
+
+### Was CAMWOSA bereits besser/anders macht
+
+- **Komplett kostenlos + offen** — die beste Einstiegshürde von allen (Carbide/
+  MillMage/DeskProto haben Free-Editions oder Tiers, CAMWOSA ist ganz frei).
+- **MCP-Parität** — KI-Assistenz nativ, hat keines der fünf.
+- **3D-Strategien auf Fusion-Niveau** — mehr als EstlCAM/Carbide-Free/MillMage-Core.
+- **Rotary + Drechseln** — DeskProto-Niveau, aber integriert statt Extra-Edition.
+
+### Die übergreifende Erkenntnis aus dem Vergleich
+
+> Die erfolgreichen Hobby-Tools sind **nicht die mit den meisten Strategien —
+> es sind die mit dem niedrigsten Einstieg.** EstlCAMs Klick-pro-Linie,
+> DeskProtos Dual-Interface, LightBurns Cuts/Layers, Carbides Preset-Bibliothek.
+> CAMWOSA hat das stärkste Backend der Gruppe und die schwächste Einstiegs-
+> schicht. **Cluster K + L schließen genau diese Lücke — und das LightBurn-
+> Cuts/Layers-Modell (K13) ist der Hebel, der Markus' eigene Erfahrung direkt
+> nutzbar macht.**
+
 ## 7. Strategische Empfehlung
 
 **Der höchste Hebel ist nicht mehr Backend — es ist die Anfänger-Schicht.**
@@ -323,6 +416,10 @@ Schritte — Backend zuerst, dann UI, da UI Markus' Test-Loop braucht):
 3. **K3 Mystery-Bit + Starter-Sets** — Backend-Heuristik + Default-Bundles.
 4. **K1 geführter Assistent** + **K6 Animation** + **K10 Jargon-Brücke** — die
    großen UI-Brocken, in Markus' Test-Sessions.
+5. **K13 LightBurn-„Cuts/Layers"-Bedienung** — der größte UX-Hebel (Muster 2
+   aus §6b). Großer UI-Umbau, der Geometrie + Operationen vereint und Markus'
+   LightBurn-Erfahrung direkt nutzbar macht. Eigene Test-Session, gut als
+   übergreifender Rahmen für K2/K11.
 
 **Bewusst NICHT übernehmen:** Sender-Integration (Markus' Regel — nur Datei).
 Der „Was jetzt?"-Guide (K7) bleibt deshalb rein erklärend, ohne Push.
