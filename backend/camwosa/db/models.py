@@ -302,6 +302,11 @@ class Werkzeug(BaseModel):
 
     id: str
     name: str
+    name_zusatz: str = Field(
+        default="",
+        description="Optionaler eigener Zusatz, der an den Auto-Namen angehaengt "
+                    "wird (D34a). Leer = nur Auto-Name aus den Daten.",
+    )
     typ: WerkzeugTyp
     material: WerkzeugMaterial = WerkzeugMaterial.HARTMETALL
     beschichtung: WerkzeugBeschichtung = WerkzeugBeschichtung.KEINE

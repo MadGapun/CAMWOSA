@@ -74,6 +74,22 @@ class OperationParameter(BaseModel):
     sicherheitshoehe: float = Field(default=5.0, gt=0)
     max_tiefe: float = Field(gt=0, description="Max. Bearbeitungstiefe in mm (positiv)")
     stepdown: float = Field(gt=0, description="Tiefe pro Z-Pass in mm")
+    # J10: knappe Freifahrt-Hoehe ueber der Geometrie (None = Sicherheitshoehe)
+    freifahrt_hoehe: float | None = Field(
+        default=None,
+        description="Hoehe fuer Zwischen-Eilgaenge (knapp ueber Geometrie). "
+                    "None = Sicherheitshoehe. Erste Anfahrt/Schluss bleiben sicher.",
+    )
+    # J11: Vorschub an Teil-Tiefe anpassen (Feed gilt fuer volle Zustellung)
+    vorschub_anpassung: bool = Field(
+        default=False,
+        description="Vorschub bei geringerer axialer Zustellung erhoehen "
+                    "(Teil-Paesse / prozentuale Tiefen).",
+    )
+    vorschub_anpassung_max: float = Field(
+        default=2.0, ge=1.0, le=5.0,
+        description="Obergrenze des Vorschub-Anpassungsfaktors (J11).",
+    )
 
     @model_validator(mode="after")
     def _stepdown_kleiner_max_tiefe(self) -> "OperationParameter":

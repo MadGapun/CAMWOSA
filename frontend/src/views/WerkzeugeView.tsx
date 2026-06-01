@@ -4,20 +4,11 @@ import { useAppStore } from "../state/store";
 import type { Werkzeug, WerkzeugTyp } from "../api/types";
 import Modal from "../components/Modal";
 import WerkzeugEditor from "../editor/WerkzeugEditor";
+import WerkzeugGrafik from "../components/WerkzeugGrafik";
 import { camwosaApi } from "../api/client";
+import { WERKZEUG_TYP_LABEL, anzeigename } from "../api/werkzeugName";
 
-const TYP_LABELS: Record<WerkzeugTyp, string> = {
-  schaftfraeser: "Schaftfraeser",
-  kugelfraeser: "Kugelfraeser",
-  torusfraeser: "Torusfraeser",
-  v_bit: "V-Bit",
-  gravierstichel: "Gravierstichel",
-  bohrer: "Bohrer",
-  einschneider: "Einschneider",
-  fischschwanz: "Fischschwanz",
-  schruppfraeser: "Schruppfraeser",
-  diamantgravierer: "Diamantgravierer",
-};
+const TYP_LABELS = WERKZEUG_TYP_LABEL;
 
 export default function WerkzeugeView() {
   const { t } = useTranslation();
@@ -115,7 +106,8 @@ export default function WerkzeugeView() {
       <table className="w-full text-sm">
         <thead className="border-b border-gray-700 text-left text-xs uppercase text-camwosa-muted">
           <tr>
-            <th className="py-2">Name</th>
+            <th className="py-2 w-8"></th>
+            <th>Name</th>
             <th>Typ</th>
             <th>Durchmesser</th>
             <th>Schneiden</th>
@@ -127,8 +119,11 @@ export default function WerkzeugeView() {
         <tbody>
           {gefiltert.map((w) => (
             <tr key={w.id} className="border-b border-gray-800 hover:bg-camwosa-surface">
+              <td className="py-2 cursor-pointer text-camwosa-muted" onClick={() => setDetailId(w.id)}>
+                <WerkzeugGrafik geo={w} mode="piktogramm" size={26} />
+              </td>
               <td className="py-2 cursor-pointer" onClick={() => setDetailId(w.id)}>
-                <span className="font-medium">{w.name}</span>
+                <span className="font-medium">{anzeigename(w)}</span>
               </td>
               <td>{TYP_LABELS[w.typ]}</td>
               <td>{w.durchmesser} mm</td>
@@ -188,7 +183,7 @@ export default function WerkzeugeView() {
       <Modal
         open={detail !== null}
         onClose={() => setDetailId(null)}
-        titel={detail ? `Werkzeug: ${detail.name}` : ""}
+        titel={detail ? `Werkzeug: ${anzeigename(detail)}` : ""}
         breit
       >
         {detail && <WerkzeugDetail werkzeug={detail} materialien={materialien} />}
@@ -213,7 +208,13 @@ function WerkzeugDetail({
 
   return (
     <div className="space-y-4 text-sm">
-      <section>
+      <section className="flex gap-4">
+        <div className="shrink-0 text-camwosa-text" style={{ width: 130 }}>
+          <div className="rounded border border-gray-700 bg-camwosa-bg p-2">
+            <WerkzeugGrafik geo={werkzeug} mode="gross" />
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
         <h3 className="mb-2 font-semibold">Geometrie</h3>
         <div className="grid grid-cols-2 gap-3 text-xs">
           <Feld label="Typ" wert={TYP_LABELS[werkzeug.typ]} />
@@ -240,6 +241,7 @@ function WerkzeugDetail({
             {werkzeug.notizen}
           </p>
         )}
+        </div>
       </section>
 
       <section>

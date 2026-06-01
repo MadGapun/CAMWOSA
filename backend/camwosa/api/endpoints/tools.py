@@ -19,7 +19,34 @@ bp = Blueprint("tools", __name__, url_prefix="/api/tools")
 
 @bp.get("/")
 def liste():
-    return jsonify([t.model_dump(mode="json") for t in lade_werkzeuge()])
+    from camwosa.db.werkzeug_name import werkzeug_anzeigename
+    out = []
+    for t in lade_werkzeuge():
+        d = t.model_dump(mode="json")
+        d["_anzeigename"] = werkzeug_anzeigename(t)  # D34a: Auto-Name + Zusatz
+        out.append(d)
+    return jsonify(out)
+
+
+@bp.post("/anzeigename")
+def anzeigename():
+    """Live-Vorschau des Auto-Namens beim Anlegen/Editieren (D34a).
+
+    Body: (Teil-)Werkzeug-dict. Liefert { auto_name, anzeigename }.
+    """
+    from camwosa.db.models import Werkzeug
+    from camwosa.db.werkzeug_name import werkzeug_anzeigename, werkzeug_auto_name
+    data = request.get_json() or {}
+    data.setdefault("id", "_preview")
+    data.setdefault("name", "")
+    try:
+        wz = Werkzeug.model_validate(data)
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    return jsonify({
+        "auto_name": werkzeug_auto_name(wz),
+        "anzeigename": werkzeug_anzeigename(wz),
+    })
 
 
 @bp.get("/<tool_id>")

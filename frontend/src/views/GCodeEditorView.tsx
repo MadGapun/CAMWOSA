@@ -48,6 +48,10 @@ export default function GCodeEditorView() {
   const [filter, setFilter] = useState("");
   const [generieren, setGenerieren] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  // J9/J10: intelligente Fahrwege beim Export (einstellbar)
+  const [fahrwegOpt, setFahrwegOpt] = useState(true);
+  const [freifahrtAktiv, setFreifahrtAktiv] = useState(false);
+  const [freifahrt, setFreifahrt] = useState(1);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
   const beforeMount: BeforeMount = (m) => {
@@ -82,6 +86,11 @@ export default function GCodeEditorView() {
         maschine.id,
         werkzeug_id,
         aktiveOps.map((o) => o.toolpath!),
+        undefined,
+        {
+          fahrweg_optimierung: fahrwegOpt,
+          freifahrt_hoehe: freifahrtAktiv ? freifahrt : null,
+        },
       );
       setValue(result.gcode);
     } catch (e: unknown) {
@@ -136,6 +145,28 @@ export default function GCodeEditorView() {
             Exportieren (.nc)
           </button>
         </div>
+      </div>
+
+      {/* J9/J10: intelligente Fahrwege — einstellbar vor dem Generieren */}
+      <div className="flex flex-wrap items-center gap-4 rounded border border-gray-700 bg-camwosa-surface px-3 py-1.5 text-xs">
+        <span className="font-semibold text-camwosa-muted">Fahrwege:</span>
+        <label className="flex items-center gap-1.5" title="Reihenfolge der Schnitte per Nearest-Neighbor optimieren → kürzere Eilgang-Wege, kürzere Zeit.">
+          <input type="checkbox" checked={fahrwegOpt} onChange={(e) => setFahrwegOpt(e.target.checked)} />
+          Kurze Wege (Reihenfolge optimieren)
+        </label>
+        <label className="flex items-center gap-1.5" title="Zwischen-Freifahrten knapp über die Geometrie senken statt auf voller Sicherheitshöhe. Erste Anfahrt + letzter Rückzug bleiben sicher.">
+          <input type="checkbox" checked={freifahrtAktiv} onChange={(e) => setFreifahrtAktiv(e.target.checked)} />
+          Knappe Freifahrt-Höhe
+        </label>
+        <span className={freifahrtAktiv ? "flex items-center gap-1" : "flex items-center gap-1 opacity-40"}>
+          <input
+            type="number" step={0.5} min={0} value={freifahrt}
+            disabled={!freifahrtAktiv}
+            onChange={(e) => setFreifahrt(Number(e.target.value))}
+            className="w-16 rounded bg-camwosa-bg px-2 py-0.5"
+          />
+          mm über Geometrie
+        </span>
       </div>
 
       {fehler && (

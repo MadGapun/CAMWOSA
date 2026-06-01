@@ -70,8 +70,9 @@ export interface MachineBundle {
 
 export type WerkzeugTyp =
   | "schaftfraeser" | "kugelfraeser" | "torusfraeser"
-  | "v_bit" | "gravierstichel" | "bohrer"
-  | "einschneider" | "fischschwanz" | "schruppfraeser" | "diamantgravierer";
+  | "v_bit" | "ballnose_v_bit" | "gravierstichel" | "bohrer"
+  | "einschneider" | "fischschwanz" | "schruppfraeser"
+  | "diamantgravierer" | "drag_gravierer";
 
 export interface WerkzeugSegment {
   z_unten: number;
@@ -84,6 +85,10 @@ export interface WerkzeugSegment {
 export interface Werkzeug {
   id: string;
   name: string;
+  /** Optionaler eigener Zusatz, der an den Auto-Namen angehaengt wird (D34a). */
+  name_zusatz?: string;
+  /** Vom Backend berechneter Anzeigename (Auto-Name + Zusatz), nur lesend (D34a). */
+  _anzeigename?: string;
   typ: WerkzeugTyp;
   material?: string;
   beschichtung?: string;

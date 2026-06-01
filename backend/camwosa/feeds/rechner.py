@@ -262,6 +262,47 @@ def korrigiere_vorschub_spanausduennung(
     return vorschub_mm_min * chip_thinning_faktor(stepover_mm, werkzeug_durchmesser_mm)
 
 
+# ---------------------------------------------------------------------------
+# Axiale Vorschub-Anpassung bei Teil-Tiefe (Cluster J11, Issue #52)
+# ---------------------------------------------------------------------------
+
+
+def vorschub_fuer_zustellung(
+    vorschub_mm_min: float,
+    ap_aktuell_mm: float,
+    stepdown_nominal_mm: float,
+    *,
+    faktor_max: float = 2.0,
+) -> float:
+    """Passt den Vorschub an die tatsaechliche axiale Zustellung eines Passes an.
+
+    Der konfigurierte Vorschub gilt fuer die **volle** Zustellung
+    (``stepdown_nominal``). Ein Pass mit geringerer Tiefe (z.B. der letzte
+    Teil-Pass oder eine prozentuale Tiefe) hat weniger Werkzeug-Eingriff
+    (kuerzere eingreifende Schneidenlaenge → kleinere Schnittkraft) und vertraegt
+    daher einen hoeheren Vorschub.
+
+    Modell: Vorschub ~ stepdown/ap (konstante Schnittkraft), gedeckelt auf
+    ``faktor_max`` (Default 2x — konservativ; sonst wuerde ein hauchduenner Pass
+    den Vorschub explodieren lassen).
+
+    Args:
+        vorschub_mm_min: Nominal-Vorschub (fuer volle Zustellung).
+        ap_aktuell_mm: tatsaechliche axiale Tiefe dieses Passes.
+        stepdown_nominal_mm: nominale Zustellung pro Pass.
+        faktor_max: Obergrenze des Anpassungsfaktors.
+
+    Returns:
+        Angepasster Vorschub (>= Nominal-Vorschub).
+    """
+    if ap_aktuell_mm <= 1e-9 or stepdown_nominal_mm <= 1e-9:
+        return vorschub_mm_min
+    if ap_aktuell_mm >= stepdown_nominal_mm:
+        return vorschub_mm_min  # voller Eingriff → kein Bonus
+    faktor = min(stepdown_nominal_mm / ap_aktuell_mm, faktor_max)
+    return vorschub_mm_min * faktor
+
+
 __all__ = [
     "FeedsSpeedsErgebnis",
     "FeedsSpeedsWarnung",
@@ -269,4 +310,5 @@ __all__ = [
     "berechne_feeds_speeds",
     "chip_thinning_faktor",
     "korrigiere_vorschub_spanausduennung",
+    "vorschub_fuer_zustellung",
 ]

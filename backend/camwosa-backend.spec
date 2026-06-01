@@ -44,6 +44,12 @@ a = Analysis(
         'camwosa.cam.wrap',
         'camwosa.cam.rotary',
         'camwosa.cam.simulation',
+        # G-Code-Post-Processing + Feeds + Zeit (teils lazy in Endpoints importiert)
+        'camwosa.gcode.fahrweg',
+        'camwosa.gcode.arc_fitting',
+        'camwosa.gcode.zeit_schaetzung',
+        'camwosa.feeds.rechner',
+        'camwosa.db.werkzeug_name',
         # STL/Heightmap Pipeline (Bild-zu-Relief A33/A35/A36)
         'camwosa.stl.heightmap',
         'camwosa.stl.bild_heightmap',

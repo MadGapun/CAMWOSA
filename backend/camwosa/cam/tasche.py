@@ -25,6 +25,7 @@ from camwosa.cam.geometry import (
     objekt_zu_shapely, offset_polygon, orientiere_bahn,
 )
 from camwosa.cam.parameter import FraesRichtung, TaschenParameter, TaschenStrategie
+from camwosa.feeds.rechner import vorschub_fuer_zustellung
 from camwosa.db.models import Werkzeug
 from camwosa.dxf.parser import GeometrieObjekt
 from camwosa.gcode.toolpath import (
@@ -367,7 +368,16 @@ def _generiere_bewegungen(
 
     z_aktuell = z_oben
     while z_aktuell > z_unten + 1e-9:
+        z_vorher = z_aktuell
         z_aktuell = max(z_aktuell - stepdown, z_unten)
+        # J11: Vorschub an tatsaechliche Zustellung dieses Passes anpassen
+        ap = z_vorher - z_aktuell
+        vorschub = parameter.vorschub
+        if parameter.vorschub_anpassung:
+            vorschub = vorschub_fuer_zustellung(
+                parameter.vorschub, ap, stepdown,
+                faktor_max=parameter.vorschub_anpassung_max,
+            )
         for bahn in bahnen:
             if len(bahn) < 2:
                 continue
@@ -381,7 +391,7 @@ def _generiere_bewegungen(
             )
             for x, y in bahn[1:]:
                 bewegungen.append(
-                    Bewegung(BewegungsTyp.LINEAR, x, y, z_aktuell, feed=parameter.vorschub)
+                    Bewegung(BewegungsTyp.LINEAR, x, y, z_aktuell, feed=vorschub)
                 )
             bewegungen.append(
                 Bewegung(BewegungsTyp.EILGANG, x, y, parameter.sicherheitshoehe)

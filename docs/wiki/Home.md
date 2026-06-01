@@ -61,6 +61,7 @@ Willkommen im CAMWOSA-Wiki. Dieses Wiki ist die zentrale Dokumentation des Proje
 - [Operations-Plugins](Operations-Plugins.md) — eigene Operations-Typen
 - [Per-Feature-Override](Per-Feature-Override.md) — pro Operation überschreiben
 - [Feeds & Speeds Rechner](Feeds-Speeds.md)
+- [Fahrweg-Optimierung](Fahrweg-Optimierung.md) — kurze Wege, knappe Freifahrten, Vorschub-Anpassung (J9/J10/J11)
 
 #### Workflow
 - [Multi-Setup Workflow](Workflow-Modul.md) — mehrere Aufspannungen + Arbeitsplan

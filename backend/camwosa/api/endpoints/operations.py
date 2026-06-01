@@ -227,6 +227,18 @@ def postprocess():
     post = registry().get(post_id)()
     ctx = PostKontext(maschine=maschine, werkzeug=werkzeug)
     toolpaths = [_deserialize_toolpath(tp) for tp in data["toolpaths"]]
+    # J9/J10: intelligente Fahrwege (Reihenfolge optimieren + Freifahrten senken)
+    if data.get("fahrweg_optimierung") or data.get("freifahrt_hoehe") is not None:
+        from camwosa.gcode.fahrweg import optimiere_fahrwege
+        reihenfolge = bool(data.get("fahrweg_optimierung", True))
+        freifahrt = data.get("freifahrt_hoehe")
+        toolpaths = [
+            optimiere_fahrwege(
+                tp, reihenfolge=reihenfolge,
+                freifahrt_hoehe=float(freifahrt) if freifahrt is not None else None,
+            )
+            for tp in toolpaths
+        ]
     # J1: optionales Arc-Fitting (G1-Folgen → G2/G3) vor dem Postprozessor
     if data.get("arc_fitting"):
         from camwosa.gcode.arc_fitting import fitte_toolpath

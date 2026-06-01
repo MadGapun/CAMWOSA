@@ -341,6 +341,12 @@ export const camwosaApi = {
     werkzeug_id: string,
     toolpaths: Toolpath[],
     postprozessor_id?: string,
+    optionen?: {
+      fahrweg_optimierung?: boolean;
+      freifahrt_hoehe?: number | null;
+      arc_fitting?: boolean;
+      arc_toleranz_mm?: number;
+    },
   ): Promise<{ gcode: string; zeilen: number }> =>
     api
       .post("/operations/postprocess", {
@@ -348,6 +354,7 @@ export const camwosaApi = {
         werkzeug_id,
         toolpaths,
         postprozessor_id,
+        ...optionen,
       })
       .then((r) => r.data),
 

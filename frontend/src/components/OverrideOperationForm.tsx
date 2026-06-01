@@ -140,6 +140,15 @@ export default function OverrideOperationForm({
         quelle={quelle("stepdown")}
         effektivAnzeige={eff("stepdown") as number}
       />
+      <OverrideField
+        typ="checkbox"
+        label="Vorschub bei Teil-Tiefe anpassen"
+        wert={ov<boolean>("vorschub_anpassung")}
+        onChange={(v) => set("vorschub_anpassung", v)}
+        onReset={() => set("vorschub_anpassung", null)}
+        quelle={quelle("vorschub_anpassung")}
+        effektivAnzeige={eff("vorschub_anpassung") ? "an" : "aus"}
+      />
     </>
   );
 

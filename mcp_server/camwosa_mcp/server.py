@@ -300,12 +300,17 @@ def gcode_erzeugen(
     postprozessor_id: str | None = None,
     arc_fitting: bool = False,
     arc_toleranz_mm: float = 0.05,
+    fahrweg_optimierung: bool = False,
+    freifahrt_hoehe: float | None = None,
 ) -> dict:
     """Postprocesst eine Liste von Toolpaths zu G-Code.
 
-    arc_fitting (J1): wenn True, werden lineare Punktfolgen auf Kreisboegen
-    vor dem Postprozessor zu G2/G3 zusammengefasst (kompakterer G-Code,
-    ruhigerer Lauf). arc_toleranz_mm steuert die max. Abweichung."""
+    arc_fitting (J1): lineare Punktfolgen auf Kreisboegen → G2/G3.
+    fahrweg_optimierung (J9): Schnitt-Gruppen per Nearest-Neighbor umsortieren
+    (kurze Wege = kuerzere Zeit).
+    freifahrt_hoehe (J10): Zwischen-Eilgaenge knapp ueber der Geometrie statt
+    auf voller Sicherheitshoehe (mm, einstellbar; erste Anfahrt/Schluss bleiben
+    sicher)."""
     return _post("/api/operations/postprocess", {
         "maschine_id": maschine_id,
         "werkzeug_id": werkzeug_id,
@@ -313,6 +318,8 @@ def gcode_erzeugen(
         "postprozessor_id": postprozessor_id,
         "arc_fitting": arc_fitting,
         "arc_toleranz_mm": arc_toleranz_mm,
+        "fahrweg_optimierung": fahrweg_optimierung,
+        "freifahrt_hoehe": freifahrt_hoehe,
     })
 
 

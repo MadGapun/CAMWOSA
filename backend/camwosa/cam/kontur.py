@@ -25,6 +25,7 @@ from camwosa.cam.geometry import (
     OffsetSeite, objekt_zu_shapely, offset_kontur, orientiere_bahn,
 )
 from camwosa.cam.parameter import FraesRichtung, KonturParameter, KonturSeite
+from camwosa.feeds.rechner import vorschub_fuer_zustellung
 from camwosa.db.models import Werkzeug
 from camwosa.dxf.parser import GeometrieObjekt
 from camwosa.gcode.toolpath import (
@@ -209,8 +210,17 @@ def _generiere_bewegungen(
         pass_nr = 0
         while z_aktuell > z_unten + 1e-9:
             pass_nr += 1
+            z_vorher = z_aktuell
             z_aktuell = max(z_aktuell - stepdown, z_unten)
             ist_letzter_pass = abs(z_aktuell - z_unten) < 1e-6
+            # J11: Vorschub an tatsaechliche Zustellung dieses Passes anpassen
+            ap = z_vorher - z_aktuell
+            vorschub = parameter.vorschub
+            if parameter.vorschub_anpassung:
+                vorschub = vorschub_fuer_zustellung(
+                    parameter.vorschub, ap, stepdown,
+                    faktor_max=parameter.vorschub_anpassung_max,
+                )
 
             bewegungen.append(
                 Bewegung(BewegungsTyp.PLUNGE, start_x, start_y, z_aktuell,
@@ -226,7 +236,7 @@ def _generiere_bewegungen(
                 for x, y in kontur[1:]:
                     bewegungen.append(
                         Bewegung(BewegungsTyp.LINEAR, x, y, z_aktuell,
-                                 feed=parameter.vorschub)
+                                 feed=vorschub)
                     )
             else:
                 # Mit Tabs: Kontur in feine Sub-Segmente (1 mm) zerlegen
@@ -254,7 +264,7 @@ def _generiere_bewegungen(
                         z_ziel = z_tab if in_tab else z_aktuell
                         bewegungen.append(
                             Bewegung(BewegungsTyp.LINEAR, sub_x, sub_y, z_ziel,
-                                     feed=parameter.vorschub,
+                                     feed=vorschub,
                                      kommentar="Tab" if in_tab else "")
                         )
                     s_aktuell += seg_laenge
@@ -263,7 +273,7 @@ def _generiere_bewegungen(
             # zurueck zum Startpunkt schliesst die Kontur
             bewegungen.append(
                 Bewegung(BewegungsTyp.LINEAR, start_x, start_y, z_aktuell,
-                         feed=parameter.vorschub,
+                         feed=vorschub,
                          kommentar="Kontur geschlossen")
             )
 

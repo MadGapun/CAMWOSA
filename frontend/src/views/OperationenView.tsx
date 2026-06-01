@@ -17,6 +17,9 @@ import { useAktiveMaschine, useAppStore } from "../state/store";
 import OverrideOperationForm from "../components/OverrideOperationForm";
 import FeedsSpeedsPanel from "../components/FeedsSpeedsPanel";
 import OperationPreview3D, { VorschauModusToggle, istHeavy } from "../components/OperationPreview3D";
+import WerkzeugGrafik from "../components/WerkzeugGrafik";
+import { anzeigename } from "../api/werkzeugName";
+import { schaetzeToolpathZeit, formatiereDauer } from "../api/zeit";
 import { useUIPrefs } from "../state/uiPrefs";
 
 const OP_LABELS: Record<OperationsTyp, string> = {
@@ -241,25 +244,35 @@ export default function OperationenView() {
                       opAktualisieren(aktiveOp.id, { name: e.target.value })
                     }
                   />
-                  <select
-                    className="rounded bg-camwosa-bg px-2 py-1 text-xs"
-                    value={aktiveOp.werkzeug_id}
-                    onChange={(e) => {
-                      opAktualisieren(aktiveOp.id, {
-                        werkzeug_id: e.target.value,
-                        parameter: {
-                          ...(aktiveOp.parameter as unknown as Record<string, unknown>),
+                  <div className="flex items-center gap-1.5">
+                    {(() => {
+                      const wz = werkzeuge.find((w) => w.id === aktiveOp.werkzeug_id);
+                      return wz ? (
+                        <span className="text-camwosa-muted" title={anzeigename(wz)}>
+                          <WerkzeugGrafik geo={wz} mode="piktogramm" size={24} />
+                        </span>
+                      ) : null;
+                    })()}
+                    <select
+                      className="rounded bg-camwosa-bg px-2 py-1 text-xs"
+                      value={aktiveOp.werkzeug_id}
+                      onChange={(e) => {
+                        opAktualisieren(aktiveOp.id, {
                           werkzeug_id: e.target.value,
-                        } as unknown as KonturParameter,
-                      });
-                    }}
-                  >
-                    {werkzeuge.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                  </select>
+                          parameter: {
+                            ...(aktiveOp.parameter as unknown as Record<string, unknown>),
+                            werkzeug_id: e.target.value,
+                          } as unknown as KonturParameter,
+                        });
+                      }}
+                    >
+                      {werkzeuge.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {anzeigename(w)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -336,7 +349,9 @@ export default function OperationenView() {
 
             <LivePreviewPanel op={aktiveOp} geometrien={geometrien} />
 
-            {aktiveOp.toolpath && <ToolpathStats toolpath={aktiveOp.toolpath} />}
+            {aktiveOp.toolpath && (
+              <ToolpathStats toolpath={aktiveOp.toolpath} eilgangMmMin={maschine?.eilgang} />
+            )}
           </>
         )}
       </main>
@@ -467,11 +482,12 @@ function anzahlOverrides(op: OperationEintrag): number {
   ).length;
 }
 
-function ToolpathStats({ toolpath }: { toolpath: Toolpath }) {
+function ToolpathStats({ toolpath, eilgangMmMin }: { toolpath: Toolpath; eilgangMmMin?: number }) {
+  const zeit = schaetzeToolpathZeit(toolpath, { eilgangMmMin: eilgangMmMin ?? 3000 });
   return (
     <section className="rounded border border-gray-700 bg-camwosa-surface p-3 text-sm">
       <h3 className="mb-2 font-semibold">Toolpath-Statistik</h3>
-      <div className="grid grid-cols-3 gap-3 text-xs">
+      <div className="grid grid-cols-4 gap-3 text-xs">
         <div>
           <div className="text-camwosa-muted">Bewegungen</div>
           <div className="text-base font-mono">{toolpath.bewegungen.length}</div>
@@ -486,6 +502,12 @@ function ToolpathStats({ toolpath }: { toolpath: Toolpath }) {
           <div className="text-camwosa-muted">Schnittstrecke</div>
           <div className="text-base font-mono">
             {toolpath.schnittlaenge?.toFixed(1) ?? "?"} mm
+          </div>
+        </div>
+        <div title={`Schnitt ${formatiereDauer(zeit.schnitt_sekunden)} · Eilgang ${formatiereDauer(zeit.eilgang_sekunden)} (inkl. Beschleunigungs-Overhead)`}>
+          <div className="text-camwosa-muted">⏱ Bearbeitungszeit ≈</div>
+          <div className="text-base font-mono text-camwosa-accent">
+            {formatiereDauer(zeit.gesamt_sekunden)}
           </div>
         </div>
       </div>

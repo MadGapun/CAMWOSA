@@ -319,3 +319,47 @@ class TestEinstellbarkeit:
         tab_moves = [b for b in mit.bewegungen if b.kommentar == "Tab"]
         assert len(tab_moves) > 0
         assert not any(b.kommentar == "Tab" for b in ohne.bewegungen)
+
+
+# --- J11 Vorschub-Anpassung bei Teil-Tiefe ----------------------------------
+
+class TestVorschubAnpassung:
+    def test_helfer_voller_eingriff_kein_bonus(self):
+        from camwosa.feeds.rechner import vorschub_fuer_zustellung
+        assert vorschub_fuer_zustellung(1000, ap_aktuell_mm=2.0, stepdown_nominal_mm=2.0) == 1000
+
+    def test_helfer_halbe_tiefe_doppelter_vorschub(self):
+        from camwosa.feeds.rechner import vorschub_fuer_zustellung
+        # ap=1, stepdown=2 → faktor 2 (= cap)
+        assert vorschub_fuer_zustellung(1000, 1.0, 2.0, faktor_max=2.0) == pytest.approx(2000)
+
+    def test_helfer_gedeckelt(self):
+        from camwosa.feeds.rechner import vorschub_fuer_zustellung
+        # ap=0.1, stepdown=2 → faktor 20, aber cap 2.5
+        assert vorschub_fuer_zustellung(1000, 0.1, 2.0, faktor_max=2.5) == pytest.approx(2500)
+
+    def test_kontur_letzter_teilpass_hoeherer_vorschub(self):
+        # max_tiefe=5, stepdown=2 → Paesse bei -2,-4,-5 (letzter ap=1)
+        tp = erzeuge_kontur_toolpath(_quadrat(), _fraeser(),
+                                     _kp(max_tiefe=5, stepdown=2, vorschub=1000,
+                                         vorschub_anpassung=True, vorschub_anpassung_max=2.0))
+        linear = [b for b in tp.bewegungen if b.typ == BewegungsTyp.LINEAR and b.feed]
+        feeds = {round(b.feed) for b in linear}
+        # volle Paesse 1000, letzter Teilpass (ap=1) 2000
+        assert 1000 in feeds
+        assert 2000 in feeds
+
+    def test_kontur_ohne_anpassung_konstanter_vorschub(self):
+        tp = erzeuge_kontur_toolpath(_quadrat(), _fraeser(),
+                                     _kp(max_tiefe=5, stepdown=2, vorschub=1000,
+                                         vorschub_anpassung=False))
+        linear = [b for b in tp.bewegungen if b.typ == BewegungsTyp.LINEAR and b.feed]
+        assert all(b.feed == 1000 for b in linear)
+
+    def test_tasche_anpassung_wirkt(self):
+        tp = erzeuge_tasche_toolpath(_quadrat(), _fraeser(),
+                                     _tp(max_tiefe=5, stepdown=2, vorschub=1000,
+                                         vorschub_anpassung=True))
+        linear = [b for b in tp.bewegungen if b.typ == BewegungsTyp.LINEAR and b.feed]
+        feeds = {round(b.feed) for b in linear}
+        assert 2000 in feeds  # letzter Teilpass schneller
