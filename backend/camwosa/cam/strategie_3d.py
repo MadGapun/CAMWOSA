@@ -159,6 +159,30 @@ def _werkzeug_kernel_offsets(
     if werkzeug.typ == WerkzeugTyp.TORUSFRAESER and werkzeug.spitzenradius:
         ecken_r = min(werkzeug.spitzenradius, r)
 
+    # M1: konische Werkzeuge (V-Bit, Gravierstichel, Diamant-/Drag-Gravierer).
+    # Spitzenwinkel = voller Oeffnungswinkel; Halbwinkel von der Achse.
+    # Bei Distanz d steigt die Kegel-Oberflaeche um d/tan(halbwinkel) ueber die
+    # Spitze. Optionale Flachflaeche bis spitzendurchmesser/2.
+    konische_typen = (
+        WerkzeugTyp.V_BIT, WerkzeugTyp.GRAVIERSTICHEL,
+        WerkzeugTyp.DIAMANTGRAVIERER, WerkzeugTyp.DRAG_GRAVIERER,
+    )
+    ist_konisch = werkzeug.typ in konische_typen and bool(werkzeug.spitzenwinkel)
+    ist_ballnose_v = (
+        werkzeug.typ == WerkzeugTyp.BALLNOSE_V_BIT and bool(werkzeug.spitzenwinkel)
+    )
+    tan_halb = 0.0
+    spitzen_r = (werkzeug.spitzendurchmesser / 2.0) if werkzeug.spitzendurchmesser else 0.0
+    if ist_konisch or ist_ballnose_v:
+        halb = math.radians(werkzeug.spitzenwinkel / 2.0)
+        tan_halb = math.tan(halb)
+    # Ball-Radius fuer Ball-Nose-V-Bit (Kugelspitze)
+    ball_r = 0.0
+    if ist_ballnose_v:
+        ball_r = werkzeug.spitzenradius or (
+            werkzeug.spitzendurchmesser / 2.0 if werkzeug.spitzendurchmesser else r * 0.1
+        )
+
     offsets: list[tuple[int, int, float]] = []
     for di in range(-rad_px, rad_px + 1):
         for dj in range(-rad_px, rad_px + 1):
@@ -177,8 +201,26 @@ def _werkzeug_kernel_offsets(
                 else:
                     dd = d - flach_r
                     dz = ecken_r - math.sqrt(max(0.0, ecken_r * ecken_r - dd * dd))
+            elif ist_konisch:
+                # Kegel mit TIP-Referenz: die Spitze sitzt UNTER dem Kontakt-
+                # punkt, darum negativer Offset. Flache Spitze bis spitzen_r,
+                # dann linear (Steigung cot(halbwinkel) = 1/tan_halb).
+                if d <= spitzen_r or tan_halb < 1e-9:
+                    dz = 0.0
+                else:
+                    dz = -(d - spitzen_r) / tan_halb
+            elif ist_ballnose_v:
+                # Hybrid Kugelspitze + Kegelwand, tangential verbunden, TIP-Ref.
+                # Tangentenpunkt: d_t = ball_r·cos(halb), profil_t = ball_r·(1-sin halb).
+                d_t = ball_r * math.cos(halb)
+                if d <= d_t:
+                    profil = ball_r - math.sqrt(max(0.0, ball_r * ball_r - d * d))
+                else:
+                    profil_t = ball_r * (1.0 - math.sin(halb))
+                    profil = profil_t + (d - d_t) / tan_halb if tan_halb > 1e-9 else profil_t
+                dz = -profil
             else:
-                # Schaftfraeser / V-Bit-Naeherung: flacher Boden
+                # Schaftfraeser / Einschneider / Fischschwanz: flacher Boden
                 dz = 0.0
             offsets.append((di, dj, dz))
     return offsets
@@ -447,6 +489,46 @@ def erzeuge_3d_parallel_toolpath(
     )
 
 
+def v_carve_parameter_vorschlag(
+    werkzeug: Werkzeug,
+    *,
+    spindel_rpm: float,
+    vorschub: float,
+    eintauch_vorschub: float,
+    riefenhoehe_mm: float = 0.02,
+    bahn_winkel_grad: float = 0.0,
+) -> Strategie3DParameter:
+    """Sinnvolle Defaults für V-Carve aus Tiefenbild/Modell (M2).
+
+    Nutzt feinen Scallop-Stepover (3D, an die Oberfläche angepasst) und das
+    V-Bit-Kegelprofil (M1). Das Werkzeug sollte ein V_BIT / GRAVIERSTICHEL /
+    BALLNOSE_V_BIT mit `spitzenwinkel` sein.
+
+    Ablauf des Power-Workflows:
+        bild → heightmap (heightmap_aus_bild / lade_stl+berechne_heightmap)
+        → erzeuge_3d_parallel_toolpath(heightmap, v_bit, dieser_vorschlag)
+    """
+    if not werkzeug.spitzenwinkel and werkzeug.typ in (
+        WerkzeugTyp.V_BIT, WerkzeugTyp.GRAVIERSTICHEL,
+        WerkzeugTyp.DIAMANTGRAVIERER, WerkzeugTyp.BALLNOSE_V_BIT,
+    ):
+        raise Strategie3DFehler(
+            "V-Carve braucht ein konisches Werkzeug mit spitzenwinkel."
+        )
+    return Strategie3DParameter(
+        werkzeug_id=werkzeug.id,
+        spindel_rpm=spindel_rpm,
+        vorschub=vorschub,
+        eintauch_vorschub=eintauch_vorschub,
+        stepover_modus=StepoverModus.SCALLOP_3D,  # konstante Riefenhöhe auf der 3D-Fläche
+        scallop_hoehe_mm=riefenhoehe_mm,
+        bahn_winkel_grad=bahn_winkel_grad,
+        aufmass_mm=0.0,
+        toleranz_mm=0.01,
+        zickzack=True,
+    )
+
+
 __all__ = [
     "Strategie3DFehler",
     "Strategie3DParameter",
@@ -454,4 +536,5 @@ __all__ = [
     "berechne_steigungswinkel",
     "erzeuge_3d_parallel_toolpath",
     "scallop_zu_stepover",
+    "v_carve_parameter_vorschlag",
 ]

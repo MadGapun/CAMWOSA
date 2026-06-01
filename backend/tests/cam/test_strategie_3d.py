@@ -11,6 +11,7 @@ from camwosa.cam.strategie_3d import (
     StepoverModus,
     Strategie3DFehler,
     Strategie3DParameter,
+    _werkzeug_kernel_offsets,
     berechne_steigungswinkel,
     erzeuge_3d_parallel_toolpath,
     scallop_zu_stepover,
@@ -304,3 +305,115 @@ class TestWerkzeugKompensation:
         zs = [b.z for b in schnitt]
         # Z-Werte variieren (Oberflaeche wird gefolgt), nicht konstant
         assert max(zs) - min(zs) > 1.0
+
+
+class TestVBitKegelprofil:
+    """M1: V-Bit/Gravierstichel als Kegel statt Flachboden (V-Carve aus Tiefenbild)."""
+
+    def _vbit(self, durchmesser=6.0, winkel=90.0, spitzen_d=0.0):
+        return Werkzeug(
+            id="t_vbit", name=f"V-Bit {winkel}°",
+            typ=WerkzeugTyp.V_BIT,
+            durchmesser=durchmesser, schaft_durchmesser=durchmesser,
+            schneidlaenge=10, gesamtlaenge=40, schneiden=2,
+            spitzenwinkel=winkel,
+            spitzendurchmesser=spitzen_d or None,
+        )
+
+    def test_90grad_vbit_dz_negativ_gleich_distanz(self):
+        # 90° V-Bit: tan(45°)=1 → profil = d, TIP-Referenz → dz = -d.
+        # Bei aufl=0.5 ist der Offset bei d=2.0 → dz≈-2.0 (Spitze unter Kontakt).
+        offsets = _werkzeug_kernel_offsets(self._vbit(winkel=90), aufloesung=0.5)
+        treffer = [dz for (di, dj, dz) in offsets if di == 4 and dj == 0]
+        assert treffer and treffer[0] == pytest.approx(-2.0, abs=0.01)
+
+    def test_60grad_taucht_tiefer_als_90grad(self):
+        # 60° V-Bit (half=30°) ist spitzer → groesseres profil → tieferes (negativeres) dz
+        o90 = _werkzeug_kernel_offsets(self._vbit(winkel=90), aufloesung=0.5)
+        o60 = _werkzeug_kernel_offsets(self._vbit(winkel=60), aufloesung=0.5)
+        dz90 = min(dz for (di, dj, dz) in o90 if di == 4 and dj == 0)
+        dz60 = min(dz for (di, dj, dz) in o60 if di == 4 and dj == 0)
+        assert dz60 < dz90  # spitzer → negativer
+
+    def test_nicht_flach_wie_schaftfraeser(self):
+        # Der entscheidende M1-Punkt: V-Bit ist NICHT flach (anders als vorher).
+        offsets = _werkzeug_kernel_offsets(self._vbit(winkel=90), aufloesung=0.5)
+        dz_werte = [dz for (_, _, dz) in offsets]
+        assert min(dz_werte) < -0.5  # echtes Kegelprofil, kein flacher Boden
+
+    def test_spitzendurchmesser_flachflaeche(self):
+        # V-Bit mit 1mm Flachspitze: innerhalb d<=0.5 ist dz=0
+        offsets = _werkzeug_kernel_offsets(
+            self._vbit(winkel=90, spitzen_d=1.0), aufloesung=0.25,
+        )
+        # d=0.25 (innerhalb spitzen_r=0.5) → dz=0
+        zentrum = [dz for (di, dj, dz) in offsets if abs(di) <= 1 and dj == 0]
+        assert max(zentrum) == 0.0
+
+    def test_vbit_carvt_v_nut_tiefer_als_flach(self):
+        # V-Carve aus Tiefenbild: V-Bit folgt einer V-foermigen Heightmap-Rille
+        # und taucht in die Spitze ein. Eine flache Ebene mit V-Nut.
+        nx, ny = 40, 20
+        z = np.zeros((nx, ny))
+        for i in range(nx):
+            # V-Nut in der Mitte: tief bei i=20, hoch an den Raendern
+            z[i, :] = -max(0.0, 5.0 - abs(i - 20) * 0.5)
+        hm = Heightmap(z_values=z, aufloesung=1.0, x_min=0, y_min=0, z_max=0.0)
+        tp = erzeuge_3d_parallel_toolpath(
+            hm, self._vbit(winkel=60, durchmesser=8),
+            _param(bahn_winkel_grad=0, stepover_modus=StepoverModus.DISTANZ,
+                   stepover_distanz_mm=1.0),
+        )
+        zs = [b.z for b in tp.bewegungen if b.typ == BewegungsTyp.LINEAR]
+        # Der V-Bit taucht in die Nut → deutlich negative Z erreichbar
+        assert min(zs) < -1.0
+
+    def test_ballnose_v_bit_hybrid(self):
+        # Ball-Nose-V-Bit: Kugelspitze + Kegel. Profil muss monoton steigen
+        # und am Zentrum gerundet (nicht spitz) sein.
+        wz = Werkzeug(
+            id="t_bnv", name="Ballnose-V", typ=WerkzeugTyp.BALLNOSE_V_BIT,
+            durchmesser=6.0, schaft_durchmesser=6.0,
+            schneidlaenge=10, gesamtlaenge=40, schneiden=2,
+            spitzenwinkel=30.0, spitzendurchmesser=1.0, spitzenradius=0.5,
+        )
+        offsets = _werkzeug_kernel_offsets(wz, aufloesung=0.25)
+        # am Zentrum dz≈0, nach aussen tiefer (negativer, TIP-Referenz)
+        zentrum = max(dz for (di, dj, dz) in offsets if di == 0 and dj == 0)
+        aussen = min(dz for (di, dj, dz) in offsets if di == 8 and dj == 0)
+        assert zentrum == pytest.approx(0.0, abs=0.01)
+        assert aussen < zentrum
+
+
+class TestVCarveVorschlag:
+    """M2: Tiefenbild→V-Carve-Pipeline Convenience-Builder."""
+
+    def _vbit(self):
+        return Werkzeug(
+            id="t_v", name="V-Bit 60", typ=WerkzeugTyp.V_BIT,
+            durchmesser=6, schaft_durchmesser=6, schneidlaenge=8,
+            gesamtlaenge=40, schneiden=2, spitzenwinkel=60.0,
+        )
+
+    def test_vorschlag_nutzt_scallop_3d(self):
+        from camwosa.cam.strategie_3d import v_carve_parameter_vorschlag
+        p = v_carve_parameter_vorschlag(
+            self._vbit(), spindel_rpm=18000, vorschub=1200, eintauch_vorschub=300,
+        )
+        assert p.stepover_modus == StepoverModus.SCALLOP_3D
+        assert p.werkzeug_id == "t_v"
+
+    def test_vorschlag_erzeugt_lauffaehigen_toolpath(self):
+        from camwosa.cam.strategie_3d import v_carve_parameter_vorschlag
+        nx, ny = 40, 20
+        z = np.zeros((nx, ny))
+        for i in range(nx):
+            z[i, :] = -max(0.0, 4.0 - abs(i - 20) * 0.4)
+        hm = Heightmap(z_values=z, aufloesung=1.0, x_min=0, y_min=0, z_max=0.0)
+        p = v_carve_parameter_vorschlag(
+            self._vbit(), spindel_rpm=18000, vorschub=1200, eintauch_vorschub=300,
+        )
+        tp = erzeuge_3d_parallel_toolpath(hm, self._vbit(), p)
+        assert len(tp.bewegungen) > 2
+        zs = [b.z for b in tp.bewegungen if b.typ == BewegungsTyp.LINEAR]
+        assert min(zs) < 0

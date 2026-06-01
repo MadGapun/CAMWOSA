@@ -3,6 +3,19 @@
 > **Stand:** 17.05.2026 · Lebendiges Dokument · Wird mit jedem Schritt aktualisiert.
 >
 > **Arbeitsprinzip:** Master-Plan-First. Neue Ideen werden erst hier eingeordnet (mit Status ⬜ und ggf. Issue), dann nach Plan abgearbeitet — nicht ad-hoc gebaut und spaeter nachgezogen.
+>
+> **Ziel-Prinzip: Dual-Audience.** CAMWOSA bedient **beide** Zielgruppen mit
+> **demselben Werkzeug** (das DeskProto-Muster — Wizard für Anfänger ↔ Full-
+> Control für Profis, gleiches Datenmodell):
+> - **Einsteiger ohne Vorkenntnisse** — geführt, jargon-überbrückt, vertrauens-
+>   bildend (Cluster K + L). Der Wizard *schreibt ins selbe Projekt-Modell*, das
+>   der Profi editiert — keine getrennte „Anfänger-Version".
+> - **Erfahrene Power-User** (wie Markus) — volle Kontrolle + erweiterte
+>   Workflows: **V-Carve aus Modellen/Tiefenbildern**, **Multi-Setup mit
+>   Umspannungen**, **Rotary/Drechseln** (Cluster M + A49 + Phase 3).
+>
+> Die Anfänger-Schicht darf die Power-User-Tiefe **nie** verdecken oder
+> beschneiden — sie liegt als optionale Führung *darüber*, nicht *statt*.
 
 Dieser Plan listet **alle Funktionen** die CAMWOSA bekommen wird, in Reihenfolge der Umsetzung. Jede Position verlinkt auf ihren Wiki-Eintrag (Stub solange nicht umgesetzt). Die Reihenfolge ist nach Abhängigkeit sortiert: was unten steht, baut auf dem auf was oben steht.
 
@@ -128,6 +141,19 @@ Design leicht reinbekommen (Phase 1). Verwandt zu D28–D30, aber: Cluster L ist
 | L1 | **Bitmap → Vektor-Trace** — `cad/bitmap_trace.py`: Schwellwert → Marching-Squares-Kontur (nutzt `waterline.py`) → Douglas-Peucker → GeometrieObjekt. Skalierung + Flecken-Filter. Outline-Trace (Centerline folgt). API `/api/cad/bitmap-trace` + MCP. 11 Tests. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ✅ |
 | L2 | **Clipart / Form-Bibliothek** — parametrische Standardformen (Herz, Stern, Zahnrad, Rahmen, Pfeil, abgerundetes Rechteck, N-Eck) → GeometrieObjekt. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
 | L3 | **Bemaßung + Lineale im Zeichnen** — sichtbare Maße/Maßketten + Canvas-Lineale. Verschränkt mit D28. | [#48](https://github.com/MadGapun/CAMWOSA/issues/48) | ⬜ |
+
+### Cluster M — Power-User / Erweiterte Workflows (Dual-Audience-Profi-Schicht)
+
+Die **Profi-Seite** des Dual-Audience-Prinzips — die Anfänger-Schicht (K/L) darf diese Tiefe nie verdecken. Markus' genannte Profi-Workflows: V-Carve aus Modellen/Tiefenbildern, Multi-Setup mit Umspannungen, Rotary. Quelle: `docs/HOBBY-CAM-ANALYSE.md`.
+
+| Nr | Funktion | Issue | Status |
+|----|----------|-------|--------|
+| M1 | **V-Bit/Gravierstichel-Kegelprofil in 3D-Strategien** — echte konische Werkzeug-Form-Dilation (Spitzenwinkel + Spitzendurchmesser-Flachfläche, TIP-Referenz) statt Flachboden-Näherung; Ball-Nose-V-Bit als Kugel+Kegel-Hybrid (tangential). Macht **V-Carve aus Tiefenbild/Modell** möglich. `cam/strategie_3d.py`, 6 Tests. Greift automatisch im 3D-Parallel-Endpoint + MCP. | [#49](https://github.com/MadGapun/CAMWOSA/issues/49) | ✅ |
+| M2 | **Tiefenbild→V-Carve-Pipeline** — `v_carve_parameter_vorschlag()` (feiner 3D-Scallop + V-Bit) + Wiki-Rezept (Bild/Modell → Heightmap → 3D-V-Carve). 2 Tests. | [#49](https://github.com/MadGapun/CAMWOSA/issues/49) | ✅ |
+| M3 | **Expert-Mode-Schalter** — explizite Profi-Seite des Dual-Interface: blendet alle Parameter direkt ein (kein Wizard dazwischen), Gegenstück zu K1. CAMWOSA hat die Override-Forms schon — als „Expert-Layer" explizit machen + global umschaltbar. | [#49](https://github.com/MadGapun/CAMWOSA/issues/49) | ⬜ |
+| M4 | **Workflow-Vorlagen für Power-User** — wiederkehrende Multi-Setup-/Umspannungs-Abläufe als Vorlage speichern + wiederverwenden. Baut auf A49 (Umspannung) + ArbeitsSchritt + QuickCAM. | [#49](https://github.com/MadGapun/CAMWOSA/issues/49) | ⬜ |
+| M5 | **Multi-Setup mit Umspannung** — siehe **A49** (Werkstück-Transformation + Maschinen-Umbau + Spannmittel pro Setup + Stabilitäts-Heuristik). Power-User-Säule, hier referenziert + priorisiert. | [#44](https://github.com/MadGapun/CAMWOSA/issues/44) | ⬜ |
+| M6 | **Rotary/Drechseln (Profi)** — bereits umgesetzt (Phase 3 + A30): 3,5-Achs-Indexing, Wrapping, Continuous-Lathe, 4 Drechsel-Strategien. Hier als Power-User-Säule referenziert. | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | ✅ |
 
 ## Teil B — REST-API + MCP
 

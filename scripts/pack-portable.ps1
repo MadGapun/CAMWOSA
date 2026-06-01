@@ -15,7 +15,7 @@
 
 $ErrorActionPreference = "Stop"
 $Repo = Split-Path -Parent $PSScriptRoot
-$Version = "0.0.1-alpha.9"
+$Version = "0.0.1-alpha.10"
 $AppName = "CAMWOSA"
 $OutDir = "$Repo\electron\dist-portable\$AppName-win32-x64"
 $ZipPath = "$Repo\electron\dist-portable\$AppName-$Version-portable.zip"

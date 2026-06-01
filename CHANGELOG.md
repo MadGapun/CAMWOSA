@@ -4,6 +4,50 @@ Alle nennenswerten Aenderungen an CAMWOSA. Format orientiert sich an
 [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionsschema
 [SemVer](https://semver.org/lang/de/).
 
+## [0.0.1-alpha.10] — 2026-05-21
+
+**Dual-Audience-Prinzip + Power-User-Schicht (Cluster M1 + M2).** Markus'
+Vorgabe: CAMWOSA muss einsteigerfreundlich **und** power-user-tauglich sein —
+gleiches Werkzeug (DeskProto-Dual-Interface-Muster). Erster Profi-Workflow
+umgesetzt: **V-Carve aus Tiefenbild/Modell**.
+
+### Master-Plan: Dual-Audience-Prinzip + Cluster M
+
+- **Ziel-Prinzip Dual-Audience** prominent im Master-Plan verankert: die
+  Anfänger-Schicht (K/L) liegt als optionale Führung *über* der vollen Profi-
+  Kontrolle, nie *statt*.
+- **Cluster M — Power-User / Erweiterte Workflows** (Issue #49): V-Carve aus
+  Tiefenbild (M1/M2), Expert-Mode (M3), Workflow-Vorlagen (M4), Umspannung
+  (M5→A49), Rotary (M6, bereits fertig).
+
+### M1 — V-Bit-Kegelprofil in 3D-Strategien (`cam/strategie_3d.py`, 6 Tests)
+
+✅ Bisher modellierten die 3D-Strategien V-Bits als Flachboden-Näherung. Jetzt
+echte **konische** Werkzeug-Form-Dilation:
+- Spitzenwinkel → Kegelwände, optionale Spitzendurchmesser-Flachfläche
+- **TIP-Referenz** (die Spitze sitzt unter dem Kontaktpunkt — so nullt man einen
+  V-Bit real); ein spitzerer V-Bit taucht tiefer in Rillen
+- Ball-Nose-V-Bit als Kugel+Kegel-Hybrid (tangential verbunden)
+- Gravierstichel / Diamant- / Drag-Gravierer ebenfalls konisch
+- **Macht V-Carve aus Tiefenbild/Modell möglich** — der V-Bit folgt der
+  Heightmap-Oberfläche mit variabler Tiefe (Markus' genannter Profi-Workflow)
+- Greift automatisch im bestehenden `/api/spezial-ops/3d-parallel` + MCP
+  `operation_3d_parallel`, sobald ein konisches Werkzeug gewählt ist
+
+### M2 — Tiefenbild→V-Carve-Pipeline (2 Tests)
+
+✅ `v_carve_parameter_vorschlag()` — sinnvolle Defaults (feiner 3D-Scallop +
+V-Bit-Kegel). Wiki-Rezept in `3D-Strategien.md`: Bild/Modell → Heightmap
+(A33-36) → 3D-V-Carve.
+
+### Test-Status
+
+- Backend: **786 Tests grün** (+8 für alpha.10)
+- Reine Backend-Erweiterung von `strategie_3d.py` — keine neue API-Fläche, MCP-
+  Parität automatisch (das V-Bit greift in den vorhandenen 3D-Endpoints)
+
+---
+
 ## [0.0.1-alpha.9] — 2026-05-21
 
 **Anfänger-Schicht-Auftakt (Cluster K5 + L1).** Aus der Hobby-CAM-Tiefenanalyse

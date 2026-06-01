@@ -152,6 +152,52 @@ Body:
 Die Heightmap im base64-Format kommt z.B. aus `/api/heightmap/aus-bild` oder
 aus dem STL-Import.
 
+## V-Carve aus Tiefenbild/Modell (Cluster M1 + M2)
+
+Power-User-Workflow: ein **V-Bit** (oder Gravierstichel/Ballnose-V-Bit) folgt
+einer Heightmap-Oberfläche mit **variabler Tiefe** — das ergibt 3D-V-Carving
+aus einem Modell oder Tiefenbild.
+
+### Werkzeug-Form-Dilation (M1)
+
+Die 3D-Strategien modellieren die echte Werkzeug-Form (`_werkzeug_kernel_offsets`):
+- **Kugelfräser** — sphärisches Profil
+- **Torusfräser** — flach + Eckenradius
+- **Schaftfräser/Einschneider** — flacher Boden
+- **V-Bit / Gravierstichel / Diamant-/Drag-Gravierer** — **Kegel** (M1):
+  Spitzenwinkel → konische Wände, optionale Spitzendurchmesser-Flachfläche.
+  TIP-Referenz (die Spitze sitzt unter dem Kontaktpunkt — so wird ein V-Bit
+  auch real genullt). Ein spitzerer V-Bit taucht tiefer in Rillen.
+- **Ballnose-V-Bit** — Kugelspitze + tangential verbundene Kegelwand.
+
+### Pipeline-Rezept (M2)
+
+```python
+from camwosa.stl.bild_heightmap import heightmap_aus_bild, BildHeightmapParameter
+from camwosa.cam.strategie_3d import v_carve_parameter_vorschlag, erzeuge_3d_parallel_toolpath
+
+# 1. Bild/Modell → Heightmap
+hm = heightmap_aus_bild(bild_bytes, BildHeightmapParameter(max_tiefe_mm=4, pixel_pro_mm=8))
+#    (oder: lade_stl + berechne_heightmap für ein 3D-Modell)
+
+# 2. V-Carve-Parameter-Vorschlag (feiner 3D-Scallop + V-Bit-Kegel)
+params = v_carve_parameter_vorschlag(
+    v_bit, spindel_rpm=18000, vorschub=1200, eintauch_vorschub=300,
+    riefenhoehe_mm=0.02,
+)
+
+# 3. Toolpath — der V-Bit folgt der Oberfläche mit variabler Tiefe
+tp = erzeuge_3d_parallel_toolpath(hm, v_bit, params)
+```
+
+Über REST/MCP identisch: das V-Bit greift automatisch im bestehenden
+`/api/spezial-ops/3d-parallel` (bzw. MCP `operation_3d_parallel`), sobald das
+gewählte Werkzeug ein konischer Typ mit `spitzenwinkel` ist.
+
+**Abgrenzung:** Dies ist *3D*-V-Carving (V-Bit folgt einer Fläche). Das
+klassische *2D*-V-Carving (variable Tiefe aus der Medialachse von Vektoren)
+ist die Gravur-Strategie `V_CARVING` (A11).
+
 ## Roadmap (Issue #45)
 
 | Sub | Strategie | Status |
