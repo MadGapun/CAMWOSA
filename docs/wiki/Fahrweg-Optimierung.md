@@ -115,6 +115,37 @@ Auch über den **MCP-Server** verfügbar: `gcode_erzeugen(..., fahrweg_optimieru
 
 ---
 
+## J5 — Rampen-Eintauchen (`rampe_eintauchen`)
+
+Senkrechtes Eintauchen (`PLUNGE`) ist hart für Fräser — Hitze, Bruchgefahr,
+schlechte Bodenfläche, besonders bei nicht-zentrumsschneidenden Werkzeugen.
+`gcode/eintauchen.py:rampe_eintauchen()` ersetzt senkrechte Plunges durch eine
+**Zickzack-Rampe** entlang des kommenden Schnitts.
+
+- **Endpunkt-treu:** die Rampe endet exakt am Plunge-Punkt auf Schnitttiefe; der
+  eigentliche Schnitt läuft danach unverändert weiter — die Teile-Geometrie
+  ändert sich **nicht**.
+- **Nur im Material:** der Teil über der `material_oberkante` (Default 0 =
+  CAMWOSA-Konvention Z-Null oben) bleibt schneller Plunge; gerampt wird nur ab
+  Materialoberkante abwärts.
+- **Winkel einstellbar** (`rampen_winkel_grad`, Default 5°). Flacher = schonender
+  + länger.
+- **Greift nur bei Folgeschnitt:** ohne anschließenden XY-Schnitt (z.B. Bohren)
+  bleibt der Plunge senkrecht.
+- **Fallback:** ist der Folgeschnitt zu kurz für eine sinnvolle Rampe
+  (`run/r > max_passes`), bleibt der normale Plunge erhalten.
+
+```jsonc
+{ "rampe_eintauchen": true, "rampen_winkel_grad": 5, "material_oberkante": 0.0 }
+```
+MCP: `gcode_erzeugen(..., rampe_eintauchen=True, rampen_winkel_grad=5)`.
+UI: G-Code-Editor → „Rampen-Eintauchen" + Winkel.
+
+> **Offen:** echter **Lead-in/out-Bogen** (tangentialer Ein-/Auslauf an
+> geschlossenen Konturen) — bessere Oberfläche an der Eintauch-Naht.
+
+---
+
 ## Was noch offen ist
 
 - **Positionsgenaue Freifahrt** gegen ein Höhenmodell (statt pauschaler Höhe) —

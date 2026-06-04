@@ -52,6 +52,12 @@ export default function GCodeEditorView() {
   const [fahrwegOpt, setFahrwegOpt] = useState(true);
   const [freifahrtAktiv, setFreifahrtAktiv] = useState(false);
   const [freifahrt, setFreifahrt] = useState(1);
+  // Cluster P: Output-Härtung
+  const [modal, setModal] = useState(true);
+  const [rapidSafety, setRapidSafety] = useState(true);
+  // J5: Rampen-Eintauchen
+  const [rampe, setRampe] = useState(false);
+  const [rampenWinkel, setRampenWinkel] = useState(5);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
   const beforeMount: BeforeMount = (m) => {
@@ -90,6 +96,10 @@ export default function GCodeEditorView() {
         {
           fahrweg_optimierung: fahrwegOpt,
           freifahrt_hoehe: freifahrtAktiv ? freifahrt : null,
+          modal,
+          rapid_safety: rapidSafety,
+          rampe_eintauchen: rampe,
+          rampen_winkel_grad: rampenWinkel,
         },
       );
       setValue(result.gcode);
@@ -166,6 +176,30 @@ export default function GCodeEditorView() {
             className="w-16 rounded bg-camwosa-bg px-2 py-0.5"
           />
           mm über Geometrie
+        </span>
+        <span className="mx-1 text-camwosa-muted">·</span>
+        <span className="font-semibold text-camwosa-muted">Output:</span>
+        <label className="flex items-center gap-1.5" title="Redundante Achsworte/Vorschub entfernen → kleinere, sauberere Datei (bahn-identisch).">
+          <input type="checkbox" checked={modal} onChange={(e) => setModal(e.target.checked)} />
+          Modal (kompakt)
+        </label>
+        <label className="flex items-center gap-1.5" title="Diagonale Eilgänge in sichere Reihenfolge splitten (Z-hoch zuerst beim Rückzug).">
+          <input type="checkbox" checked={rapidSafety} onChange={(e) => setRapidSafety(e.target.checked)} />
+          Sichere Eilgänge
+        </label>
+        <span className="mx-1 text-camwosa-muted">·</span>
+        <label className="flex items-center gap-1.5" title="Senkrechtes Eintauchen durch schräge Rampen ersetzen (schont den Fräser). Bahn bleibt identisch.">
+          <input type="checkbox" checked={rampe} onChange={(e) => setRampe(e.target.checked)} />
+          Rampen-Eintauchen
+        </label>
+        <span className={rampe ? "flex items-center gap-1" : "flex items-center gap-1 opacity-40"}>
+          <input
+            type="number" step={1} min={1} max={45} value={rampenWinkel}
+            disabled={!rampe}
+            onChange={(e) => setRampenWinkel(Number(e.target.value))}
+            className="w-14 rounded bg-camwosa-bg px-2 py-0.5"
+          />
+          ° Winkel
         </span>
       </div>
 

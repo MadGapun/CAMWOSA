@@ -225,8 +225,31 @@ def postprocess():
     werkzeug = werkzeuge[data["werkzeug_id"]]
     post_id = data.get("postprozessor_id", maschine.postprozessor)
     post = registry().get(post_id)()
-    ctx = PostKontext(maschine=maschine, werkzeug=werkzeug)
+    # P1: Spindel-Hochlauf-Dwell aus aktiver Spindel (rampen_zeit_s), per Body uebersteuerbar.
+    hochlauf = data.get("spindel_hochlauf_s")
+    if hochlauf is None:
+        try:
+            from camwosa.db.loader import lade_spindeln
+            sp_index = {s.id: s for s in lade_spindeln()}
+            sp = maschine.aktive_spindel(sp_index)
+            if sp and sp.rampen_zeit_s:
+                hochlauf = sp.rampen_zeit_s
+        except Exception:  # noqa: BLE001 — Spindel-Aufloesung optional
+            hochlauf = None
+    ctx = PostKontext(
+        maschine=maschine, werkzeug=werkzeug,
+        spindel_hochlauf_s=float(hochlauf) if hochlauf else 0.0,
+    )
     toolpaths = [_deserialize_toolpath(tp) for tp in data["toolpaths"]]
+    # J5: Rampen-Eintauchen statt senkrechtem Plunge (vor allen weiteren Schritten)
+    if data.get("rampe_eintauchen"):
+        from camwosa.gcode.eintauchen import rampe_eintauchen
+        winkel = float(data.get("rampen_winkel_grad", 5.0))
+        mat_ok = float(data.get("material_oberkante", 0.0))
+        toolpaths = [
+            rampe_eintauchen(tp, winkel_grad=winkel, material_oberkante=mat_ok)
+            for tp in toolpaths
+        ]
     # J9/J10: intelligente Fahrwege (Reihenfolge optimieren + Freifahrten senken)
     if data.get("fahrweg_optimierung") or data.get("freifahrt_hoehe") is not None:
         from camwosa.gcode.fahrweg import optimiere_fahrwege
@@ -239,12 +262,20 @@ def postprocess():
             )
             for tp in toolpaths
         ]
+    # P3: Rapid-Safety — diagonale Eilgaenge in sichere Reihenfolge splitten
+    if data.get("rapid_safety"):
+        from camwosa.gcode.fahrweg import entschaerfe_eilgaenge
+        toolpaths = [entschaerfe_eilgaenge(tp) for tp in toolpaths]
     # J1: optionales Arc-Fitting (G1-Folgen → G2/G3) vor dem Postprozessor
     if data.get("arc_fitting"):
         from camwosa.gcode.arc_fitting import fitte_toolpath
         tol = float(data.get("arc_toleranz_mm", 0.05))
         toolpaths = [fitte_toolpath(tp, toleranz_mm=tol) for tp in toolpaths]
     zeilen = post.post_alle(ctx, toolpaths)
+    # P2: modale Kompression (redundante Achsworte/Feed/Bewegungs-Wort entfernen)
+    if data.get("modal"):
+        from camwosa.gcode.modal import komprimiere_modal
+        zeilen = komprimiere_modal(zeilen)
     return jsonify({"gcode": "\n".join(zeilen) + "\n", "zeilen": len(zeilen)})
 
 

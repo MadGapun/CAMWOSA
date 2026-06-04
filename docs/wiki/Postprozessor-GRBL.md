@@ -69,6 +69,47 @@ Genmitsu-spezifische Variante: [Postprozessor-GRBL-Genmitsu](Postprozessor-GRBL-
 Rotary-Variante: [Postprozessor-GRBL-Rotary](Postprozessor-GRBL-Rotary.md)
 Eigene Postprozessoren: [Postprozessor-Plugins](Postprozessor-Plugins.md)
 
+## Output-Härtung (Cluster P, Issue #54)
+
+Vier Maßnahmen verbessern den realen Maschinen-Output. Alle rückwärtskompatibel
+(Defaults = altes Verhalten):
+
+### P1 — Spindel-Hochlauf-Dwell
+`spindle_on()` hängt nach `M3 S<rpm>` ein `G4 P<t>` an, damit die Spindel
+(Makita RT0700 ~1–2 s) vor dem Erstschnitt auf Drehzahl ist. Die Pause kommt aus
+`Spindel.rampen_zeit_s` (im Postprozessor via `PostKontext.spindel_hochlauf_s`),
+am Endpoint aus der aktiven Spindel der Maschine oder per Body
+`spindel_hochlauf_s`. `0` = aus.
+
+```
+M3 S18000
+G4 P2          ; Hochlauf-Pause
+```
+
+### P2 — Modaler Output (`modal: true`)
+`gcode/modal.py:komprimiere_modal()` entfernt **redundante** Worte aus dem
+fertigen G-code: Achsworte die sich nicht ändern, den Vorschub `F` (nur bei
+Änderung) und das wiederholte Bewegungs-Wort. **Endpunkt-treu** — die gefahrene
+Bahn bleibt identisch (per Replay-Test abgesichert). Bögen (G2/G3) behalten immer
+X/Y/I/J. Ergebnis: 2–3× kleinere Datei, kein Z-Jitter durch Rundung.
+
+### P3 — Rapid-Safety (`rapid_safety: true`)
+`gcode/fahrweg.py:entschaerfe_eilgaenge()` zerlegt diagonale Eilgänge
+(`G0` mit gleichzeitiger Z- und XY-Änderung) in eine **sichere Reihenfolge**:
+beim Rückzug Z zuerst hoch, beim Anfahren XY zuerst. Verhindert schräges
+Eintauchen / Schleifen durch Material.
+
+### P4 — G54 im Header
+Der Header wählt das Arbeits-Koordinatensystem explizit mit `G54` (statt sich auf
+den GRBL-Default zu verlassen). Der Start-Sicherheits-Z kommt aus den Generatoren
+(jeder Toolpath beginnt mit einem Eilgang auf Sicherheitshöhe).
+
+**Aktivierung am Endpoint** `POST /api/operations/postprocess`:
+```jsonc
+{ "modal": true, "rapid_safety": true, "spindel_hochlauf_s": 2.0 }
+```
+Auch über MCP: `gcode_erzeugen(..., modal=True, rapid_safety=True, spindel_hochlauf_s=2.0)`.
+
 ## Bekannte Einschraenkungen
 
 - Kein G43 (Tool Length Offset) — GRBL unterstuetzt es nicht.

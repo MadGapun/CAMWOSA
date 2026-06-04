@@ -302,6 +302,11 @@ def gcode_erzeugen(
     arc_toleranz_mm: float = 0.05,
     fahrweg_optimierung: bool = False,
     freifahrt_hoehe: float | None = None,
+    modal: bool = False,
+    rapid_safety: bool = False,
+    spindel_hochlauf_s: float | None = None,
+    rampe_eintauchen: bool = False,
+    rampen_winkel_grad: float = 5.0,
 ) -> dict:
     """Postprocesst eine Liste von Toolpaths zu G-Code.
 
@@ -310,7 +315,12 @@ def gcode_erzeugen(
     (kurze Wege = kuerzere Zeit).
     freifahrt_hoehe (J10): Zwischen-Eilgaenge knapp ueber der Geometrie statt
     auf voller Sicherheitshoehe (mm, einstellbar; erste Anfahrt/Schluss bleiben
-    sicher)."""
+    sicher).
+    modal (P2): redundante Achsworte/Feed/Bewegungs-Wort entfernen (kleinere Datei,
+    kein Z-Jitter).
+    rapid_safety (P3): diagonale Eilgaenge in sichere Reihenfolge splitten.
+    spindel_hochlauf_s (P1): Hochlauf-Pause (G4 P) nach M3; None = aus aktiver
+    Spindel (rampen_zeit_s)."""
     return _post("/api/operations/postprocess", {
         "maschine_id": maschine_id,
         "werkzeug_id": werkzeug_id,
@@ -320,6 +330,11 @@ def gcode_erzeugen(
         "arc_toleranz_mm": arc_toleranz_mm,
         "fahrweg_optimierung": fahrweg_optimierung,
         "freifahrt_hoehe": freifahrt_hoehe,
+        "modal": modal,
+        "rapid_safety": rapid_safety,
+        "spindel_hochlauf_s": spindel_hochlauf_s,
+        "rampe_eintauchen": rampe_eintauchen,
+        "rampen_winkel_grad": rampen_winkel_grad,
     })
 
 

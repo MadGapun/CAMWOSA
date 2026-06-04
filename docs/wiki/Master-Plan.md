@@ -107,13 +107,24 @@ Lücken bei Toolpath-Qualität/Infrastruktur (nicht bei Strategien). Quelle: GAP
 | J2 | **Bohr-Zyklen erweitern** — ANBOHREN (Zentrier-Spot), SENKEN (zylindrisch/konisch aus Winkel), GEWINDEBOHREN (synchron-Vorschub aus Steigung × RPM). Erweitert `BohrStrategie` + `BohrParameter` + `cam/bohren.py`. 8 Tests. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [Operation-Bohren](Operation-Bohren.md) | ✅ |
 | J3 | **Spanausduennung (Chip Thinning)** — `chip_thinning_faktor()` + `korrigiere_vorschub_spanausduennung()` in `feeds/rechner.py`, `f_korr = f / sqrt(1-(1-2·ae/d)²)`, geklemmt ≤4. API `/api/feeds/chip-thinning` + MCP `spanausduennung_faktor`. 12 Tests. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [Feeds-Speeds](Feeds-Speeds.md) | ✅ |
 | J4 | **Linking / Stay-Down-Optimierung** — Werkzeug unten lassen wo der direkte Weg frei + kurz ist (stayDownDistance). Weniger Luftbewegungen. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | — | ⬜ |
-| J5 | **Lead-in/out + Rampe fuer 3D-Strategien** — sanftes Bogen/Rampen-Eintauchen statt senkrechtem Plunge. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [3D-Strategien](3D-Strategien.md) | ⬜ |
+| J5 | **Rampen-Eintauchen + Lead-in/out** — **Rampen-Eintauchen ✅** (`gcode/eintauchen.py:rampe_eintauchen`): senkrechte Plunges werden durch Zickzack-Rampen entlang des Folgeschnitts ersetzt (einstellbarer Winkel, `material_oberkante`-Konvention, endpunkt-treu, Fallback bei zu kurzem Segment). Opt-in `rampe_eintauchen:true` am Endpoint + MCP + UI. 10 Tests. **Lead-in/out-Bogen (tangentialer Ein-/Auslauf an Konturen) noch offen.** | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [Fahrweg-Optimierung](Fahrweg-Optimierung.md) | 🔶 |
 | J6 | **Flat-Area-Detection** — flache 3D-Bereiche (slope≈0) erkennen + separat plan-schlichten. Nutzt `berechne_steigungswinkel()`. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [3D-Strategien](3D-Strategien.md) | ⬜ |
 | J7 | **Pencil / Kehlnaht-Cleanup** — Tal-Linien mit kleinem Werkzeug nachfahren (3D-Pencil). Grosser Brocken. | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | [3D-Strategien](3D-Strategien.md) | ⬜ |
 | J8 | **Trochoidales Nutenfraesen** — Slot mit kreisender Bahn fuer tiefe schmale Nuten (konstante Last). | [#46](https://github.com/MadGapun/CAMWOSA/issues/46) | — | ⬜ |
 | J9 | **Intelligente Fahrwege (kurze Wege)** — Reihenfolge der Schnitt-Gruppen (Konturen/Bahnen/Bohrungen) per Nearest-Neighbor optimieren → minimaler Eilgang-Verfahrweg = kürzere Zeit. Post-Schritt `gcode/fahrweg.py`, allgemein über alle Ops. Markus' Anforderung. | [#52](https://github.com/MadGapun/CAMWOSA/issues/52) | [Fahrweg-Optimierung](Fahrweg-Optimierung.md) | ✅ |
 | J10 | **Knappe Freifahrten über Geometrie** — Zwischen-Eilgänge laufen knapp (einstellbar) über der vorhandenen Geometrie statt auf voller Sicherheitshöhe über dem Rohling. `freifahrt_hoehe` pro Op + Post-Schritt `senke_freifahrten()`. Erste Anfahrt + Schluss-Rückzug bleiben auf Sicherheitshöhe. Markus' Anforderung. | [#52](https://github.com/MadGapun/CAMWOSA/issues/52) | [Fahrweg-Optimierung](Fahrweg-Optimierung.md) | ✅ |
 | J11 | **Vorschub-Anpassung bei Teil-Tiefe** — der Vorschub gilt für die volle Zustellung (`stepdown`). Pässe mit geringerer axialer Tiefe (z.B. letzter Teil-Pass, prozentuale Tiefen) bekommen höheren Vorschub (∝ stepdown/ap, gedeckelt). `feeds`-Helfer + in Kontur/Tasche-Pass-Generierung. Speist auch K5-Zeitschätzung. Markus' Anforderung. | [#52](https://github.com/MadGapun/CAMWOSA/issues/52) | [Feeds-Speeds](Feeds-Speeds.md) | ✅ |
+
+### Cluster P — Postprozessor-Härtung / GRBL-Output-Qualität (Audit 2026-06)
+
+Lücken im **realen G-code-Output** (was auf der Maschine läuft), gefunden beim Audit von `postprocessor/base.py` → `grbl_standard.py`. Quelle: `docs/ANALYSE-2026-06.md` §1. Betrifft **jede** erzeugte Datei → höchster Maschinen-ROI. Alle rückwärtskompatibel (Defaults = altes Verhalten).
+
+| Nr | Funktion | Issue | Wiki | Status |
+|----|----------|-------|------|--------|
+| P1 | **Spindel-Hochlauf-Dwell** — `spindle_on()` hängt `G4 P<t>` nach `M3 S<rpm>` an, damit die Spindel (Makita ~1–2 s) vor dem Erstschnitt auf Drehzahl ist. Quelle `Spindel.rampen_zeit_s` (war schon im Modell, jetzt verdrahtet), per `PostKontext.spindel_hochlauf_s`. Default 0 = aus. 4 Tests. | [#54](https://github.com/MadGapun/CAMWOSA/issues/54) | [Postprozessor-GRBL](Postprozessor-GRBL.md) | ✅ |
+| P2 | **Modaler Output** — `gcode/modal.py` `komprimiere_modal()`: endpunkt-treuer Post-Pass entfernt redundante Achsworte (X/Y/Z unverändert), Feed (nur bei Änderung) und Motion-Wort. Datei kleiner, kein Z-Jitter. Boegen behalten X/Y/I/J. Opt-in `modal:true`. 11 Tests (inkl. Bahn-Treue-Replay). | [#54](https://github.com/MadGapun/CAMWOSA/issues/54) | [Postprozessor-GRBL](Postprozessor-GRBL.md) | ✅ |
+| P3 | **Rapid-Safety-Split** — `entschaerfe_eilgaenge()` zerlegt mehr-achsige Eilgänge in sichere Reihenfolge: Z-hoch zuerst beim Rückzug, XY zuerst beim Anfahren. Kein diagonaler Tauchgang/Schliff. `gcode/fahrweg.py`. Opt-in `rapid_safety:true`. 6 Tests. | [#54](https://github.com/MadGapun/CAMWOSA/issues/54) | [Fahrweg-Optimierung](Fahrweg-Optimierung.md) | ✅ |
+| P4 | **G54 im Header** — `grbl_standard.header()` wählt das Arbeits-KS explizit. Start-Sicherheits-Z liefern die Generatoren bereits (jeder Toolpath beginnt mit Eilgang auf Sicherheitshöhe). 1 Test. | [#54](https://github.com/MadGapun/CAMWOSA/issues/54) | [Postprozessor-GRBL](Postprozessor-GRBL.md) | ✅ |
 
 ### Cluster K — Anfänger-Erlebnis / Zero-to-Cut (Tiefenanalyse 2026-05-21)
 
@@ -249,6 +260,23 @@ Die **Profi-Seite** des Dual-Audience-Prinzips — die Anfänger-Schicht (K/L) d
 | F4 | GitHub Actions: Build + Release-Pipeline | — | [CI-CD](CI-CD.md) | ✅ |
 | F5 | Auto-Updater-Backend — `publish.github` Config + `app-update.yml` im Bundle + `electron-updater.checkForUpdates()` laeuft beim Start. **Auto-Update funktioniert nur mit NSIS-Installer**: portable ZIP kann sich nicht selbst aktualisieren (electron-updater hat keinen ZIP-Provider). NSIS-Build scheitert aktuell am winCodeSign-Symlink-Bug auf Windows ohne Developer-Mode (siehe [Issue #21](https://github.com/MadGapun/CAMWOSA/issues/21)). User bekommt update-available-Dialog, kann das ZIP manuell laden. | [#21](https://github.com/MadGapun/CAMWOSA/issues/21) | [Auto-Updater](Auto-Updater.md) | 🟨 |
 
+## Teil G — Maschinensteuerung / Sender (separate App)
+
+> **Neu 2026-06.** Eigenständige, **lose gekoppelte** App (nicht Teil von CAMWOSA-Core). CAMWOSA bleibt Pure-CAM (streamt nichts selbst); der Sender spricht GRBL über USB-Serial. Voll-Design: `docs/SENDER-ARCHITEKTUR.md`. Reconcile mit „Pure CAM"-Grundsatz: siehe Abschnitt „Was nicht im Plan steht" unten.
+
+| Nr | Funktion | Issue | Wiki | Status |
+|----|----------|-------|------|--------|
+| G1 | **Serial + Verbindung** — Port-Scan, Connect/Disconnect, Baud (Default 115200), Welcome-Parse (`Grbl 1.1`), `$$`/`$I` lesen. | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G2 | **Status-DRO** — 5-Hz-`?`-Polling, Status-Parser (`<State|MPos|FS|Ov|Pn>`), WCO-Cache, WPos-Berechnung. | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G3 | **Jog + Nullen + Homing** — Jog-Pad (`$J=`), Jog-Cancel (`0x85`), `$H`, `$X`, Achsen nullen (`G10 L20`). | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G4 | **Streaming-Engine** — Character-Counting (128-Byte-RX), Pause/Resume/Stop, Fortschritt + ETA, Konsole. | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G5 | **Real-Time-Overrides** — Feed/Rapid/Spindle (`0x90`-`0x9E`), Feed-Hold (`!`), Resume (`~`), **E-Stop** (`0x18`). | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G6 | **Probing-Wizard** — `G38.2` + Plattendicke, Z-Null setzen mit Bestätigung. | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G7 | **Sicherheits-Layer** — Alarm/Error-Klartext (Code-Tabellen), Limit-Warnung, Connection-Loss-Handling, **kein Auto-Resume**. | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G8 | **CAMWOSA-Kopplung** — read-only Job-Export (HTTP) + „In Sender öffnen"; LAN-Discovery optional. | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G9 | **MCP + i18n + Packaging** — FastMCP-Tools (Parität), DE/EN, Installer/Portable, optional reine Web-UI (Pi/Tablet). | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+| G10 | **Controller-Plugins** — Protokoll-Adapter für grblHAL / FluidNC / Marlin-CNC (Zukunft). | [#55](https://github.com/MadGapun/CAMWOSA/issues/55) | [Sender-Architektur](../SENDER-ARCHITEKTUR.md) | ⬜ |
+
 ---
 
 ## Reihenfolge-Logik
@@ -272,9 +300,9 @@ Weil Nesting Backend-Logik ist (Algorithmen). Die UI ist später Teil D14.
 
 ## Was nicht im Plan steht (bewusst aus Scope)
 
-Diese Punkte gehören **nicht** zu CAMWOSA — siehe [Architektur > Pure CAM](Architektur.md#pure-cam-keine-maschinen-steuerung):
+Diese Punkte gehören **nicht** zu CAMWOSA-Core — siehe [Architektur > Pure CAM](Architektur.md#pure-cam-keine-maschinen-steuerung):
 
-- Direkte Maschinen-Steuerung (Jog, Job-Send, Probe-Aufruf) → CNCjs
+- **Direkte Maschinen-Steuerung im CAMWOSA-Core** (Jog, Job-Send, Probe-Aufruf) — bleibt draußen. **Aber:** seit 2026-06 als **separate, lose gekoppelte App** geplant → **Teil G (CAMWOSA-Sender)** + `docs/SENDER-ARCHITEKTUR.md`. CAMWOSA-Core streamt weiterhin nichts selbst; der Sender ist ein eigenes Programm (eigener Prozess/Repo), das `.nc`-Dateien fährt. Der „Pure-CAM"-Grundsatz für CAMWOSA selbst bleibt damit intakt.
 - 5-Achs-CAM
 - 3D-Modellierung (parametrisch, BREP) → Solid Edge / Blender
 - DWG-Editing

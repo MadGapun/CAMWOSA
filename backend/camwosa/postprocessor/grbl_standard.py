@@ -34,6 +34,7 @@ class GRBLStandard(PostProcessor):
             "G90",  # absolute coords
             "G17",  # XY-Ebene
             "G94",  # Vorschub mm/min
+            "G54",  # P4: Arbeits-Koordinatensystem explizit waehlen
         ]
         if ctx.operation_kommentar:
             zeilen.append(self._kommentar(ctx.operation_kommentar))

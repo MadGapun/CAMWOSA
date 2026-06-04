@@ -47,6 +47,8 @@ a = Analysis(
         # G-Code-Post-Processing + Feeds + Zeit (teils lazy in Endpoints importiert)
         'camwosa.gcode.fahrweg',
         'camwosa.gcode.arc_fitting',
+        'camwosa.gcode.modal',
+        'camwosa.gcode.eintauchen',
         'camwosa.gcode.zeit_schaetzung',
         'camwosa.feeds.rechner',
         'camwosa.db.werkzeug_name',

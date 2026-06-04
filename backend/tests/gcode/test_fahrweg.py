@@ -6,6 +6,7 @@ import pytest
 
 from camwosa.gcode.fahrweg import (
     eilgang_weg,
+    entschaerfe_eilgaenge,
     optimiere_fahrwege,
     optimiere_reihenfolge,
     senke_freifahrten,
@@ -109,3 +110,62 @@ class TestKombiniert:
         assert opt.metadaten.get("freifahrt_hoehe") == 1.0
         # kuerzerer Eilgang-Weg als Original
         assert eilgang_weg(opt) < eilgang_weg(tp)
+
+
+class TestRapidSafety:
+    """P3: diagonale Eilgaenge in sichere Reihenfolge splitten."""
+
+    def test_rueckzug_z_zuerst(self):
+        # Schnitt unten, dann diagonaler Eilgang hoch+rueber
+        bew = [
+            Bewegung(BewegungsTyp.LINEAR, 0, 0, -2, feed=500),
+            Bewegung(BewegungsTyp.EILGANG, 50, 50, 5),  # diagonal hoch
+        ]
+        out = entschaerfe_eilgaenge(_tp(bew)).bewegungen
+        # aus 1 Eilgang werden 2: erst Z hoch (an alter XY), dann XY
+        assert len(out) == 3
+        z_hoch = out[1]
+        assert z_hoch.typ == BewegungsTyp.EILGANG
+        assert (z_hoch.x, z_hoch.y, z_hoch.z) == (0, 0, 5)  # XY alt, Z neu
+        assert (out[2].x, out[2].y, out[2].z) == (50, 50, 5)
+
+    def test_anfahrt_xy_zuerst(self):
+        # Von oben diagonal runter+rueber (Anfahrt)
+        bew = [
+            Bewegung(BewegungsTyp.EILGANG, 0, 0, 5),
+            Bewegung(BewegungsTyp.EILGANG, 50, 50, 1),  # diagonal runter
+        ]
+        out = entschaerfe_eilgaenge(_tp(bew)).bewegungen
+        assert len(out) == 3
+        xy = out[1]
+        assert (xy.x, xy.y, xy.z) == (50, 50, 5)  # XY neu, Z noch alt
+        assert (out[2].x, out[2].y, out[2].z) == (50, 50, 1)
+
+    def test_reiner_xy_eilgang_unveraendert(self):
+        bew = [
+            Bewegung(BewegungsTyp.EILGANG, 0, 0, 5),
+            Bewegung(BewegungsTyp.EILGANG, 50, 50, 5),  # nur XY, Z gleich
+        ]
+        out = entschaerfe_eilgaenge(_tp(bew)).bewegungen
+        assert len(out) == 2
+
+    def test_reiner_z_eilgang_unveraendert(self):
+        bew = [
+            Bewegung(BewegungsTyp.EILGANG, 10, 10, 5),
+            Bewegung(BewegungsTyp.EILGANG, 10, 10, -1),  # nur Z
+        ]
+        out = entschaerfe_eilgaenge(_tp(bew)).bewegungen
+        assert len(out) == 2
+
+    def test_schnittbewegung_nie_gesplittet(self):
+        # diagonaler G1 (Rampe) bleibt unangetastet
+        bew = [
+            Bewegung(BewegungsTyp.LINEAR, 0, 0, 0, feed=500),
+            Bewegung(BewegungsTyp.LINEAR, 50, 50, -2, feed=500),  # diagonal, aber Schnitt
+        ]
+        out = entschaerfe_eilgaenge(_tp(bew)).bewegungen
+        assert len(out) == 2
+
+    def test_leerer_toolpath(self):
+        out = entschaerfe_eilgaenge(_tp([]))
+        assert out.bewegungen == []

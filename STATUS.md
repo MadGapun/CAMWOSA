@@ -7,14 +7,15 @@ Detaillierte Begründungen + Beispiele liegen im [Wiki](docs/wiki/).
 
 | Bereich | Stand |
 |---------|-------|
-| Backend pytest | **842 / 842** grün (+ 1 skipped Integration-Smoke fuer [ai]) — Stand alpha.12 |
-| Frontend vite build | OK (960 Module, alpha.12) |
+| Backend pytest | **877 / 877** grün (+ 1 skipped Integration-Smoke fuer [ai]) — Stand alpha.13 |
+| Frontend vite build | OK (alpha.13) |
 | Bundle Smoke-Test | PASS (Renderer rendert) |
 | MCP-Server | Syntax-OK, `werkzeuge_anzeigen` + `gcode_erzeugen` (Fahrweg-Opt) — smoke nicht ausgeführt |
 | Frontend vitest | **33 / 35** grün — neu in alpha.12: `zeit` (6), `werkzeugName` (10), `WerkzeugGrafik` (3); 2 vorbestehende rot in `varianteStore` → [#53](https://github.com/MadGapun/CAMWOSA/issues/53) |
 
 **Releases:**
 
+- **v0.0.1-alpha.13** (G-code-Härtung + Rampen-Eintauchen + Steuerungs-Architektur) — **Cluster P** (Postprozessor-Härtung: P1 Spindel-Hochlauf-Dwell, P2 modaler Output, P3 Rapid-Safety, P4 G54) + **J5 Rampen-Eintauchen** (`gcode/eintauchen.py`, endpunkt-treu). Tiefen-Analyse (`docs/ANALYSE-2026-06.md`) + **Sender-Architektur** (`docs/SENDER-ARCHITEKTUR.md`, neuer **Teil G** im Master-Plan, Pure-CAM-Grundsatz reconciled). +35 Backend-Tests. Issues #54 (Cluster P), #55 (Sender). UI-Toggles im G-Code-Editor.
 - **v0.0.1-alpha.12** (Intelligente Fahrwege + Werkzeug-Grafiken) — J9 kurze Wege (Nearest-Neighbor-Reihenfolge) + J10 knappe Freifahrten (`gcode/fahrweg.py`) + J11 Vorschub-Anpassung bei Teil-Tiefe + K5 Bearbeitungszeit im UI (#52); parametrische Werkzeug-Skizze `WerkzeugGrafik.tsx` (12 Typen, bemaßt im Editor mit Feld-Fokus-Highlight, Piktogramm in Liste + Dropdown) + Auto-Name aus Daten + optionaler Zusatz (#33/D34/D34a). +9 Backend-Tests, +19 Frontend-Tests. **Erstes Release mit substanziellem UI-Anteil für diese Features.**
 
 - **v0.0.1-alpha.6** (3D-Frässtrategien-Auftakt) — Fusion-CAM-Analyse (`docs/FUSION-CAM-VERGLEICH.md`) + Cluster I1 Planfräsen + I2 3D-Parallel-Schlichten auf STL-Heightmap (Werkzeug-Form-Dilation, Scallop-Stepover, Bahn-Winkel, StockToLeave). +28 Tests. **Frontend hat nur Client-Bindings, UI folgt.**

@@ -346,6 +346,11 @@ export const camwosaApi = {
       freifahrt_hoehe?: number | null;
       arc_fitting?: boolean;
       arc_toleranz_mm?: number;
+      modal?: boolean;
+      rapid_safety?: boolean;
+      spindel_hochlauf_s?: number | null;
+      rampe_eintauchen?: boolean;
+      rampen_winkel_grad?: number;
     },
   ): Promise<{ gcode: string; zeilen: number }> =>
     api

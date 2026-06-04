@@ -137,3 +137,82 @@ class TestFahrwegPostprocess:
         })
         assert rv.status_code == 200, rv.get_json()
         assert "gcode" in rv.get_json()
+
+
+class TestClusterPAPI:
+    """P-Optionen am /postprocess-Endpoint (modal, rapid_safety, G54)."""
+
+    def _tp(self, wid):
+        return {
+            "operation_id": "op", "operation_typ": "kontur", "werkzeug_id": wid,
+            "spindel_rpm": 18000, "sicherheitshoehe": 5, "kommentar": "", "metadaten": {},
+            "bewegungen": [
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+                {"typ": "plunge", "x": 0, "y": 0, "z": -1, "feed": 300},
+                {"typ": "linear", "x": 50, "y": 0, "z": -1, "feed": 800},
+                {"typ": "linear", "x": 50, "y": 40, "z": -1, "feed": 800},
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+            ],
+        }
+
+    def test_g54_immer_im_header(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        rv = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+        })
+        assert rv.status_code == 200, rv.get_json()
+        assert "G54" in rv.get_json()["gcode"]
+
+    def test_modal_komprimiert(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        ohne = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+        }).get_json()["gcode"]
+        mit = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])], "modal": True,
+        }).get_json()["gcode"]
+        # modal: F800 nur einmal statt zweimal
+        assert mit.count("F800") < ohne.count("F800")
+
+    def test_rapid_safety_akzeptiert(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        rv = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])], "rapid_safety": True,
+        })
+        assert rv.status_code == 200
+        assert "gcode" in rv.get_json()
+
+
+class TestRampeAPI:
+    """J5 Rampen-Eintauchen am /postprocess-Endpoint."""
+
+    def _tp(self, wid):
+        return {
+            "operation_id": "op", "operation_typ": "kontur", "werkzeug_id": wid,
+            "spindel_rpm": 18000, "sicherheitshoehe": 5, "kommentar": "", "metadaten": {},
+            "bewegungen": [
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+                {"typ": "plunge", "x": 0, "y": 0, "z": -2, "feed": 300},
+                {"typ": "linear", "x": 80, "y": 0, "z": -2, "feed": 800},
+                {"typ": "linear", "x": 80, "y": 80, "z": -2, "feed": 800},
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+            ],
+        }
+
+    def test_rampe_erzeugt_schraegen_einstieg(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        rv = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+            "rampe_eintauchen": True, "rampen_winkel_grad": 5,
+        })
+        assert rv.status_code == 200, rv.get_json()
+        assert "Rampen-Eintauchen" in rv.get_json()["gcode"]

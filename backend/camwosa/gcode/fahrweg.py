@@ -180,6 +180,48 @@ def optimiere_fahrwege(
     return tp
 
 
+def entschaerfe_eilgaenge(toolpath: Toolpath, *, eps: float = 1e-6) -> Toolpath:
+    """P3 (Cluster P): zerlegt diagonale Eilgaenge in eine sichere Reihenfolge.
+
+    Ein ``G0 X Y Z`` der **gleichzeitig** Z und XY aendert faehrt schraeg — beim
+    Rueckzug kann das Werkzeug durch Material/Steg schleifen, beim Anfahren
+    schraeg eintauchen. Wir splitten solche Eilgaenge:
+
+    - **Z hoch** (Rueckzug): erst Z hoch (an alter XY), dann XY (auf neuer Z).
+    - **Z runter** (Anfahrt): erst XY (auf alter Z), dann Z runter.
+
+    Nur Eilgaenge werden angefasst; Schnitt-Bewegungen bleiben unveraendert.
+    Konservativ: bei leerem Toolpath unveraendert.
+    """
+    bew = toolpath.bewegungen
+    if not bew:
+        return toolpath
+
+    neu: list[Bewegung] = []
+    px, py, pz = bew[0].x, bew[0].y, bew[0].z
+    neu.append(bew[0])
+    for b in bew[1:]:
+        if b.typ == BewegungsTyp.EILGANG:
+            z_anders = abs(b.z - pz) > eps
+            xy_anders = abs(b.x - px) > eps or abs(b.y - py) > eps
+            if z_anders and xy_anders:
+                if b.z > pz:  # hoch: Z zuerst, dann XY
+                    neu.append(Bewegung(BewegungsTyp.EILGANG, px, py, b.z))
+                    neu.append(replace(b, x=b.x, y=b.y, z=b.z))
+                else:  # runter: XY zuerst, dann Z
+                    neu.append(Bewegung(BewegungsTyp.EILGANG, b.x, b.y, pz))
+                    neu.append(replace(b, x=b.x, y=b.y, z=b.z))
+            else:
+                neu.append(b)
+        else:
+            neu.append(b)
+        px, py, pz = b.x, b.y, b.z
+
+    meta = dict(toolpath.metadaten)
+    meta["rapid_safety"] = True
+    return replace(toolpath, bewegungen=neu, metadaten=meta)
+
+
 def eilgang_weg(toolpath: Toolpath) -> float:
     """Gesamter Eilgang-Verfahrweg (mm) — Metrik fuer die Optimierung."""
     bew = toolpath.bewegungen
@@ -196,6 +238,7 @@ def eilgang_weg(toolpath: Toolpath) -> float:
 
 __all__ = [
     "eilgang_weg",
+    "entschaerfe_eilgaenge",
     "optimiere_fahrwege",
     "optimiere_reihenfolge",
     "senke_freifahrten",

@@ -31,6 +31,10 @@ class PostKontext:
     operation_kommentar: str = ""
     backplot_annotation: bool = True
     metadaten: dict = field(default_factory=dict)
+    # P1 (Cluster P): Spindel-Hochlauf-Pause in Sekunden. Wird nach M3 als
+    # ``G4 P<t>`` ausgegeben, damit die Spindel vor dem Erstschnitt auf Drehzahl
+    # ist. 0 = aus (rueckwaertskompatibel). Quelle: Spindel.rampen_zeit_s.
+    spindel_hochlauf_s: float = 0.0
 
 
 class PostProcessor(ABC):
@@ -59,7 +63,12 @@ class PostProcessor(ABC):
         return []
 
     def spindle_on(self, ctx: PostKontext, rpm: float) -> list[str]:
-        return [f"M3 S{int(round(rpm))}"]
+        zeilen = [f"M3 S{int(round(rpm))}"]
+        # P1: Hochlauf-Pause, damit die Spindel vor dem ersten Schnitt dreht.
+        if ctx.spindel_hochlauf_s and ctx.spindel_hochlauf_s > 0:
+            # P-Wert in Sekunden; :g vermeidet unnoetige Nullen (2.0 -> 2).
+            zeilen.append(f"G4 P{ctx.spindel_hochlauf_s:g}")
+        return zeilen
 
     def spindle_off(self, ctx: PostKontext) -> list[str]:
         return ["M5"]

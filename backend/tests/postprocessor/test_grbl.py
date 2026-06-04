@@ -162,3 +162,34 @@ class TestUserPost(PostProcessor):
         )
         with pytest.raises(ValueError, match="POSTPROCESSOR_ID"):
             registry().lade_aus_verzeichnis(tmp_path)
+
+
+class TestClusterP:
+    """Postprozessor-Haertung: Spindel-Dwell (P1) + G54 (P4)."""
+
+    def test_p1_dwell_nach_m3(self, proverxl_maschine, schaftfraeser_6mm):
+        from camwosa.postprocessor.grbl_standard import GRBLStandard
+        ctx = PostKontext(
+            maschine=proverxl_maschine, werkzeug=schaftfraeser_6mm,
+            spindel_hochlauf_s=2.0,
+        )
+        zeilen = GRBLStandard().spindle_on(ctx, 18000)
+        assert zeilen == ["M3 S18000", "G4 P2"]
+
+    def test_p1_default_kein_dwell(self, kontext):
+        from camwosa.postprocessor.grbl_standard import GRBLStandard
+        # Default-Kontext hat spindel_hochlauf_s=0 → rueckwaertskompatibel
+        assert GRBLStandard().spindle_on(kontext, 18000) == ["M3 S18000"]
+
+    def test_p4_header_hat_g54(self, kontext):
+        from camwosa.postprocessor.grbl_standard import GRBLStandard
+        assert "G54" in GRBLStandard().header(kontext)
+
+    def test_p1_im_kompletten_job(self, proverxl_maschine, schaftfraeser_6mm, einfacher_toolpath):
+        from camwosa.postprocessor.grbl_standard import GRBLStandard
+        ctx = PostKontext(
+            maschine=proverxl_maschine, werkzeug=schaftfraeser_6mm,
+            spindel_hochlauf_s=1.5,
+        )
+        zeilen = GRBLStandard().post_alle(ctx, [einfacher_toolpath])
+        assert any("G4 P1.5" in z for z in zeilen)
