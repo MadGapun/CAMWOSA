@@ -12,6 +12,7 @@ import type {
   MaschinenProfil,
   Material,
   PostprozessorInfo,
+  RotaryProfil,
   Spindel,
   TaschenParameter,
   Toolpath,
@@ -93,6 +94,16 @@ export const camwosaApi = {
     api.put(`/spindles/${id}`, s).then((r) => r.data),
   spindelLoeschen: (id: string): Promise<{ geloescht: boolean }> =>
     api.delete(`/spindles/${id}`).then((r) => r.data),
+
+  // Rotary-Profil CRUD (alles editierbar)
+  rotaryProfile: (): Promise<RotaryProfil[]> =>
+    api.get<RotaryProfil[]>("/rotary/profile").then((r) => r.data),
+  rotaryProfilAnlegen: (p: RotaryProfil): Promise<{ gespeichert: boolean; rotary_profil: RotaryProfil }> =>
+    api.post("/rotary/profile", p).then((r) => r.data),
+  rotaryProfilUpdaten: (id: string, p: RotaryProfil): Promise<{ gespeichert: boolean; rotary_profil: RotaryProfil }> =>
+    api.put(`/rotary/profile/${id}`, p).then((r) => r.data),
+  rotaryProfilLoeschen: (id: string): Promise<{ geloescht: boolean }> =>
+    api.delete(`/rotary/profile/${id}`).then((r) => r.data),
 
   // Feeds & Speeds
   feedsBerechnen: (

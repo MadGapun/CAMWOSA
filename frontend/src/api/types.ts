@@ -309,6 +309,26 @@ export interface CheckBericht {
 
 // --- Postprozessoren ---
 
+export interface RotaryProfil {
+  id: string;
+  name: string;
+  hersteller: string;
+  modell: string;
+  quelle_url?: string | null;
+  spannfutter_backen_anzahl: number;
+  spannfutter_max_durchmesser_mm: number;
+  spannfutter_min_durchmesser_mm: number;
+  hat_reitstock: boolean;
+  reitstock_verstellbar_mm?: number | null;
+  max_werkstueck_laenge_mm: number;
+  durchschiebbar: boolean;
+  grbl_y_steps_pro_grad?: number | null;
+  grbl_y_limit_aufheben: boolean;
+  cncjs_macro_ein?: string | null;
+  cncjs_macro_aus?: string | null;
+  notizen: string;
+}
+
 export interface PostprozessorInfo {
   id: string;
   name: string;

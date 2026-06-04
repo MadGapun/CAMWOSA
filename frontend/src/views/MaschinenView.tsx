@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../state/store";
 import { camwosaApi } from "../api/client";
-import type { MachineBundle, Spindel } from "../api/types";
+import type { MachineBundle, MaschinenProfil, RotaryProfil, Spindel } from "../api/types";
 import Modal from "../components/Modal";
 import SpindelEditor from "../editor/SpindelEditor";
+import MaschinenEditor from "../editor/MaschinenEditor";
+import RotaryProfilEditor from "../editor/RotaryProfilEditor";
 
 const HERKUNFT_LABEL: Record<string, string> = {
   oem: "OEM",
@@ -15,6 +17,7 @@ const HERKUNFT_LABEL: Record<string, string> = {
 export default function MaschinenView() {
   const { t } = useTranslation();
   const maschinen = useAppStore((s) => s.maschinen);
+  const setMaschinen = useAppStore((s) => s.setMaschinen);
   const spindeln = useAppStore((s) => s.spindeln);
   const setSpindeln = useAppStore((s) => s.setSpindeln);
   const aktiveSpindelId = useAppStore((s) => s.aktiveSpindelId);
@@ -23,9 +26,41 @@ export default function MaschinenView() {
   const [importOk, setImportOk] = useState<string | null>(null);
   const [spEdit, setSpEdit] = useState<"none" | "neu" | "bearbeiten">("none");
   const [spDetail, setSpDetail] = useState<Spindel | null>(null);
+  const [mEdit, setMEdit] = useState<"none" | "neu" | "bearbeiten">("none");
+  const [mDetail, setMDetail] = useState<MaschinenProfil | null>(null);
+  const [rotary, setRotary] = useState<RotaryProfil[]>([]);
+  const [rEdit, setREdit] = useState<"none" | "neu" | "bearbeiten">("none");
+  const [rDetail, setRDetail] = useState<RotaryProfil | null>(null);
+
+  useEffect(() => { void reloadRotary(); }, []);
+  async function reloadRotary() {
+    try { setRotary(await camwosaApi.rotaryProfile()); } catch { /* optional */ }
+  }
+  async function rotaryLoeschen(rp: RotaryProfil) {
+    if (!window.confirm(`Rotary-Profil '${rp.name}' wirklich loeschen?`)) return;
+    try {
+      await camwosaApi.rotaryProfilLoeschen(rp.id);
+      await reloadRotary();
+    } catch (e: any) {
+      window.alert(`Loeschen fehlgeschlagen: ${e.response?.data?.fehler ?? e.message}`);
+    }
+  }
 
   async function reloadSpindeln() {
     setSpindeln(await camwosaApi.spindeln());
+  }
+  async function reloadMaschinen() {
+    setMaschinen(await camwosaApi.maschinen());
+  }
+
+  async function maschineLoeschen(mp: MaschinenProfil) {
+    if (!window.confirm(`Maschine '${mp.name}' wirklich loeschen?`)) return;
+    try {
+      await camwosaApi.maschineLoeschen(mp.id);
+      await reloadMaschinen();
+    } catch (e: any) {
+      window.alert(`Loeschen fehlgeschlagen: ${e.response?.data?.fehler ?? e.message}`);
+    }
   }
 
   async function spindelLoeschen(sp: Spindel) {
@@ -75,18 +110,26 @@ export default function MaschinenView() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{t("navigation.maschinen")}</h1>
-        <label className="cursor-pointer rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-white">
-          Bundle importieren
-          <input
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void importMaschine(f);
-            }}
-          />
-        </label>
+        <div className="flex items-center gap-2">
+          <button
+            className="rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-camwosa-bg hover:opacity-90"
+            onClick={() => { setMDetail(null); setMEdit("neu"); }}
+          >
+            + Neue Maschine
+          </button>
+          <label className="cursor-pointer rounded border border-gray-600 px-3 py-1 text-xs font-semibold hover:bg-gray-700">
+            Bundle importieren
+            <input
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importMaschine(f);
+              }}
+            />
+          </label>
+        </div>
       </div>
 
       {importOk && (
@@ -116,13 +159,29 @@ export default function MaschinenView() {
                     {m.hersteller} · {m.modell}
                   </p>
                 </div>
-                <button
-                  className="rounded border border-gray-600 px-2 py-0.5 text-xs hover:bg-gray-700"
-                  onClick={() => void exportMaschine(m.id)}
-                  title="Als JSON exportieren (zum Teilen mit anderen Usern)"
-                >
-                  📦 Bundle
-                </button>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    className="rounded border border-gray-600 px-2 py-0.5 text-xs hover:bg-gray-700"
+                    onClick={() => { setMDetail(m); setMEdit("bearbeiten"); }}
+                    title="Maschine bearbeiten"
+                  >
+                    ✏
+                  </button>
+                  <button
+                    className="rounded border border-gray-600 px-2 py-0.5 text-xs hover:bg-gray-700"
+                    onClick={() => void exportMaschine(m.id)}
+                    title="Als JSON exportieren (zum Teilen mit anderen Usern)"
+                  >
+                    📦
+                  </button>
+                  <button
+                    className="rounded border border-red-700 px-2 py-0.5 text-xs hover:bg-red-900/40"
+                    onClick={() => void maschineLoeschen(m)}
+                    title="Maschine loeschen"
+                  >
+                    🗑
+                  </button>
+                </div>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
                 <dt className="text-camwosa-muted">{t("maschine.controller")}</dt>
@@ -242,6 +301,75 @@ export default function MaschinenView() {
           User-Override übersteuern.
         </p>
       </div>
+
+      {/* Rotary-Profil-Bibliothek — alle Felder editierbar */}
+      <div className="rounded border border-gray-700 bg-camwosa-surface p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-semibold">Rotary-Profile ({rotary.length})</h2>
+          <button
+            className="rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-camwosa-bg hover:opacity-90"
+            onClick={() => { setRDetail(null); setREdit("neu"); }}
+          >
+            + Neues Rotary-Profil
+          </button>
+        </div>
+        {rotary.length === 0 ? (
+          <p className="text-xs text-camwosa-muted">Noch keine Rotary-Profile.</p>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="border-b border-gray-700 text-left uppercase text-camwosa-muted">
+              <tr>
+                <th className="py-1">Name</th><th>Spannfutter-Ø</th><th>Reitstock</th>
+                <th>Y-Steps/°</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rotary.map((rp) => (
+                <tr key={rp.id} className="border-b border-gray-800 hover:bg-camwosa-bg/40">
+                  <td className="py-1 font-medium">{rp.name}</td>
+                  <td>{rp.spannfutter_min_durchmesser_mm}–{rp.spannfutter_max_durchmesser_mm} mm</td>
+                  <td>{rp.hat_reitstock ? "ja" : "nein"}{rp.durchschiebbar ? " · durchschiebbar" : ""}</td>
+                  <td>{rp.grbl_y_steps_pro_grad ?? "—"}</td>
+                  <td className="space-x-1 whitespace-nowrap">
+                    <button className="rounded border border-gray-600 px-2 py-0.5 hover:bg-gray-700"
+                      title="Bearbeiten"
+                      onClick={() => { setRDetail(rp); setREdit("bearbeiten"); }}>✏</button>
+                    <button className="rounded border border-red-700 px-2 py-0.5 hover:bg-red-900/40"
+                      title="Loeschen"
+                      onClick={() => void rotaryLoeschen(rp)}>🗑</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <Modal
+        open={rEdit !== "none"}
+        onClose={() => setREdit("none")}
+        titel={rEdit === "neu" ? "Neues Rotary-Profil" : "Rotary-Profil bearbeiten"}
+        breit
+      >
+        <RotaryProfilEditor
+          initial={rEdit === "bearbeiten" ? rDetail : null}
+          onAbbrechen={() => setREdit("none")}
+          onGespeichert={async () => { await reloadRotary(); setREdit("none"); }}
+        />
+      </Modal>
+
+      <Modal
+        open={mEdit !== "none"}
+        onClose={() => setMEdit("none")}
+        titel={mEdit === "neu" ? "Neue Maschine" : "Maschine bearbeiten"}
+        breit
+      >
+        <MaschinenEditor
+          initial={mEdit === "bearbeiten" ? mDetail : null}
+          onAbbrechen={() => setMEdit("none")}
+          onGespeichert={async () => { await reloadMaschinen(); setMEdit("none"); }}
+        />
+      </Modal>
 
       <Modal
         open={spEdit !== "none"}
