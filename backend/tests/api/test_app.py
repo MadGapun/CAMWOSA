@@ -38,8 +38,8 @@ class TestMaschinen:
         assert rv.status_code == 200
         data = rv.get_json()
         assert data["controller"] == "GRBL"
-        assert data["_aktive_spindel"]["id"] == "makita_rt0700"
-        assert len(data["_verfuegbare_spindeln"]) == 2
+        assert data["_aktive_spindel"]["id"] == "spindle_1500w_aircooled_vfd"
+        assert len(data["_verfuegbare_spindeln"]) == 4
 
     def test_unbekannt_404(self, client) -> None:
         rv = client.get("/api/machines/xxx")

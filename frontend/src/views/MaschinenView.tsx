@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../state/store";
 import { camwosaApi } from "../api/client";
-import type { MachineBundle } from "../api/types";
+import type { MachineBundle, Spindel } from "../api/types";
+import Modal from "../components/Modal";
+import SpindelEditor from "../editor/SpindelEditor";
 
 const HERKUNFT_LABEL: Record<string, string> = {
   oem: "OEM",
@@ -14,8 +16,27 @@ export default function MaschinenView() {
   const { t } = useTranslation();
   const maschinen = useAppStore((s) => s.maschinen);
   const spindeln = useAppStore((s) => s.spindeln);
+  const setSpindeln = useAppStore((s) => s.setSpindeln);
+  const aktiveSpindelId = useAppStore((s) => s.aktiveSpindelId);
+  const setAktiveSpindelId = useAppStore((s) => s.setAktiveSpindelId);
   const [importFehler, setImportFehler] = useState<string | null>(null);
   const [importOk, setImportOk] = useState<string | null>(null);
+  const [spEdit, setSpEdit] = useState<"none" | "neu" | "bearbeiten">("none");
+  const [spDetail, setSpDetail] = useState<Spindel | null>(null);
+
+  async function reloadSpindeln() {
+    setSpindeln(await camwosaApi.spindeln());
+  }
+
+  async function spindelLoeschen(sp: Spindel) {
+    if (!window.confirm(`Spindel '${sp.name}' wirklich loeschen?`)) return;
+    try {
+      await camwosaApi.spindelLoeschen(sp.id);
+      await reloadSpindeln();
+    } catch (e: any) {
+      window.alert(`Loeschen fehlgeschlagen: ${e.response?.data?.fehler ?? e.message}`);
+    }
+  }
 
   async function exportMaschine(id: string) {
     const bundle = await camwosaApi.machineExport(id);
@@ -81,7 +102,8 @@ export default function MaschinenView() {
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {maschinen.map((m) => {
-          const aktive = m._aktive_spindel;
+          // Effektiv aktive Spindel: Session-Override (Projekt) vor Profil-Default
+          const aktivId = aktiveSpindelId ?? m.aktive_spindel_id;
           const verfuegbar = m._verfuegbare_spindeln ?? spindeln.filter(
             (sp) => m.spindel_ids.includes(sp.id),
           );
@@ -124,22 +146,40 @@ export default function MaschinenView() {
                     <li
                       key={sp.id}
                       className={
-                        aktive?.id === sp.id
+                        aktivId === sp.id
                           ? "rounded bg-camwosa-accent/20 px-2 py-1"
                           : "px-2 py-1 text-camwosa-muted"
                       }
                     >
-                      <div className="flex items-center justify-between">
-                        <span>
-                          {aktive?.id === sp.id && "● "}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate">
+                          {aktivId === sp.id && "● "}
                           {sp.name}{" "}
                           <span className="text-[10px]">
                             ({HERKUNFT_LABEL[sp.herkunft]})
                           </span>
                         </span>
-                        <span className="text-[10px]">
-                          {sp.rpm_min}–{sp.rpm_max} RPM · {sp.typ}
-                          {sp.leistung_watt ? ` · ${sp.leistung_watt}W` : ""}
+                        <span className="flex shrink-0 items-center gap-1">
+                          <span className="text-[10px]">
+                            {sp.rpm_min}–{sp.rpm_max} · {sp.typ}
+                            {sp.leistung_watt ? ` · ${sp.leistung_watt}W` : ""}
+                          </span>
+                          {aktivId !== sp.id && (
+                            <button
+                              className="rounded border border-camwosa-default px-1 text-[10px] hover:text-camwosa-accent"
+                              title="Als aktive Spindel setzen (für dieses Projekt)"
+                              onClick={() => setAktiveSpindelId(sp.id)}
+                            >
+                              aktiv
+                            </button>
+                          )}
+                          <button
+                            className="rounded border border-camwosa-default px-1 text-[10px] hover:text-camwosa-text"
+                            title="Spindel bearbeiten"
+                            onClick={() => { setSpDetail(sp); setSpEdit("bearbeiten"); }}
+                          >
+                            ✏
+                          </button>
                         </span>
                       </div>
                     </li>
@@ -156,6 +196,65 @@ export default function MaschinenView() {
           );
         })}
       </div>
+
+      {/* Spindel-Bibliothek — alle Spindeln editierbar (Issue: alles einstellbar) */}
+      <div className="rounded border border-gray-700 bg-camwosa-surface p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-semibold">Spindel-Bibliothek ({spindeln.length})</h2>
+          <button
+            className="rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-camwosa-bg hover:opacity-90"
+            onClick={() => { setSpDetail(null); setSpEdit("neu"); }}
+          >
+            + Neue Spindel
+          </button>
+        </div>
+        <table className="w-full text-xs">
+          <thead className="border-b border-gray-700 text-left uppercase text-camwosa-muted">
+            <tr>
+              <th className="py-1">Name</th><th>Typ</th><th>Drehzahl</th>
+              <th>Leistung</th><th>Hochlauf</th><th>Herkunft</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {spindeln.map((sp) => (
+              <tr key={sp.id} className="border-b border-gray-800 hover:bg-camwosa-bg/40">
+                <td className="py-1 font-medium">{sp.name}</td>
+                <td>{sp.typ}</td>
+                <td>{sp.rpm_min}–{sp.rpm_max}</td>
+                <td>{sp.leistung_watt ? `${sp.leistung_watt} W` : "—"}</td>
+                <td>{sp.rampen_zeit_s != null ? `${sp.rampen_zeit_s} s` : "—"}</td>
+                <td>{HERKUNFT_LABEL[sp.herkunft]}</td>
+                <td className="space-x-1 whitespace-nowrap">
+                  <button className="rounded border border-gray-600 px-2 py-0.5 hover:bg-gray-700"
+                    title="Bearbeiten"
+                    onClick={() => { setSpDetail(sp); setSpEdit("bearbeiten"); }}>✏</button>
+                  <button className="rounded border border-red-700 px-2 py-0.5 hover:bg-red-900/40"
+                    title="Loeschen"
+                    onClick={() => void spindelLoeschen(sp)}>🗑</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-2 text-[10px] text-camwosa-muted">
+          Alle Werte (Drehzahl, VFD-Hochlauf, Spannzange …) sind hier editierbar.
+          Default-Spindeln aus der Sammel-Datei lassen sich per gleichnamiger
+          User-Override übersteuern.
+        </p>
+      </div>
+
+      <Modal
+        open={spEdit !== "none"}
+        onClose={() => setSpEdit("none")}
+        titel={spEdit === "neu" ? "Neue Spindel" : "Spindel bearbeiten"}
+        breit
+      >
+        <SpindelEditor
+          initial={spEdit === "bearbeiten" ? spDetail : null}
+          onAbbrechen={() => setSpEdit("none")}
+          onGespeichert={async () => { await reloadSpindeln(); setSpEdit("none"); }}
+        />
+      </Modal>
     </div>
   );
 }

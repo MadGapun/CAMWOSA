@@ -76,7 +76,7 @@ Vier Maßnahmen verbessern den realen Maschinen-Output. Alle rückwärtskompatib
 
 ### P1 — Spindel-Hochlauf-Dwell
 `spindle_on()` hängt nach `M3 S<rpm>` ein `G4 P<t>` an, damit die Spindel
-(Makita RT0700 ~1–2 s) vor dem Erstschnitt auf Drehzahl ist. Die Pause kommt aus
+(z.B. 1,5 kW VFD ~3 s) vor dem Erstschnitt auf Drehzahl ist. Die Pause kommt aus
 `Spindel.rampen_zeit_s` (im Postprozessor via `PostKontext.spindel_hochlauf_s`),
 am Endpoint aus der aktiven Spindel der Maschine oder per Body
 `spindel_hochlauf_s`. `0` = aus.

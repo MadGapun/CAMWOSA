@@ -164,6 +164,28 @@ JSON-Datei in `data/spindles/community/` ablegen (oder direkt in `data/spindles/
 ]
 ```
 
+## Spindel-Editor (UI)
+
+Seit alpha.14 sind **alle** Spindel-Werte in der UI editierbar (vorher nur per
+JSON). In **Maschinen** → Abschnitt **Spindel-Bibliothek**:
+
+- **+ Neue Spindel** / ✏ bearbeiten / 🗑 löschen — `editor/SpindelEditor.tsx`.
+- Felder: Name, Hersteller/Modell, **Steuerungs-Typ** (manuell/PWM/analog),
+  Herkunft, **RPM min/max**, Leistung, Drehmoment, **Spannzangen-Ø**, Kühlung,
+  **Hochlauf-Dwell** (VFD-Accel → `G4 P` vor Erstschnitt), PWM-Kennlinie, Notizen.
+- Pro Maschine: **„aktiv"** setzt die aktive Spindel für das aktuelle Projekt
+  (Session-Override; das Maschinenprofil bleibt unverändert).
+
+Default-Spindeln aus der Sammel-Datei (`data/spindles/standard.json`) lassen sich
+durch eine gleichnamige **User-Override**-Datei übersteuern (Backend-CRUD schreibt
+solche Einzeldateien).
+
+> **Hochlauf-Dwell vs. Warmlauf:** `rampen_zeit_s` ist der kurze Dwell, bis die
+> Spindel nach `M3` auf Drehzahl ist (VFD-Accel, z.B. 3 s) — er steht vor *jedem*
+> Erstschnitt. Der manuelle **Warmlauf** (z.B. 10 s Routine, um die Lager warm zu
+> fahren) ist davon getrennt; ein automatischer Programmstart-Warmlauf ist als
+> Folge-Option vorgemerkt.
+
 ## Verwandt
 
 - [Datenmodell](Datenmodell)

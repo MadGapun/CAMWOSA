@@ -3,7 +3,7 @@ import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { camwosaApi } from "../api/client";
-import { useAktiveMaschine, useAppStore } from "../state/store";
+import { useAktiveMaschine, useAktiveSpindel, useAppStore } from "../state/store";
 import { BEFEHLE, findeBefehl, type GCodeBefehl } from "../components/GCodeBibliothek";
 import {
   registriereGcodeHighlighting,
@@ -40,6 +40,7 @@ M30
 export default function GCodeEditorView() {
   const { t } = useTranslation();
   const maschine = useAktiveMaschine();
+  const aktiveSpindel = useAktiveSpindel();
   const operationen = useAppStore((s) => s.operationen);
   const aktiveOps = operationen.filter((o) => o.aktiviert && o.toolpath);
 
@@ -100,6 +101,8 @@ export default function GCodeEditorView() {
           rapid_safety: rapidSafety,
           rampe_eintauchen: rampe,
           rampen_winkel_grad: rampenWinkel,
+          // P1: Hochlauf-Dwell folgt der im UI gewählten (aktiven) Spindel
+          spindel_hochlauf_s: aktiveSpindel?.rampen_zeit_s ?? null,
         },
       );
       setValue(result.gcode);

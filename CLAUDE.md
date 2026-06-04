@@ -102,8 +102,9 @@ Wichtigste Details die im Code abgebildet sein müssen:
 |---|---|
 | Arbeitsraum (Standard) | 400 × 400 × 110 mm |
 | Controller | GRBL 1.1 |
-| Spindel | Makita RT0700 |
-| RPM-Range | 10.000 - 30.000 |
+| Spindel | 1,5 kW luftgekühlt mit VFD (ER11) — davor SainSmart 710 W Router (ersetzte Original-Spindel) |
+| RPM-Range | 6.000 - 24.000 (einstellbar; alle Spindel-Werte UI-editierbar) |
+| Spindel-Hochlauf | manueller Warmlauf ~10 s; G4-Dwell vor Erstschnitt ~3 s (VFD-Accel) |
 | Vorschub max | 3000 mm/min |
 | Rotary-Setup | Y-Achse umgemappt, $101=88.889 steps/deg |
 | Rotary-Macros | ROTARY EIN/AUS in CNCjs vorhanden |

@@ -95,9 +95,10 @@ class TestSpindeln:
         assert "genmitsu_router_710w" in proverxl.spindel_ids
         sp = proverxl.aktive_spindel(idx)
         assert sp is not None
-        assert sp.id == "makita_rt0700"
+        # Markus' reale aktive Spindel: 1,5 kW luftgekuehlt mit VFD
+        assert sp.id == "spindle_1500w_aircooled_vfd"
         # Effektive RPM-Range sollte aus aktiver Spindel kommen
-        assert proverxl.effektive_rpm_range(idx) == (10000, 30000)
+        assert proverxl.effektive_rpm_range(idx) == (6000, 24000)
 
 
 class TestLeeresVerzeichnis:

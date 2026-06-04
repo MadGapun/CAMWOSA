@@ -43,7 +43,7 @@ Geprüfter Pfad: `gcode/toolpath.py` → `postprocessor/base.py` →
 
 | # | Befund | Schwere | Wirkung |
 |---|--------|---------|---------|
-| P1 | **Kein Spindel-Hochlauf-Dwell.** `spindle_on()` gibt `M3 S<rpm>` ohne folgendes `G4 P<t>`. | 🔴 hoch | Erster Plunge passiert, bevor die Makita RT0700 (~1–2 s Hochlauf) auf Drehzahl ist → schlechter Erstschnitt, Werkzeug-/Spindel-Last, Stall-Risiko. |
+| P1 | **Kein Spindel-Hochlauf-Dwell.** `spindle_on()` gibt `M3 S<rpm>` ohne folgendes `G4 P<t>`. | 🔴 hoch | Erster Plunge passiert, bevor die Spindel (Markus: 1,5 kW VFD, ~3 s Hochlauf) auf Drehzahl ist → schlechter Erstschnitt, Werkzeug-/Spindel-Last, Stall-Risiko. |
 | P2 | **Nicht-modaler Output.** Jede `G1`-Zeile wiederholt `F<feed>` (grbl_standard.py:75) und **alle** Achsworte `X Y Z`, auch wenn unverändert. | 🟠 mittel | Datei 2–3× größer; Z wird auf reinen XY-Zügen wieder gesetzt → Mikro-Jitter durch `:.3f`-Rundung; unübersichtlicher G-code. |
 | P3 | **Diagonale Eilgänge möglich.** `rapid_move()` gibt `G0 X Y Z` in **einer** Zeile (base/standard). Wenn eine Eilgang-Bewegung gleichzeitig XY ändert und Z bewegt, fährt die Maschine schräg. | 🟠 mittel | Beim Rückzug: Werkzeug zieht schräg → kann durch Material/Steg schleifen. Bei Anfahrt mit Z-ab: schräger Tauchgang. Abhängig vom Generator. |
 | P4 | **Kein explizites `G54`, kein garantierter Start-Sicherheits-Z.** Header setzt G21/G90/G17/G94, aber kein Arbeits-KS und keinen ersten Z-Rückzug. | 🟡 niedrig | Verlässt sich auf GRBL-Default G54 + darauf, dass jeder Toolpath mit Eilgang auf Safe-Z startet. Robustheit. |
