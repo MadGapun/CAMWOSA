@@ -129,6 +129,10 @@ export default function SpindelEditor({ initial, onGespeichert, onAbbrechen }: P
           </Feld>
           <NumFeld label="Hochlauf-Dwell (s)" v={s.rampen_zeit_s ?? null} on={(n) => up("rampen_zeit_s", n)} step={0.5}
             hint="G4-Pause nach M3, bis die Spindel auf Drehzahl ist (VFD-Accel). NICHT der manuelle Warmlauf." />
+          <NumFeld label="Warmlauf-Zeit (s)" v={s.warmlauf_zeit_s ?? null} on={(n) => up("warmlauf_zeit_s", n)} step={1} min={0}
+            hint="Optionaler Spindel-Warmlauf am Programmstart (schont VFD/Lager). 0/leer = aus." />
+          <NumFeld label="Warmlauf-Drehzahl (U/min)" v={s.warmlauf_rpm ?? null} on={(n) => up("warmlauf_rpm", n)} step={500} min={0}
+            hint="Moderate Drehzahl während des Warmlaufs, z.B. 8000. Nur mit Warmlauf-Zeit." />
           <NumFeld label="Gewicht (g)" v={s.gewicht_g ?? null} on={(n) => up("gewicht_g", n)} step={50} />
         </div>
       </section>

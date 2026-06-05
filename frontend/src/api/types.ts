@@ -29,6 +29,8 @@ export interface Spindel {
   pwm_min_promille?: number | null;
   pwm_max_promille?: number | null;
   rampen_zeit_s?: number | null;
+  warmlauf_zeit_s?: number | null;
+  warmlauf_rpm?: number | null;
   herkunft: SpindelHerkunft;
   notizen?: string;
 }

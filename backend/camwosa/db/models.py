@@ -89,6 +89,14 @@ class Spindel(BaseModel):
     rampen_zeit_s: float | None = Field(
         default=None, ge=0, description="Zeit bis Spindel auf Solldrehzahl (Sicherheits-Pause)"
     )
+    warmlauf_zeit_s: float | None = Field(
+        default=None, ge=0,
+        description="Optionaler Spindel-Warmlauf am Programmstart in Sekunden (0/None = aus)",
+    )
+    warmlauf_rpm: float | None = Field(
+        default=None, ge=0,
+        description="Drehzahl waehrend des Warmlaufs (moderat, z.B. 8000); nur mit warmlauf_zeit_s",
+    )
     herkunft: SpindelHerkunft = SpindelHerkunft.OEM
     notizen: str = ""
 

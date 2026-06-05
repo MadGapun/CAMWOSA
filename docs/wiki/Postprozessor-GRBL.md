@@ -104,11 +104,30 @@ Der Header wählt das Arbeits-Koordinatensystem explizit mit `G54` (statt sich a
 den GRBL-Default zu verlassen). Der Start-Sicherheits-Z kommt aus den Generatoren
 (jeder Toolpath beginnt mit einem Eilgang auf Sicherheitshöhe).
 
+### P5 — Programm-Start-Warmlauf (`warmlauf: true`)
+Optionaler Spindel-Warmlauf **am Programmstart** (nach dem Header, vor dem ersten
+Schnitt): die Spindel dreht `warmlauf_s` Sekunden bei `warmlauf_rpm` und bleibt an —
+der erste Schnitt rampt dann per `spindle_on` auf Schnittdrehzahl. Schont VFD und
+Lager (Markus' manueller 10-s-Warmlauf, jetzt optional automatisiert). Werte aus
+`Spindel.warmlauf_zeit_s`/`warmlauf_rpm` (im Spindel-Editor einstellbar) oder per
+Body. Beide > 0 nötig, sonst aus.
+
+```
+G21
+G90
+G54
+; Spindel-Warmlauf 10s @ 8000 U/min (VFD/Lager schonen)
+M3 S8000
+G4 P10
+; ... dann der Job: erster Schnitt M3 S18000 (+ Hochlauf-Dwell) ...
+```
+
 **Aktivierung am Endpoint** `POST /api/operations/postprocess`:
 ```jsonc
-{ "modal": true, "rapid_safety": true, "spindel_hochlauf_s": 2.0 }
+{ "modal": true, "rapid_safety": true, "spindel_hochlauf_s": 2.0,
+  "warmlauf": true, "warmlauf_s": 10, "warmlauf_rpm": 8000 }
 ```
-Auch über MCP: `gcode_erzeugen(..., modal=True, rapid_safety=True, spindel_hochlauf_s=2.0)`.
+Auch über MCP: `gcode_erzeugen(..., modal=True, rapid_safety=True, spindel_hochlauf_s=2.0, warmlauf=True)`.
 
 ## Bekannte Einschraenkungen
 

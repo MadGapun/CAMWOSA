@@ -374,6 +374,10 @@ export const camwosaApi = {
         werkstueck_breite_mm?: number;
         werkstueck_tiefe_mm?: number;
       } | null;
+      // Optionaler Spindel-Warmlauf am Programmstart (VFD/Lager schonen).
+      warmlauf?: boolean;
+      warmlauf_s?: number | null;
+      warmlauf_rpm?: number | null;
     },
   ): Promise<{ gcode: string; zeilen: number }> =>
     api

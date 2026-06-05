@@ -95,6 +95,10 @@ export default function GCodeEditorView() {
   const [rampe, setRampe] = useState(false);
   const [rampenWinkel, setRampenWinkel] = useState(5);
   const [rampenFaktor, setRampenFaktor] = useState(1);
+  // Warmlauf am Programmstart (optional, VFD/Lager schonen). Defaults aus Spindel.
+  const [warmlauf, setWarmlauf] = useState(false);
+  const [warmlaufS, setWarmlaufS] = useState(aktiveSpindel?.warmlauf_zeit_s ?? 10);
+  const [warmlaufRpm, setWarmlaufRpm] = useState(aktiveSpindel?.warmlauf_rpm ?? 8000);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
   const beforeMount: BeforeMount = (m) => {
@@ -142,6 +146,10 @@ export default function GCodeEditorView() {
           spindel_hochlauf_s: aktiveSpindel?.rampen_zeit_s ?? null,
           // A49: Werkstück-Lage (Umspannung) — gewählte Transformation anwenden
           transformation: aktiveTransformation,
+          // Warmlauf am Programmstart — nur wenn aktiviert
+          warmlauf,
+          warmlauf_s: warmlauf ? warmlaufS : null,
+          warmlauf_rpm: warmlauf ? warmlaufRpm : null,
         },
       );
       setValue(result.gcode);
@@ -250,6 +258,30 @@ export default function GCodeEditorView() {
             title="Rampe darf schneller eintauchen als senkrecht (× Eintauch-Vorschub)"
           />
           × Feed
+        </span>
+        <span className="mx-1 text-camwosa-muted">·</span>
+        <label
+          className="flex items-center gap-1.5"
+          title="Spindel am Programmstart kurz warmlaufen lassen (schont VFD/Lager). Sie dreht bei moderater Drehzahl, danach startet der Job."
+        >
+          <input type="checkbox" checked={warmlauf} onChange={(e) => setWarmlauf(e.target.checked)} />
+          Warmlauf
+        </label>
+        <span className={warmlauf ? "flex items-center gap-1" : "flex items-center gap-1 opacity-40"}>
+          <input
+            type="number" step={1} min={1} max={120} value={warmlaufS}
+            disabled={!warmlauf}
+            onChange={(e) => setWarmlaufS(Number(e.target.value))}
+            className="w-14 rounded bg-camwosa-bg px-2 py-0.5"
+          />
+          s @
+          <input
+            type="number" step={500} min={1} value={warmlaufRpm}
+            disabled={!warmlauf}
+            onChange={(e) => setWarmlaufRpm(Number(e.target.value))}
+            className="w-20 rounded bg-camwosa-bg px-2 py-0.5"
+          />
+          U/min
         </span>
         {umspannSetups.length > 0 && (
           <>

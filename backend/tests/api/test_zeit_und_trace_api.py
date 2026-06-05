@@ -328,3 +328,64 @@ class TestPostprocessTransformation:
             "transformation": {"spiegeln": "schraeg"},  # ungültiger Enum-Wert
         })
         assert rv.status_code == 422
+
+
+class TestWarmlaufAPI:
+    """Optionaler Spindel-Warmlauf am Programmstart (/postprocess)."""
+
+    def _tp(self, wid):
+        return {
+            "operation_id": "op", "operation_typ": "kontur", "werkzeug_id": wid,
+            "spindel_rpm": 18000, "sicherheitshoehe": 5, "kommentar": "", "metadaten": {},
+            "bewegungen": [
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+                {"typ": "plunge", "x": 0, "y": 0, "z": -1, "feed": 300},
+                {"typ": "linear", "x": 50, "y": 0, "z": -1, "feed": 800},
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+            ],
+        }
+
+    def test_warmlauf_block_im_gcode(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        rv = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+            "warmlauf_s": 10, "warmlauf_rpm": 8000,
+        })
+        assert rv.status_code == 200, rv.get_json()
+        g = rv.get_json()["gcode"]
+        assert "M3 S8000" in g
+        assert "G4 P10" in g
+        assert "Warmlauf" in g
+
+    def test_kein_warmlauf_default(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        g = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+        }).get_json()["gcode"]
+        assert "Warmlauf" not in g
+
+    def test_warmlauf_vor_erstem_schnitt(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        g = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+            "warmlauf_s": 5, "warmlauf_rpm": 9000,
+        }).get_json()["gcode"]
+        # Warmlauf-Drehzahl (9000) steht vor der Schnitt-Drehzahl (18000)
+        assert g.index("S9000") < g.index("S18000")
+
+    def test_unvollstaendig_kein_block(self, client):
+        """Nur Zeit ohne RPM (oder umgekehrt) → kein Warmlauf (beide noetig)."""
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        g = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+            "warmlauf_s": 10,  # rpm fehlt
+        }).get_json()["gcode"]
+        assert "Warmlauf" not in g

@@ -310,6 +310,9 @@ def gcode_erzeugen(
     rampen_vorschub: float | None = None,
     rampen_vorschub_faktor: float = 1.0,
     transformation: dict | None = None,
+    warmlauf: bool = False,
+    warmlauf_s: float | None = None,
+    warmlauf_rpm: float | None = None,
 ) -> dict:
     """Postprocesst eine Liste von Toolpaths zu G-Code.
 
@@ -327,7 +330,9 @@ def gcode_erzeugen(
     transformation (A49): Umspann-Lage, die VOR allen Schritten auf ALLE Toolpaths
     angewendet wird (2-/N-seitiger Export). Dict wie bei ``toolpath_transformieren``:
     {spiegeln: 'keine'|'x'|'y', drehung_grad, invertiere_z, offset,
-    werkstueck_breite_mm, werkstueck_tiefe_mm}. None/leer = keine."""
+    werkstueck_breite_mm, werkstueck_tiefe_mm}. None/leer = keine.
+    warmlauf: optionaler Spindel-Warmlauf am Programmstart. Bei True werden
+    warmlauf_s/warmlauf_rpm genutzt (None = Defaults der aktiven Spindel)."""
     return _post("/api/operations/postprocess", {
         "maschine_id": maschine_id,
         "werkzeug_id": werkzeug_id,
@@ -345,6 +350,9 @@ def gcode_erzeugen(
         "rampen_vorschub": rampen_vorschub,
         "rampen_vorschub_faktor": rampen_vorschub_faktor,
         "transformation": transformation,
+        "warmlauf": warmlauf,
+        "warmlauf_s": warmlauf_s,
+        "warmlauf_rpm": warmlauf_rpm,
     })
 
 

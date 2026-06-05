@@ -15,8 +15,10 @@
     "pwm_min_promille": 250,
     "pwm_max_promille": 1000,
     "rampen_zeit_s": 3.0,
+    "warmlauf_zeit_s": 10.0,
+    "warmlauf_rpm": 8000.0,
     "herkunft": "upgrade",
-    "notizen": "1,5-kW-Spindel mit VFD (GRBL-PWM → 0-10 V Wandler → VFD), ER11. Alle Werte im Spindel-Editor anpassbar — Max-Drehzahl + VFD-Hochlaufzeit sind maschinenabhängig. rampen_zeit_s = Hochlauf-Dwell vor dem Erstschnitt (NICHT der manuelle Warmlauf)."
+    "notizen": "1,5-kW-Spindel mit VFD (GRBL-PWM → 0-10 V Wandler → VFD), ER11. Alle Werte im Spindel-Editor anpassbar — Max-Drehzahl + VFD-Hochlaufzeit sind maschinenabhängig. rampen_zeit_s = Hochlauf-Dwell vor dem Erstschnitt (NICHT der manuelle Warmlauf). warmlauf_zeit_s/warmlauf_rpm = optionaler 10-s-Warmlauf am Programmstart (Markus' manueller Warmlauf, jetzt optional automatisierbar)."
   },
   {
     "id": "sainsmart_router_710w",

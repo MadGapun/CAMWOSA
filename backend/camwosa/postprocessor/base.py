@@ -35,6 +35,11 @@ class PostKontext:
     # ``G4 P<t>`` ausgegeben, damit die Spindel vor dem Erstschnitt auf Drehzahl
     # ist. 0 = aus (rueckwaertskompatibel). Quelle: Spindel.rampen_zeit_s.
     spindel_hochlauf_s: float = 0.0
+    # Warmlauf (optional): laesst die Spindel am PROGRAMMSTART eine Weile bei
+    # moderater Drehzahl laufen, bevor der Job beginnt — schont VFD/Lager.
+    # Beide > 0 noetig, sonst aus. Quelle: Spindel.warmlauf_zeit_s / warmlauf_rpm.
+    warmlauf_s: float = 0.0
+    warmlauf_rpm: float = 0.0
 
 
 class PostProcessor(ABC):
@@ -72,6 +77,23 @@ class PostProcessor(ABC):
 
     def spindle_off(self, ctx: PostKontext) -> list[str]:
         return ["M5"]
+
+    def warmlauf(self, ctx: PostKontext) -> list[str]:
+        """Optionaler Spindel-Warmlauf am Programmstart.
+
+        Laesst die Spindel ``warmlauf_s`` Sekunden bei ``warmlauf_rpm`` drehen
+        (M3 + G4-Dwell) bevor der eigentliche Job startet. Die Spindel bleibt an
+        — der erste Schnitt rampt per ``spindle_on`` auf Schnittdrehzahl.
+        Beide Werte > 0 noetig, sonst leer (rueckwaertskompatibel).
+        """
+        if not (ctx.warmlauf_s and ctx.warmlauf_s > 0 and ctx.warmlauf_rpm and ctx.warmlauf_rpm > 0):
+            return []
+        rpm = int(round(ctx.warmlauf_rpm))
+        return [
+            self._kommentar(f"Spindel-Warmlauf {ctx.warmlauf_s:g}s @ {rpm} U/min (VFD/Lager schonen)"),
+            f"M3 S{rpm}",
+            f"G4 P{ctx.warmlauf_s:g}",
+        ]
 
     # --- Bewegungen --------------------------------------------------------
 
@@ -118,6 +140,7 @@ class PostProcessor(ABC):
         """
         zeilen: list[str] = []
         zeilen.extend(self.header(ctx))
+        zeilen.extend(self.warmlauf(ctx))
         aktuelles_werkzeug = ctx.werkzeug
         for tp in toolpaths:
             if tp.werkzeug_id != aktuelles_werkzeug.id:

@@ -225,20 +225,35 @@ def postprocess():
     werkzeug = werkzeuge[data["werkzeug_id"]]
     post_id = data.get("postprozessor_id", maschine.postprozessor)
     post = registry().get(post_id)()
-    # P1: Spindel-Hochlauf-Dwell aus aktiver Spindel (rampen_zeit_s), per Body uebersteuerbar.
+    # Aktive Spindel einmal aufloesen (Hochlauf-Dwell P1 + optionaler Warmlauf).
+    aktive_spindel = None
+    try:
+        from camwosa.db.loader import lade_spindeln
+        sp_index = {s.id: s for s in lade_spindeln()}
+        aktive_spindel = maschine.aktive_spindel(sp_index)
+    except Exception:  # noqa: BLE001 — Spindel-Aufloesung optional
+        aktive_spindel = None
+
+    # P1: Spindel-Hochlauf-Dwell (rampen_zeit_s), per Body uebersteuerbar.
     hochlauf = data.get("spindel_hochlauf_s")
-    if hochlauf is None:
-        try:
-            from camwosa.db.loader import lade_spindeln
-            sp_index = {s.id: s for s in lade_spindeln()}
-            sp = maschine.aktive_spindel(sp_index)
-            if sp and sp.rampen_zeit_s:
-                hochlauf = sp.rampen_zeit_s
-        except Exception:  # noqa: BLE001 — Spindel-Aufloesung optional
-            hochlauf = None
+    if hochlauf is None and aktive_spindel and aktive_spindel.rampen_zeit_s:
+        hochlauf = aktive_spindel.rampen_zeit_s
+
+    # Warmlauf (optional, am Programmstart): Body-Werte haben Vorrang; bei
+    # ``warmlauf=true`` sonst die Defaults der aktiven Spindel.
+    warmlauf_s = data.get("warmlauf_s")
+    warmlauf_rpm = data.get("warmlauf_rpm")
+    if data.get("warmlauf") and aktive_spindel:
+        if warmlauf_s is None:
+            warmlauf_s = aktive_spindel.warmlauf_zeit_s
+        if warmlauf_rpm is None:
+            warmlauf_rpm = aktive_spindel.warmlauf_rpm
+
     ctx = PostKontext(
         maschine=maschine, werkzeug=werkzeug,
         spindel_hochlauf_s=float(hochlauf) if hochlauf else 0.0,
+        warmlauf_s=float(warmlauf_s) if warmlauf_s else 0.0,
+        warmlauf_rpm=float(warmlauf_rpm) if warmlauf_rpm else 0.0,
     )
     toolpaths = [_deserialize_toolpath(tp) for tp in data["toolpaths"]]
     # A49: Werkstück-Umspannung (Spiegeln/Drehen/Wenden) als ERSTER Schritt —
