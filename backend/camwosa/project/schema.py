@@ -20,6 +20,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from camwosa.cam.umspannung import WerkstueckTransformation
 from camwosa.cam.parameter import (
     BohrParameter,
     GravurParameter,
@@ -127,6 +128,9 @@ class Setup(BaseModel):
     werkzeug_id: str
     rohmaterial_uebernehmen: bool = True  # vom Vorgaenger-Setup
     nullpunkt: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    # A49: Werkstueck-Transformation gegenueber dem Design/Vorgaenger (Wenden/
+    # Spiegeln/Drehen beim Umspannen). None = keine (nur Nullpunkt gilt).
+    transformation: WerkstueckTransformation | None = None
     operationen: list[OperationsKonfig] = Field(default_factory=list)
     pause_vor: SetupPause | None = None
     # Schritt-Liste (ab v2): flexible Workflow-Reihenfolge mit ArbeitsSchritt.

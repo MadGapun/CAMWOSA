@@ -333,6 +333,26 @@ def zeitschaetzung():
     })
 
 
+@bp.post("/transformiere")
+def transformiere():
+    """A49: wendet eine Umspann-Transformation auf einen Toolpath an.
+
+    Body: ``{ toolpath: {...}, transformation: { spiegeln, drehung_grad,
+    invertiere_z, offset, werkstueck_breite_mm, werkstueck_tiefe_mm } }``.
+    Liefert den transformierten Toolpath (serialisiert).
+    """
+    from camwosa.cam.umspannung import (
+        WerkstueckTransformation, transformiere_toolpath,
+    )
+    data = request.get_json() or {}
+    try:
+        tp = _deserialize_toolpath(data["toolpath"])
+        t = WerkstueckTransformation.model_validate(data.get("transformation", {}))
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"fehler": str(e)}), 422
+    return jsonify(_serialize_toolpath(transformiere_toolpath(tp, t)))
+
+
 def _serialize_toolpath(tp) -> dict:
     return {
         "operation_id": tp.operation_id,

@@ -382,6 +382,56 @@ function SetupEditor({
             placeholder="z.B. Schraubzwingen x 4, Backen + Reitstock"
           />
         </label>
+        <div className="col-span-3 rounded border border-gray-700 bg-camwosa-surface/60 p-2">
+          <div className="mb-1 text-camwosa-muted">Umspannung — Werkstück-Lage (A49)</div>
+          {(() => {
+            const tf = setup.transformation ?? {};
+            const setTf = (patch: Record<string, unknown>) =>
+              onChange({ transformation: { ...tf, ...patch } });
+            return (
+              <div className="flex flex-wrap items-end gap-3">
+                <label>
+                  <span className="text-[10px] text-camwosa-muted">Spiegeln/Wenden</span>
+                  <select className="mt-0.5 block rounded bg-camwosa-surface px-2 py-1"
+                    value={tf.spiegeln ?? "keine"}
+                    onChange={(e) => setTf({ spiegeln: e.target.value })}>
+                    <option value="keine">keine</option>
+                    <option value="x">an X (vorn/hinten wenden)</option>
+                    <option value="y">an Y (links/rechts wenden)</option>
+                  </select>
+                </label>
+                <label>
+                  <span className="text-[10px] text-camwosa-muted">Drehung</span>
+                  <select className="mt-0.5 block rounded bg-camwosa-surface px-2 py-1"
+                    value={String(tf.drehung_grad ?? 0)}
+                    onChange={(e) => setTf({ drehung_grad: Number(e.target.value) })}>
+                    {[0, 90, 180, 270].map((g) => <option key={g} value={g}>{g}°</option>)}
+                  </select>
+                </label>
+                <label className="flex items-center gap-1.5 pb-1">
+                  <input type="checkbox" checked={!!tf.invertiere_z}
+                    onChange={(e) => setTf({ invertiere_z: e.target.checked })} />
+                  <span className="text-[11px]">Z invertieren (gewendet)</span>
+                </label>
+                <label>
+                  <span className="text-[10px] text-camwosa-muted">Werkstück B×T (mm)</span>
+                  <span className="mt-0.5 flex gap-1">
+                    <input type="number" className="w-16 rounded bg-camwosa-surface px-1 py-1"
+                      value={tf.werkstueck_breite_mm ?? ""} placeholder="X"
+                      onChange={(e) => setTf({ werkstueck_breite_mm: e.target.value === "" ? 0 : Number(e.target.value) })} />
+                    <input type="number" className="w-16 rounded bg-camwosa-surface px-1 py-1"
+                      value={tf.werkstueck_tiefe_mm ?? ""} placeholder="Y"
+                      onChange={(e) => setTf({ werkstueck_tiefe_mm: e.target.value === "" ? 0 : Number(e.target.value) })} />
+                  </span>
+                </label>
+              </div>
+            );
+          })()}
+          <p className="mt-1 text-[10px] text-camwosa-muted">
+            Für 2-/N-seitige Bearbeitung: Spiegeln/Drehen um die Werkstück-Mitte (B×T nötig).
+            Bei Spiegelung wird die Bogen-Drehrichtung automatisch korrigiert.
+          </p>
+        </div>
         <label className="col-span-3">
           <span className="text-camwosa-muted">Notizen</span>
           <textarea

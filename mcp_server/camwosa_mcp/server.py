@@ -342,6 +342,35 @@ def gcode_erzeugen(
     })
 
 
+@mcp.tool()
+def toolpath_transformieren(
+    toolpath: dict,
+    spiegeln: str = "keine",
+    drehung_grad: float = 0.0,
+    invertiere_z: bool = False,
+    offset: list | None = None,
+    werkstueck_breite_mm: float = 0.0,
+    werkstueck_tiefe_mm: float = 0.0,
+) -> dict:
+    """A49: Umspann-Transformation auf einen Toolpath anwenden.
+
+    spiegeln: 'keine' | 'x' | 'y'. invertiere_z = Wenden (Oberseite↔Unterseite).
+    drehung_grad = Drehung in XY um die Werkstueck-Mitte (Indexing).
+    Liefert den transformierten Toolpath (Bogen-Drehrichtung wird bei Spiegelung
+    korrekt getauscht)."""
+    return _post("/api/operations/transformiere", {
+        "toolpath": toolpath,
+        "transformation": {
+            "spiegeln": spiegeln,
+            "drehung_grad": drehung_grad,
+            "invertiere_z": invertiere_z,
+            "offset": offset if offset is not None else [0.0, 0.0, 0.0],
+            "werkstueck_breite_mm": werkstueck_breite_mm,
+            "werkstueck_tiefe_mm": werkstueck_tiefe_mm,
+        },
+    })
+
+
 # ---------------------------------------------------------------------------
 # Sicherheits-Checks
 # ---------------------------------------------------------------------------

@@ -241,3 +241,29 @@ class TestQ2RampeFeedRoundtrip:
         assert rv.status_code == 200, rv.get_json()
         # Rampen-Segmente bekommen den schnelleren Feed 900 (aus rampe_feed)
         assert "F900" in rv.get_json()["gcode"]
+
+
+class TestTransformiereAPI:
+    """A49: /operations/transformiere — Umspann-Transformation auf Toolpath."""
+
+    def test_spiegel_y_und_bogen(self, client):
+        tp = {
+            "operation_id": "op", "operation_typ": "kontur", "werkzeug_id": "t",
+            "spindel_rpm": 12000, "sicherheitshoehe": 5, "kommentar": "", "metadaten": {},
+            "bewegungen": [
+                {"typ": "linear", "x": 10, "y": 5, "z": -2, "feed": 800},
+                {"typ": "bogen_cw", "x": 20, "y": 0, "z": -2, "i": 5, "j": 0, "feed": 600},
+            ],
+        }
+        rv = client.post("/api/operations/transformiere", json={
+            "toolpath": tp,
+            "transformation": {"spiegeln": "y", "werkstueck_breite_mm": 40},
+        })
+        assert rv.status_code == 200, rv.get_json()
+        bew = rv.get_json()["bewegungen"]
+        assert bew[0]["x"] == 30  # 40 - 10
+        assert bew[1]["typ"] == "bogen_ccw"  # Spiegelung kippt Drehsinn
+
+    def test_invalide_422(self, client):
+        rv = client.post("/api/operations/transformiere", json={"toolpath": {}})
+        assert rv.status_code == 422

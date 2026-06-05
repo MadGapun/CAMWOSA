@@ -9,6 +9,16 @@ export type SetupPauseTyp =
   | "spindel_wechsel"
   | "optionaler_stop";
 
+/** A49: Werkstueck-Transformation beim Umspannen (spiegelt schema.py). */
+export interface WerkstueckTransformation {
+  spiegeln?: "keine" | "x" | "y";
+  drehung_grad?: number;
+  invertiere_z?: boolean;
+  offset?: [number, number, number];
+  werkstueck_breite_mm?: number;
+  werkstueck_tiefe_mm?: number;
+}
+
 export interface SetupPause {
   typ: SetupPauseTyp;
   titel: string;
@@ -29,6 +39,8 @@ export interface Setup {
   werkzeug_id: string;
   rohmaterial_uebernehmen: boolean;
   nullpunkt: [number, number, number];
+  /** A49: Werkstueck-Transformation beim Umspannen (Wenden/Spiegeln/Drehen). */
+  transformation?: WerkstueckTransformation | null;
   operationen: unknown[];
   pause_vor: SetupPause | null;
   /** ArbeitsSchritt-Liste (ab v2). Wenn leer, wird aus pause_vor + operationen
