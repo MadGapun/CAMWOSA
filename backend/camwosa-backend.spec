@@ -44,6 +44,7 @@ a = Analysis(
         'camwosa.cam.wrap',
         'camwosa.cam.rotary',
         'camwosa.cam.simulation',
+        'camwosa.cam.umspannung',
         # G-Code-Post-Processing + Feeds + Zeit (teils lazy in Endpoints importiert)
         'camwosa.gcode.fahrweg',
         'camwosa.gcode.arc_fitting',
