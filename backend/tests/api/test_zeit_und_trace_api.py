@@ -267,3 +267,64 @@ class TestTransformiereAPI:
     def test_invalide_422(self, client):
         rv = client.post("/api/operations/transformiere", json={"toolpath": {}})
         assert rv.status_code == 422
+
+
+class TestPostprocessTransformation:
+    """A49 Auto-Apply: ``transformation`` am /postprocess wendet die Umspann-Lage
+    automatisch auf ALLE Toolpaths an — der End-to-End-Weg für den 2-/N-seitigen
+    Export (Setup B wird beim Generieren gespiegelt/gedreht)."""
+
+    def _tp(self, wid):
+        return {
+            "operation_id": "op", "operation_typ": "kontur", "werkzeug_id": wid,
+            "spindel_rpm": 18000, "sicherheitshoehe": 5, "kommentar": "", "metadaten": {},
+            "bewegungen": [
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+                {"typ": "plunge", "x": 0, "y": 0, "z": -2, "feed": 300},
+                {"typ": "linear", "x": 30, "y": 0, "z": -2, "feed": 800},
+                {"typ": "bogen_cw", "x": 30, "y": 20, "z": -2, "i": 0, "j": 10, "feed": 600},
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+            ],
+        }
+
+    def test_spiegel_y_wirkt_im_gcode(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        body = {
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+        }
+        ohne = client.post("/api/operations/postprocess", json=body).get_json()["gcode"]
+        mit = client.post("/api/operations/postprocess", json={
+            **body, "transformation": {"spiegeln": "y", "werkstueck_breite_mm": 100},
+        }).get_json()["gcode"]
+        # Spiegelung an Y (Mitte = 50): linearer Ziel-X 30 -> 70
+        assert "X70" in mit
+        assert "X70" not in ohne
+        # Bogen-Drehsinn kippt automatisch: G2 (cw) -> G3 (ccw)
+        assert "G3 " in mit
+        assert "G3 " not in ohne
+
+    def test_identitaet_ist_noop(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        body = {
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+        }
+        ohne = client.post("/api/operations/postprocess", json=body).get_json()["gcode"]
+        # leere/Identitäts-Transformation darf den G-Code NICHT verändern
+        mit = client.post("/api/operations/postprocess", json={
+            **body, "transformation": {"spiegeln": "keine"},
+        }).get_json()["gcode"]
+        assert ohne == mit
+
+    def test_invalide_transformation_422(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        rv = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"],
+            "toolpaths": [self._tp(t[0]["id"])],
+            "transformation": {"spiegeln": "schraeg"},  # ungültiger Enum-Wert
+        })
+        assert rv.status_code == 422

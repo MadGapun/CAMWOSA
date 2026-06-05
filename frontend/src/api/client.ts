@@ -364,6 +364,16 @@ export const camwosaApi = {
       rampen_winkel_grad?: number;
       rampen_vorschub?: number | null;
       rampen_vorschub_faktor?: number;
+      // A49: Werkstück-Umspannung — wird VOR allen Schritten auf alle Toolpaths
+      // angewendet (2-/N-seitiger Export). Spiegelt WerkstueckTransformation.
+      transformation?: {
+        spiegeln?: "keine" | "x" | "y";
+        drehung_grad?: number;
+        invertiere_z?: boolean;
+        offset?: [number, number, number];
+        werkstueck_breite_mm?: number;
+        werkstueck_tiefe_mm?: number;
+      } | null;
     },
   ): Promise<{ gcode: string; zeilen: number }> =>
     api

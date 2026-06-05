@@ -237,22 +237,21 @@ def _baue_ergebnis(
     )
 
 
-def simuliere_toolpaths(
+def simuliere_grid(
     toolpaths: list[Toolpath],
     werkzeug: Werkzeug,
     werkstueck: WerkstueckQuader,
     *,
     aufloesung_mm: float = 2.0,
     z_oberkante_material: float | None = None,
-) -> SimulationsErgebnis:
-    """Verkettet mehrere Toolpaths auf demselben Werkstueck-Grid.
+) -> tuple[np.ndarray, int, int]:
+    """Traegt mehrere Toolpaths auf EINEM Voxel-Grid ab.
 
-    Verwendet das gleiche Grid fuer alle Toolpaths — Abtrag des ersten
-    bleibt fuer den zweiten erhalten. Ideal fuer Multi-Werkzeug-Setups
-    (Schruppen + Schlichten).
+    Gibt das rohe Grid zurueck (``(grid, voxel_anfang, sim_count)``) — die
+    Basis sowohl fuer die Boundary-Visualisierung (``simuliere_toolpaths``) als
+    auch fuer die Rest-Material-Heightmap (``cam/rest_material.py``, I6).
     """
     grid = voxelisiere_werkstueck(werkstueck, aufloesung_mm)
-    voxel_volumen = aufloesung_mm ** 3
     voxel_anfang = int(grid.sum())
     z_oberkante = z_oberkante_material if z_oberkante_material is not None else werkstueck.hoehe_z
 
@@ -276,7 +275,30 @@ def simuliere_toolpaths(
                 sim_count += 1
             aktuelle_pos = ziel
 
-    return _baue_ergebnis(grid, werkstueck, aufloesung_mm, voxel_volumen, voxel_anfang, sim_count)
+    return grid, voxel_anfang, sim_count
+
+
+def simuliere_toolpaths(
+    toolpaths: list[Toolpath],
+    werkzeug: Werkzeug,
+    werkstueck: WerkstueckQuader,
+    *,
+    aufloesung_mm: float = 2.0,
+    z_oberkante_material: float | None = None,
+) -> SimulationsErgebnis:
+    """Verkettet mehrere Toolpaths auf demselben Werkstueck-Grid.
+
+    Verwendet das gleiche Grid fuer alle Toolpaths — Abtrag des ersten
+    bleibt fuer den zweiten erhalten. Ideal fuer Multi-Werkzeug-Setups
+    (Schruppen + Schlichten).
+    """
+    grid, voxel_anfang, sim_count = simuliere_grid(
+        toolpaths, werkzeug, werkstueck,
+        aufloesung_mm=aufloesung_mm, z_oberkante_material=z_oberkante_material,
+    )
+    return _baue_ergebnis(
+        grid, werkstueck, aufloesung_mm, aufloesung_mm ** 3, voxel_anfang, sim_count
+    )
 
 
 def surface_voxel(grid: np.ndarray) -> list[tuple[int, int, int]]:
@@ -317,6 +339,7 @@ def surface_voxel(grid: np.ndarray) -> list[tuple[int, int, int]]:
 __all__ = [
     "SimulationsErgebnis",
     "WerkstueckQuader",
+    "simuliere_grid",
     "simuliere_toolpath",
     "simuliere_toolpaths",
     "surface_voxel",

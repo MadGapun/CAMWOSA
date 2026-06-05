@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { camwosaApi } from "../api/client";
 import { useAktiveMaschine, useAktiveSpindel, useAppStore } from "../state/store";
+import { useWorkflowStore, type WerkstueckTransformation } from "../state/workflowStore";
 import { BEFEHLE, findeBefehl, type GCodeBefehl } from "../components/GCodeBibliothek";
 import {
   registriereGcodeHighlighting,
@@ -19,6 +20,28 @@ const KAT_LABEL: Record<GCodeBefehl["kategorie"], string> = {
   einheit: "Einheiten",
   ende: "Programm-Ende",
 };
+
+/** A49: Hat die Transformation überhaupt eine Wirkung (≠ Identität)? */
+function istAktiveTransformation(tf?: WerkstueckTransformation | null): boolean {
+  if (!tf) return false;
+  return (
+    (!!tf.spiegeln && tf.spiegeln !== "keine") ||
+    !!tf.drehung_grad ||
+    !!tf.invertiere_z ||
+    !!(tf.offset && tf.offset.some((v) => v !== 0))
+  );
+}
+
+/** A49: Kurzbeschreibung einer Umspann-Lage für die Auswahl. */
+function beschreibeTransformation(tf?: WerkstueckTransformation | null): string {
+  if (!tf) return "keine";
+  const teile: string[] = [];
+  if (tf.spiegeln === "x") teile.push("an X gespiegelt");
+  else if (tf.spiegeln === "y") teile.push("an Y gespiegelt");
+  if (tf.drehung_grad) teile.push(`${tf.drehung_grad}° gedreht`);
+  if (tf.invertiere_z) teile.push("gewendet (Z)");
+  return teile.join(", ") || "keine";
+}
 
 const BEISPIEL = `; CAMWOSA G-Code (Beispiel)
 G21
@@ -43,6 +66,18 @@ export default function GCodeEditorView() {
   const aktiveSpindel = useAktiveSpindel();
   const operationen = useAppStore((s) => s.operationen);
   const aktiveOps = operationen.filter((o) => o.aktiviert && o.toolpath);
+  // A49: Setups mit echter Umspann-Lage → Werkstück-Lage beim Export wählbar.
+  const setups = useWorkflowStore((s) => s.setups);
+  const umspannSetups = setups.filter((s) => istAktiveTransformation(s.transformation));
+  const [umspannSetupId, setUmspannSetupId] = useState<string | null>(null);
+  const aktiveTransformation =
+    umspannSetups.find((s) => s.id === umspannSetupId)?.transformation ?? null;
+  // Footgun-Warnung: Spiegeln ohne Werkstückmaß spiegelt um 0 → negative Koordinaten.
+  const spiegelOhneMass =
+    !!aktiveTransformation &&
+    aktiveTransformation.spiegeln !== "keine" &&
+    !aktiveTransformation.werkstueck_breite_mm &&
+    !aktiveTransformation.werkstueck_tiefe_mm;
 
   const [value, setValue] = useState<string>(BEISPIEL);
   const [aktiverBefehl, setAktiverBefehl] = useState<GCodeBefehl | null>(null);
@@ -105,6 +140,8 @@ export default function GCodeEditorView() {
           rampen_vorschub_faktor: rampenFaktor,
           // P1: Hochlauf-Dwell folgt der im UI gewählten (aktiven) Spindel
           spindel_hochlauf_s: aktiveSpindel?.rampen_zeit_s ?? null,
+          // A49: Werkstück-Lage (Umspannung) — gewählte Transformation anwenden
+          transformation: aktiveTransformation,
         },
       );
       setValue(result.gcode);
@@ -214,7 +251,39 @@ export default function GCodeEditorView() {
           />
           × Feed
         </span>
+        {umspannSetups.length > 0 && (
+          <>
+            <span className="mx-1 text-camwosa-muted">·</span>
+            <label
+              className="flex items-center gap-1.5"
+              title="A49: Werkstück-Lage beim Umspannen. Die gewählte Transformation (Spiegeln/Drehen/Wenden) wird vor dem Generieren auf ALLE Toolpaths angewendet — für 2-/N-seitige Bearbeitung. Bögen werden automatisch korrekt umgedreht."
+            >
+              <span className="font-semibold text-camwosa-muted">Werkstück-Lage:</span>
+              <select
+                className="rounded bg-camwosa-bg px-2 py-0.5"
+                value={umspannSetupId ?? ""}
+                onChange={(e) => setUmspannSetupId(e.target.value || null)}
+              >
+                <option value="">Original (keine Umspannung)</option>
+                {umspannSetups.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} — {beschreibeTransformation(s.transformation)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
       </div>
+
+      {spiegelOhneMass && (
+        <div className="rounded border border-camwosa-warn bg-amber-950/30 p-2 text-xs text-camwosa-warn">
+          Achtung: Die gewählte Werkstück-Lage spiegelt, aber es ist kein
+          Werkstückmaß (B×T) hinterlegt. Ohne Maß wird um die Null-Linie gespiegelt
+          → negative Koordinaten. Trage die Werkstück-Breite/Tiefe im Setup
+          (Workflow-Ansicht) nach.
+        </div>
+      )}
 
       {fehler && (
         <div className="rounded border border-camwosa-danger bg-red-950/30 p-2 text-xs text-camwosa-danger">

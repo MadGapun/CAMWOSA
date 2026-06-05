@@ -309,6 +309,7 @@ def gcode_erzeugen(
     rampen_winkel_grad: float = 5.0,
     rampen_vorschub: float | None = None,
     rampen_vorschub_faktor: float = 1.0,
+    transformation: dict | None = None,
 ) -> dict:
     """Postprocesst eine Liste von Toolpaths zu G-Code.
 
@@ -322,7 +323,11 @@ def gcode_erzeugen(
     kein Z-Jitter).
     rapid_safety (P3): diagonale Eilgaenge in sichere Reihenfolge splitten.
     spindel_hochlauf_s (P1): Hochlauf-Pause (G4 P) nach M3; None = aus aktiver
-    Spindel (rampen_zeit_s)."""
+    Spindel (rampen_zeit_s).
+    transformation (A49): Umspann-Lage, die VOR allen Schritten auf ALLE Toolpaths
+    angewendet wird (2-/N-seitiger Export). Dict wie bei ``toolpath_transformieren``:
+    {spiegeln: 'keine'|'x'|'y', drehung_grad, invertiere_z, offset,
+    werkstueck_breite_mm, werkstueck_tiefe_mm}. None/leer = keine."""
     return _post("/api/operations/postprocess", {
         "maschine_id": maschine_id,
         "werkzeug_id": werkzeug_id,
@@ -339,6 +344,7 @@ def gcode_erzeugen(
         "rampen_winkel_grad": rampen_winkel_grad,
         "rampen_vorschub": rampen_vorschub,
         "rampen_vorschub_faktor": rampen_vorschub_faktor,
+        "transformation": transformation,
     })
 
 
@@ -757,6 +763,34 @@ def material_abtrag_simulieren(
     if z_oberkante_material is not None:
         body["z_oberkante_material"] = z_oberkante_material
     return _post("/api/simulation/voxel", body)
+
+
+@mcp.tool()
+def rest_material_heightmap(
+    toolpaths: list[dict],
+    werkzeug_id: str,
+    werkstueck: dict,
+    aufloesung_mm: float = 2.0,
+    z_oberkante_material: float | None = None,
+) -> dict:
+    """I6: Rest-Material-Höhe-Karte nach dem Abtrag (Schruppen→Schlichten / A49-Stock).
+
+    Trägt die Toolpaths auf einem Werkstück-Grid ab und gibt pro XY-Zelle die
+    höchste verbleibende Material-Z zurück — die Datengrundlage für „wo steht noch
+    Material" und Rest-Bearbeitung.
+
+    Parameter wie ``material_abtrag_simulieren``. Antwortet mit ``hoehen_mm``
+    (2D-Array [ix][iy] = Rest-Z in mm), ``max_rest_mm``, Rest-/Abtrag-Volumen.
+    Welt: ``x = nullpunkt_x + (ix+0.5)*aufloesung_mm``."""
+    body: dict = {
+        "toolpaths": toolpaths,
+        "werkzeug_id": werkzeug_id,
+        "werkstueck": werkstueck,
+        "aufloesung_mm": aufloesung_mm,
+    }
+    if z_oberkante_material is not None:
+        body["z_oberkante_material"] = z_oberkante_material
+    return _post("/api/simulation/rest-heightmap", body)
 
 
 @mcp.tool()

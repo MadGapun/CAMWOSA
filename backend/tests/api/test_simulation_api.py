@@ -95,3 +95,32 @@ class TestVoxelEndpoint:
             "aufloesung_mm": 2.0,
         })
         assert rv_multi.get_json()["abgetragenes_volumen_mm3"] > rv_single.get_json()["abgetragenes_volumen_mm3"]
+
+
+class TestRestHeightmapEndpoint:
+    """I6: /api/simulation/rest-heightmap."""
+
+    def test_heightmap_form_und_stats(self, client):
+        rv = client.post("/api/simulation/rest-heightmap", json={
+            "werkzeug_id": _wz_id(),
+            "toolpaths": [_einfacher_toolpath()],
+            "werkstueck": {"laenge_x": 80, "breite_y": 40, "hoehe_z": 20},
+            "aufloesung_mm": 2.0,
+        })
+        assert rv.status_code == 200, rv.get_json()
+        body = rv.get_json()
+        assert body["nx"] == 40 and body["ny"] == 20
+        # hoehen_mm ist ein nx×ny-Raster
+        assert len(body["hoehen_mm"]) == 40
+        assert len(body["hoehen_mm"][0]) == 20
+        # Unberührte Bereiche = volle Höhe; max_rest darf 20 nicht überschreiten
+        assert body["max_rest_mm"] == pytest.approx(20.0, abs=2.0)
+        assert body["abgetragenes_volumen_mm3"] > 0
+
+    def test_unbekanntes_werkzeug_404(self, client):
+        rv = client.post("/api/simulation/rest-heightmap", json={
+            "werkzeug_id": "gibts_nicht",
+            "toolpaths": [_einfacher_toolpath()],
+            "werkstueck": {"laenge_x": 50, "breite_y": 50, "hoehe_z": 20},
+        })
+        assert rv.status_code == 404

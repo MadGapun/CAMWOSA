@@ -99,6 +99,54 @@ dateien = schreibe_gcode_pro_setup(
 
 CNCjs laedt einfach die naechste Datei, wenn du am Maschinen-Bediener bist.
 
+## Werkstück-Umspannung (A49) — 2-/N-seitige Bearbeitung
+
+Wenn du das Werkstück zwischen zwei Setups **umdrehst** (2-seitig) oder
+**weiterdrehst** (N-seitig indexiert), müssen die Toolpaths von Seite B
+geometrisch passen. CAMWOSA rechnet das automatisch um — du musst nichts von
+Hand spiegeln.
+
+**Schnellstart — Mehrseitig-Assistent:** In der Workflow-Ansicht oben rechts auf
+*„⇄ Mehrseitig einrichten"*. Zwei Modi:
+- **2-seitig (wenden):** Wenderichtung (an Y = links/rechts, an X = vorn/hinten)
+  + Werkstück B×T wählen → legt automatisch „Seite B" mit gespiegelter Lage und
+  einer Umspann-Pause an.
+- **N-seitig (drehen):** Anzahl Seiten + B×T → legt N Setups an, jedes um 360°/N
+  weitergedreht, mit Dreh-Pause dazwischen (für indexierte Bearbeitung /
+  Klemmen-Umgehung).
+
+Die Operationen pro Seite fügst du danach normal hinzu. Wer es manuell mag, stellt
+die Lage direkt am Setup ein:
+
+**So geht's (manuell):**
+
+1. In der **Workflow-Ansicht** beim Setup unter *„Umspannung — Werkstück-Lage"*
+   die Lage einstellen:
+   - **Spiegeln/Wenden** an X (vorn/hinten) oder Y (links/rechts) — der klassische
+     Brett-Umklapp-Fall.
+   - **Drehung** 0/90/180/270° (für indexierte N-seitige Aufspannung).
+   - **Z invertieren** (gewendet, Oberseite↔Unterseite).
+   - **Werkstück B×T (mm)** — wird beim Spiegeln/Drehen als Mitte gebraucht.
+2. Im **G-Code-Editor** beim Generieren oben *„Werkstück-Lage"* wählen — dort
+   stehen alle Setups, die eine Umspannung hinterlegt haben. Wählst du eines, wird
+   dessen Transformation **vor allen anderen Schritten** auf alle Toolpaths
+   angewendet, dann erst Rampen/Fahrweg-Optimierung/Rapid-Safety (so rechnen die
+   Sicherheits-Schritte auf den **finalen** Maschinen-Koordinaten).
+
+**Bögen werden automatisch korrekt umgedreht:** Beim Spiegeln kippt die
+Bogen-Drehrichtung (G2 ↔ G3) und die I/J-Mittelpunkt-Vektoren werden
+mittransformiert. Das ist der Punkt, an dem hand-gespiegelter G-Code sonst falsche
+Kreise fräst.
+
+> ⚠️ **Spiegeln ohne Werkstückmaß** spiegelt um die Null-Linie → negative
+> Koordinaten. Trage immer die Werkstück-Breite/Tiefe im Setup ein. Der
+> G-Code-Editor warnt, wenn das Maß fehlt.
+
+API: `POST /api/operations/postprocess` mit `transformation: {spiegeln, drehung_grad,
+invertiere_z, offset, werkstueck_breite_mm, werkstueck_tiefe_mm}`. Einzelnen Toolpath
+transformieren: `POST /api/operations/transformiere`. MCP:
+`gcode_erzeugen(..., transformation={...})` bzw. `toolpath_transformieren(...)`.
+
 ## Setup-Foto
 
 Jedes Setup hat einen optionalen `foto_pfad` — beim ersten Lauf einmal fotografiert, beim Wiederholungs-Lauf hat man Vergleichsbild.

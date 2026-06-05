@@ -241,6 +241,19 @@ def postprocess():
         spindel_hochlauf_s=float(hochlauf) if hochlauf else 0.0,
     )
     toolpaths = [_deserialize_toolpath(tp) for tp in data["toolpaths"]]
+    # A49: Werkstück-Umspannung (Spiegeln/Drehen/Wenden) als ERSTER Schritt —
+    # so rechnen Rampen, Fahrweg-Optimierung und Rapid-Safety bereits auf den
+    # finalen Maschinen-Koordinaten (das ist die sichere Reihenfolge).
+    if data.get("transformation"):
+        from camwosa.cam.umspannung import (
+            WerkstueckTransformation, transformiere_toolpath,
+        )
+        try:
+            t = WerkstueckTransformation.model_validate(data["transformation"])
+        except Exception as e:  # noqa: BLE001
+            return jsonify({"fehler": f"transformation ungueltig: {e}"}), 422
+        if t.spiegelt or t.drehung_grad or t.invertiere_z or any(t.offset):
+            toolpaths = [transformiere_toolpath(tp, t) for tp in toolpaths]
     # J5: Rampen-Eintauchen statt senkrechtem Plunge (vor allen weiteren Schritten)
     if data.get("rampe_eintauchen"):
         from camwosa.gcode.eintauchen import rampe_eintauchen

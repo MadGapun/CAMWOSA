@@ -44,9 +44,78 @@ export default function WorkflowView() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [projektName, setProjektName] = useState("Mein Projekt");
 
+  // A49: Mehrseitig-Assistent — legt Folge-Setups mit Umspann-Lage + Pause an.
+  const [zweiseitigOffen, setZweiseitigOffen] = useState(false);
+  const [wizardModus, setWizardModus] = useState<"zweiseitig" | "nseitig">("zweiseitig");
+  const [wendeAchse, setWendeAchse] = useState<"x" | "y">("y");
+  const [wsBreite, setWsBreite] = useState(0);
+  const [wsTiefe, setWsTiefe] = useState(0);
+  const [anzahlSeiten, setAnzahlSeiten] = useState(4);
+  const [seiteBWerkzeugId, setSeiteBWerkzeugId] = useState("");
+
   function neuesSetupAnlegen() {
     if (werkzeuge.length === 0) return;
     hinzufuegen(neueSetup(`Setup ${setups.length + 1}`, werkzeuge[0].id));
+  }
+
+  function zweiseitigEinrichten() {
+    if (werkzeuge.length === 0) return;
+    const seiteAWz = setups[0]?.werkzeug_id || werkzeuge[0].id;
+    const wzId = seiteBWerkzeugId || seiteAWz;
+    // Seite A sicherstellen (falls noch gar kein Setup existiert)
+    if (setups.length === 0) {
+      hinzufuegen(neueSetup("Seite A — Oberseite", seiteAWz));
+    }
+    const richtung = wendeAchse === "y" ? "links/rechts" : "vorn/hinten";
+    const seiteB = neueSetup("Seite B — Unterseite", wzId);
+    seiteB.transformation = {
+      spiegeln: wendeAchse,
+      werkstueck_breite_mm: wsBreite || 0,
+      werkstueck_tiefe_mm: wsTiefe || 0,
+    };
+    seiteB.pause_vor = {
+      typ: "umspann",
+      titel: "Werkstück wenden (2-seitig)",
+      anweisung:
+        `Werkstück ${richtung} wenden. Bereits bearbeitete Seite plan und sicher ` +
+        `spannen (weiche Backen / Opferplatte mit Passstiften). Referenzkante bzw. ` +
+        `Passstifte nutzen, damit Seite B exakt zu Seite A registriert ist. ` +
+        `Danach Z auf der neuen Oberseite neu nullen.`,
+      bestaetigung_text: "Gewendet & genullt",
+    };
+    hinzufuegen(seiteB);
+    setZweiseitigOffen(false);
+  }
+
+  function nseitigEinrichten() {
+    if (werkzeuge.length === 0) return;
+    const n = Math.max(2, Math.min(24, Math.round(anzahlSeiten)));
+    const wzId = seiteBWerkzeugId || setups[0]?.werkzeug_id || werkzeuge[0].id;
+    const schritt = 360 / n;
+    for (let i = 0; i < n; i++) {
+      const grad = Math.round(i * schritt * 100) / 100;
+      const setup = neueSetup(`Seite ${i + 1}/${n} (${grad}°)`, wzId);
+      // Erste Seite = Referenz (keine Transformation, keine Pause).
+      if (i > 0) {
+        setup.transformation = {
+          drehung_grad: grad,
+          werkstueck_breite_mm: wsBreite || 0,
+          werkstueck_tiefe_mm: wsTiefe || 0,
+        };
+        setup.pause_vor = {
+          typ: "umspann",
+          titel: `Werkstück um ${Math.round(schritt * 100) / 100}° weiterdrehen`,
+          anweisung:
+            `Werkstück gegen den Uhrzeigersinn auf ${grad}° (gesamt) zur ` +
+            `Ausgangslage indexieren und sicher neu spannen. Referenz-/Drehmitte ` +
+            `beibehalten (B×T = Werkstückmitte), damit alle Seiten zueinander ` +
+            `registriert bleiben. Z bei Bedarf neu nullen.`,
+          bestaetigung_text: "Gedreht & gespannt",
+        };
+      }
+      hinzufuegen(setup);
+    }
+    setZweiseitigOffen(false);
   }
 
   function varianteFuerBackend() {
@@ -190,14 +259,140 @@ export default function WorkflowView() {
       <section className="rounded border border-gray-700 bg-camwosa-surface">
         <header className="flex items-center justify-between border-b border-gray-700 px-3 py-2">
           <h2 className="text-sm font-semibold">Setups ({setups.length})</h2>
-          <button
-            className="rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
-            onClick={neuesSetupAnlegen}
-            disabled={werkzeuge.length === 0}
-          >
-            + Setup hinzufuegen
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="rounded border border-camwosa-accent px-3 py-1 text-xs font-semibold text-camwosa-accent disabled:opacity-50"
+              onClick={() => setZweiseitigOffen((v) => !v)}
+              disabled={werkzeuge.length === 0}
+              title="Mehrseitige Bearbeitung einrichten: 2-seitig (wenden) oder N-seitig (drehen/indexieren). Legt die Folge-Setups mit korrekter Werkstück-Lage + Umspann-Pause an — beim Export wird automatisch korrekt transformiert."
+            >
+              ⇄ Mehrseitig einrichten
+            </button>
+            <button
+              className="rounded bg-camwosa-accent px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+              onClick={neuesSetupAnlegen}
+              disabled={werkzeuge.length === 0}
+            >
+              + Setup hinzufuegen
+            </button>
+          </div>
         </header>
+        {zweiseitigOffen && (
+          <div className="border-b border-gray-700 bg-camwosa-bg/40 p-3 text-xs">
+            <div className="mb-2 flex items-center gap-3">
+              <span className="font-semibold text-camwosa-accent">
+                Mehrseitige Bearbeitung einrichten
+              </span>
+              <div className="flex overflow-hidden rounded border border-gray-600">
+                <button
+                  className={clsx(
+                    "px-2 py-0.5",
+                    wizardModus === "zweiseitig"
+                      ? "bg-camwosa-accent font-semibold text-white"
+                      : "text-camwosa-muted",
+                  )}
+                  onClick={() => setWizardModus("zweiseitig")}
+                >
+                  2-seitig (wenden)
+                </button>
+                <button
+                  className={clsx(
+                    "px-2 py-0.5",
+                    wizardModus === "nseitig"
+                      ? "bg-camwosa-accent font-semibold text-white"
+                      : "text-camwosa-muted",
+                  )}
+                  onClick={() => setWizardModus("nseitig")}
+                >
+                  N-seitig (drehen)
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              {wizardModus === "zweiseitig" ? (
+                <label>
+                  <span className="block text-[10px] text-camwosa-muted">Wenderichtung</span>
+                  <select
+                    className="mt-0.5 rounded bg-camwosa-surface px-2 py-1"
+                    value={wendeAchse}
+                    onChange={(e) => setWendeAchse(e.target.value as "x" | "y")}
+                  >
+                    <option value="y">an Y spiegeln (links/rechts wenden)</option>
+                    <option value="x">an X spiegeln (vorn/hinten wenden)</option>
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  <span className="block text-[10px] text-camwosa-muted">Anzahl Seiten</span>
+                  <input
+                    type="number"
+                    min={2}
+                    max={24}
+                    className="mt-0.5 w-24 rounded bg-camwosa-surface px-2 py-1"
+                    value={anzahlSeiten}
+                    onChange={(e) => setAnzahlSeiten(Number(e.target.value) || 2)}
+                  />
+                </label>
+              )}
+              <label>
+                <span className="block text-[10px] text-camwosa-muted">Werkstück-Breite X (mm)</span>
+                <input
+                  type="number"
+                  className="mt-0.5 w-24 rounded bg-camwosa-surface px-2 py-1"
+                  value={wsBreite || ""}
+                  onChange={(e) => setWsBreite(Number(e.target.value) || 0)}
+                />
+              </label>
+              <label>
+                <span className="block text-[10px] text-camwosa-muted">Werkstück-Tiefe Y (mm)</span>
+                <input
+                  type="number"
+                  className="mt-0.5 w-24 rounded bg-camwosa-surface px-2 py-1"
+                  value={wsTiefe || ""}
+                  onChange={(e) => setWsTiefe(Number(e.target.value) || 0)}
+                />
+              </label>
+              <label>
+                <span className="block text-[10px] text-camwosa-muted">
+                  {wizardModus === "zweiseitig" ? "Werkzeug Seite B" : "Werkzeug Folge-Seiten"}
+                </span>
+                <select
+                  className="mt-0.5 rounded bg-camwosa-surface px-2 py-1"
+                  value={seiteBWerkzeugId}
+                  onChange={(e) => setSeiteBWerkzeugId(e.target.value)}
+                >
+                  <option value="">(wie Seite A)</option>
+                  {werkzeuge.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="rounded bg-camwosa-accent px-3 py-1 font-semibold text-white disabled:opacity-50"
+                onClick={() =>
+                  wizardModus === "zweiseitig" ? zweiseitigEinrichten() : nseitigEinrichten()
+                }
+                disabled={
+                  wizardModus === "zweiseitig"
+                    ? (wendeAchse === "y" && !wsBreite) || (wendeAchse === "x" && !wsTiefe)
+                    : !wsBreite || !wsTiefe || anzahlSeiten < 2
+                }
+                title="Spiegeln/Drehen braucht das Werkstückmaß als Mitte (an Y → Breite X, an X → Tiefe Y, Drehen → beide), sonst entstehen falsche Koordinaten."
+              >
+                {wizardModus === "zweiseitig"
+                  ? "Seite B anlegen"
+                  : `${Math.max(2, Math.min(24, Math.round(anzahlSeiten)))} Seiten anlegen`}
+              </button>
+            </div>
+            <p className="mt-2 text-[10px] text-camwosa-muted">
+              {wizardModus === "zweiseitig"
+                ? "Legt „Seite B“ mit gespiegelter Werkstück-Lage + Umspann-Pause an. Die Operationen für Seite B fügst du danach normal hinzu — beim G-Code-Export wird Seite B automatisch korrekt gespiegelt (Bögen inklusive)."
+                : "Legt N Setups an, jedes um 360°/N weitergedreht, mit Dreh-Pause dazwischen. Operationen pro Seite fügst du danach hinzu — beim Export wird jede Seite automatisch korrekt rotiert (für indexierte Bearbeitung / Klemmen-Umgehung)."}
+            </p>
+          </div>
+        )}
         {setups.length === 0 && (
           <p className="p-4 text-sm text-camwosa-muted">
             Noch keine Setups. „Setup hinzufuegen" klicken um anzulegen.
