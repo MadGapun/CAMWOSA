@@ -348,6 +348,7 @@ def _serialize_toolpath(tp) -> dict:
                 "x": b.x, "y": b.y, "z": b.z,
                 "feed": b.feed, "i": b.i, "j": b.j,
                 "kommentar": b.kommentar,
+                "rampe_feed": b.rampe_feed,  # Q2: Rampen-Feed ueber Roundtrip erhalten
             }
             for b in tp.bewegungen
         ],
@@ -375,6 +376,7 @@ def _deserialize_toolpath(daten: dict):
                 feed=b.get("feed"),
                 i=b.get("i"), j=b.get("j"),
                 kommentar=b.get("kommentar", ""),
+                rampe_feed=b.get("rampe_feed"),  # Q2
             )
             for b in daten["bewegungen"]
         ],

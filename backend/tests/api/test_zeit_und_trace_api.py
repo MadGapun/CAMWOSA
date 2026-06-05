@@ -216,3 +216,28 @@ class TestRampeAPI:
         })
         assert rv.status_code == 200, rv.get_json()
         assert "Rampen-Eintauchen" in rv.get_json()["gcode"]
+
+
+class TestQ2RampeFeedRoundtrip:
+    """Q2: rampe_feed ueberlebt Serialize/Deserialize + wirkt im /postprocess."""
+
+    def test_rampe_feed_aus_bewegung_im_gcode(self, client):
+        m = client.get("/api/machines/").get_json()
+        t = client.get("/api/tools/").get_json()
+        tp = {
+            "operation_id": "op", "operation_typ": "kontur", "werkzeug_id": t[0]["id"],
+            "spindel_rpm": 18000, "sicherheitshoehe": 5, "kommentar": "", "metadaten": {},
+            "bewegungen": [
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+                {"typ": "plunge", "x": 0, "y": 0, "z": -2, "feed": 300, "rampe_feed": 900},
+                {"typ": "linear", "x": 80, "y": 0, "z": -2, "feed": 800},
+                {"typ": "eilgang", "x": 0, "y": 0, "z": 5},
+            ],
+        }
+        rv = client.post("/api/operations/postprocess", json={
+            "maschine_id": m[0]["id"], "werkzeug_id": t[0]["id"], "toolpaths": [tp],
+            "rampe_eintauchen": True, "rampen_winkel_grad": 5,
+        })
+        assert rv.status_code == 200, rv.get_json()
+        # Rampen-Segmente bekommen den schnelleren Feed 900 (aus rampe_feed)
+        assert "F900" in rv.get_json()["gcode"]
