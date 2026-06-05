@@ -21,6 +21,7 @@ import WerkzeugGrafik from "../components/WerkzeugGrafik";
 import OperationGrafik from "../components/OperationGrafik";
 import { anzeigename } from "../api/werkzeugName";
 import { schaetzeToolpathZeit, formatiereDauer } from "../api/zeit";
+import { kombiniereToolpaths } from "../api/toolpathKombi";
 import { useUIPrefs } from "../state/uiPrefs";
 
 const OP_LABELS: Record<OperationsTyp, string> = {
@@ -119,24 +120,39 @@ export default function OperationenView() {
       );
       const param = aufgeloest.parameter;
 
-      // 2) Toolpath berechnen
+      // 2) Toolpath berechnen — Q3: ALLE zugewiesenen Geometrien (je optional
+      //    eigene per-Geometrie-Overrides), danach zu einem Toolpath kombiniert.
       let tp: Toolpath | null = null;
-      if (op.typ === "kontur") {
-        const geo = waehleGeometrie(op, geometrien);
-        if (!geo) throw new Error("Keine Geometrie zugewiesen.");
-        tp = await camwosaApi.opKontur(op.werkzeug_id, geo, param as unknown as KonturParameter);
-      } else if (op.typ === "tasche") {
-        const geo = waehleGeometrie(op, geometrien);
-        if (!geo) throw new Error("Keine geschlossene Geometrie zugewiesen.");
-        tp = await camwosaApi.opTasche(op.werkzeug_id, geo, param as unknown as TaschenParameter);
-      } else if (op.typ === "bohren") {
+      if (op.typ === "bohren") {
         const punkte = bohrpunkte(geometrien);
         if (punkte.length === 0) throw new Error("Keine Bohrpunkte gefunden (KREIS/PUNKT).");
         tp = await camwosaApi.opBohren(op.werkzeug_id, punkte, param as unknown as BohrParameter);
-      } else if (op.typ === "gravur") {
-        const geo = waehleGeometrie(op, geometrien);
-        if (!geo) throw new Error("Keine Geometrie zugewiesen.");
-        tp = await camwosaApi.opGravur(op.werkzeug_id, geo, param as unknown as GravurParameter);
+      } else {
+        const geos = waehleGeometrien(op, geometrien);
+        if (geos.length === 0) throw new Error("Keine Geometrie zugewiesen.");
+        const ovMap = op.geometrie_overrides ?? {};
+        const tps: Array<Toolpath | null> = [];
+        for (const geo of geos) {
+          // per-Geometrie-Override → ggf. eigene Parameter auflösen, sonst Basis
+          let geoParam = param;
+          const geoOv = geo.id ? ovMap[geo.id] : undefined;
+          if (geoOv && Object.keys(geoOv).length > 0) {
+            const a = await camwosaApi.opAufloesen(
+              op.typ as "kontur" | "tasche" | "bohren" | "gravur",
+              aktivesMaterialId,
+              { ...overrides, ...geoOv },
+            );
+            geoParam = a.parameter;
+          }
+          if (op.typ === "kontur") {
+            tps.push(await camwosaApi.opKontur(op.werkzeug_id, geo, geoParam as unknown as KonturParameter));
+          } else if (op.typ === "tasche") {
+            tps.push(await camwosaApi.opTasche(op.werkzeug_id, geo, geoParam as unknown as TaschenParameter));
+          } else if (op.typ === "gravur") {
+            tps.push(await camwosaApi.opGravur(op.werkzeug_id, geo, geoParam as unknown as GravurParameter));
+          }
+        }
+        tp = kombiniereToolpaths(tps);
       }
       if (!tp) return;
 
@@ -321,6 +337,12 @@ export default function OperationenView() {
               op={aktiveOp}
               geometrien={geometrien}
               onChange={(ids) => opAktualisieren(aktiveOp.id, { geometrie_ids: ids })}
+            />
+
+            <GeometrieFeinabstimmung
+              op={aktiveOp}
+              geometrien={geometrien}
+              onChange={(ov) => opAktualisieren(aktiveOp.id, { geometrie_overrides: ov })}
             />
 
             <section className="rounded border border-gray-700 bg-camwosa-surface p-3">
@@ -682,6 +704,76 @@ function GeometrieAuswahl({
   );
 }
 
+/**
+ * Q3: Pro-Geometrie-Feinabstimmung — bei einer Operation mit mehreren
+ * Geometrien kann jede Kontur Feed/Tiefe/Plunge einzeln überschreiben
+ * (Estlcam-Stil). Leer = Operations-Wert. Nur sichtbar ab 2 Geometrien.
+ */
+function GeometrieFeinabstimmung({
+  op, geometrien, onChange,
+}: {
+  op: OperationEintrag;
+  geometrien: GeometrieObjekt[];
+  onChange: (ov: Record<string, Record<string, unknown>>) => void;
+}) {
+  if (op.typ === "bohren" || op.typ === "relief") return null;
+  const ids = op.geometrie_ids ?? (op.geometrie_id ? [op.geometrie_id] : []);
+  const zugewiesen = geometrien.filter((g) => g.id && ids.includes(g.id));
+  if (zugewiesen.length < 2) return null;
+
+  const ovMap = op.geometrie_overrides ?? {};
+  const felder: Array<{ key: string; label: string; step: number }> = [
+    { key: "vorschub", label: "Vorschub", step: 50 },
+    { key: "max_tiefe", label: "Max-Tiefe", step: 0.5 },
+    { key: "eintauch_vorschub", label: "Plunge", step: 50 },
+  ];
+  function setFeld(gid: string, feld: string, wert: number | null) {
+    const next: Record<string, Record<string, unknown>> = { ...ovMap };
+    const geo = { ...(next[gid] ?? {}) };
+    if (wert === null) delete geo[feld];
+    else geo[feld] = wert;
+    if (Object.keys(geo).length === 0) delete next[gid];
+    else next[gid] = geo;
+    onChange(next);
+  }
+  return (
+    <section className="rounded border border-gray-700 bg-camwosa-surface p-3 text-xs">
+      <h3 className="mb-1 text-sm font-semibold">Pro-Geometrie-Feinabstimmung</h3>
+      <p className="mb-2 text-camwosa-muted">
+        Diese Operation bearbeitet {zugewiesen.length} Geometrien. Leeres Feld = Operations-Wert;
+        pro Kontur überschreibbar (z.B. langsamer in engen Radien).
+      </p>
+      <table className="w-full">
+        <thead className="text-left uppercase text-camwosa-muted">
+          <tr>
+            <th className="py-1">Geometrie</th>
+            {felder.map((f) => <th key={f.key} className="font-normal">{f.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {zugewiesen.map((g) => (
+            <tr key={g.id} className="border-t border-gray-800">
+              <td className="py-1 pr-2 font-mono">{g.id}</td>
+              {felder.map((f) => (
+                <td key={f.key} className="pr-2">
+                  <input
+                    type="number" step={f.step}
+                    value={(ovMap[g.id!]?.[f.key] as number | undefined) ?? ""}
+                    placeholder="(Op)"
+                    onChange={(e) =>
+                      setFeld(g.id!, f.key, e.target.value === "" ? null : Number(e.target.value))}
+                    className="w-20 rounded bg-camwosa-bg px-1 py-0.5"
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 function waehleGeometrie(
   op: OperationEintrag,
   geometrien: GeometrieObjekt[],
@@ -701,6 +793,29 @@ function waehleGeometrie(
     return geometrien.find((g) => g.geschlossen) ?? null;
   }
   return geometrien[0];
+}
+
+/**
+ * Q3: ALLE zugewiesenen, typ-passenden Geometrien einer Operation (nicht nur die
+ * erste). Eine Operation kann mehrere Konturen bearbeiten — je Geometrie ein
+ * Toolpath, der danach kombiniert wird. Fallback wie waehleGeometrie (eine).
+ */
+function waehleGeometrien(
+  op: OperationEintrag,
+  geometrien: GeometrieObjekt[],
+): GeometrieObjekt[] {
+  const ids = op.geometrie_ids && op.geometrie_ids.length > 0
+    ? op.geometrie_ids
+    : (op.geometrie_id ? [op.geometrie_id] : []);
+  const zugewiesen = ids.length > 0
+    ? geometrien.filter((g) => g.id && ids.includes(g.id))
+    : [];
+  if (zugewiesen.length === 0) {
+    const eine = waehleGeometrie(op, geometrien);  // Legacy-Auto-Fallback
+    return eine ? [eine] : [];
+  }
+  const passend = passendeGeometrienFuerTyp(zugewiesen, op.typ);
+  return passend.length > 0 ? passend : zugewiesen;
 }
 
 /**

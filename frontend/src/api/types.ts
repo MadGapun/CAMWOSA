@@ -369,6 +369,8 @@ export interface OperationEintrag {
   geometrie_id?: string | null;
   /** Geometrien die diese Operation verwendet (Master-Plan D31). */
   geometrie_ids?: string[];
+  /** Q3: optionale Parameter-Overrides pro Geometrie-ID (Feed/Tiefe/Plunge je Pfad). */
+  geometrie_overrides?: Record<string, Record<string, unknown>>;
   werkzeug_id: string;
   parameter: KonturParameter | TaschenParameter | BohrParameter | GravurParameter;
   toolpath?: Toolpath | null;
