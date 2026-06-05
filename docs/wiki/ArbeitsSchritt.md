@@ -30,6 +30,24 @@ class ArbeitsSchritt:
 
 Pydantic-Discriminated-Union ueber `typ`-Feld — beim Deserialisieren wird automatisch der richtige Subtyp gewaehlt.
 
+### Datei-Trennung bei Umbau (`getrennte_datei`, M7)
+
+`UmspannSchritt`, `PauseSchritt` und `AchsWechselSchritt` haben ein Flag
+`getrennte_datei`. Ist es gesetzt, **trennt der G-Code-Export an dieser Stelle in
+eine neue Datei** (statt einer `M0`-Pause im selben Job). Das ist noetig, wenn die
+Maschine fuer den Eingriff **ausgeschaltet** werden muss (Umkabeln XYZ↔Rotary,
+Spindel umverdrahten) — dann reisst die Streaming-Verbindung ab und eine
+Einzeldatei mit Pause laeuft nicht durch.
+
+- `AchsWechselSchritt`: Default **True** (Moduswechsel = praktisch immer Umkabeln).
+- `UmspannSchritt` / `PauseSchritt`: Default **False** (reines Umspannen geht bei
+  laufender Maschine per `M0`).
+
+Die erste Datei bekommt am Ende einen Hinweis-Kommentar
+(`; >>> Maschine ausschalten + umbauen … — Danach naechste Datei laden. <<<`).
+Verwandt: `WerkzeugWechselStrategie.SEPARATE_DATEI` macht dasselbe fuer
+Werkzeugwechsel (Schruppen + Schlichten ohne ATC).
+
 ## Beispiel: gemischter Workflow
 
 ```python

@@ -773,6 +773,21 @@ function PauseEditor({
         onChange={(e) => onChange({ ...pause, anweisung: e.target.value })}
         placeholder="Anweisungen fuer den Bediener (Multi-line)"
       />
+      <label
+        className="mt-1.5 flex items-start gap-1.5 text-[11px] text-camwosa-muted"
+        title="Wenn die Maschine für diesen Umbau AUSGESCHALTET werden muss (z.B. Umkabeln auf Rotary, Spindel umverdrahten), reißt die Streaming-Verbindung ab — eine M0-Pause reicht dann nicht. Mit dieser Option endet der G-Code hier und wird in eine eigene Datei getrennt."
+      >
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={!!pause.getrennte_datei}
+          onChange={(e) => onChange({ ...pause, getrennte_datei: e.target.checked })}
+        />
+        <span>
+          Getrennte G-Code-Datei (Maschine aus / Umkabeln) — eigene Datei statt
+          M0-Pause, weil die Verbindung beim Ausschalten abreißt
+        </span>
+      </label>
     </div>
   );
 }

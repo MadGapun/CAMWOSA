@@ -27,6 +27,9 @@ export interface SetupPause {
   werkzeug_neu_id?: string | null;
   nullpunkt_neu?: [number, number, number] | null;
   bestaetigung_text?: string;
+  /** M7: G-Code hier in eine NEUE Datei trennen statt M0-Pause — nötig wenn die
+   *  Maschine zum Umbau ausgeschaltet werden muss (Umkabeln → Verbindung weg). */
+  getrennte_datei?: boolean;
 }
 
 export type MaschinenModus = "standard_xyz" | "rotary_y" | "rotary_x" | "laser" | "drag_knife";

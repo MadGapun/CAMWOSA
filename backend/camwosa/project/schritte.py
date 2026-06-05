@@ -119,6 +119,15 @@ class UmspannSchritt(_SchrittBasis):
     anweisung: str
     foto_pfad: str | None = None
     nullpunkt_neu: tuple[float, float, float] | None = None
+    getrennte_datei: bool = Field(
+        default=False,
+        description=(
+            "G-Code an dieser Stelle in eine NEUE Datei trennen statt M0-Pause. "
+            "Noetig wenn die Maschine zum Umbau ausgeschaltet werden muss "
+            "(z.B. Umkabeln) — dann reisst die Streaming-Verbindung ab und eine "
+            "Einzeldatei mit Pause funktioniert nicht."
+        ),
+    )
 
 
 class AchsWechselSchritt(_SchrittBasis):
@@ -129,6 +138,14 @@ class AchsWechselSchritt(_SchrittBasis):
     modus_neu: str
     anweisung: str = ""
     foto_pfad: str | None = None
+    getrennte_datei: bool = Field(
+        default=True,
+        description=(
+            "Achswechsel (z.B. XYZ<->Rotary) bedeutet i.d.R. Umkabeln bei "
+            "ausgeschalteter Maschine — daher Default an: eigene G-Code-Datei. "
+            "Auf False setzen nur wenn der Moduswechsel ohne Strom-Aus geht."
+        ),
+    )
 
 
 class ManualNCSchritt(_SchrittBasis):
@@ -160,6 +177,14 @@ class PauseSchritt(_SchrittBasis):
     anweisung: str
     foto_pfad: str | None = None
     bestaetigung_text: str = "Verstanden"
+    getrennte_datei: bool = Field(
+        default=False,
+        description=(
+            "G-Code an dieser Stelle in eine NEUE Datei trennen statt M0-Pause "
+            "(z.B. wenn die Maschine fuer den Eingriff ausgeschaltet wird und die "
+            "Verbindung abreisst)."
+        ),
+    )
 
 
 # Discriminated Union via 'typ'-Feld
@@ -253,6 +278,7 @@ def aus_setup_legacy(setup) -> list[ArbeitsSchritt]:  # type: ignore[no-untyped-
                 anweisung=p.anweisung,
                 foto_pfad=p.foto_pfad,
                 nullpunkt_neu=p.nullpunkt_neu,
+                getrennte_datei=getattr(p, "getrennte_datei", False),
             ))
         else:
             aus.append(PauseSchritt(
@@ -261,6 +287,7 @@ def aus_setup_legacy(setup) -> list[ArbeitsSchritt]:  # type: ignore[no-untyped-
                 anweisung=p.anweisung,
                 foto_pfad=p.foto_pfad,
                 bestaetigung_text=p.bestaetigung_text,
+                getrennte_datei=getattr(p, "getrennte_datei", False),
             ))
 
     for op in setup.operationen:

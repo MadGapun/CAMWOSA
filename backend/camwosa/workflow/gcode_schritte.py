@@ -56,6 +56,9 @@ class GcodeBlock:
     inline_zeilen: list[tuple[int, list[str]]]
     """``(position, zeilen)`` — Position relativ zur Toolpath-Liste, danach werden
     die zusaetzlichen Zeilen vor dem n-ten Toolpath eingefuegt."""
+    abschluss_hinweis: str = ""
+    """Optionaler Hinweis am Datei-Ende — z.B. 'Maschine ausschalten, umkabeln,
+    naechste Datei laden' wenn der Block wegen eines Umbau-Schritts getrennt wurde."""
 
 
 def gliedere_schritte_in_bloecke(
@@ -79,7 +82,7 @@ def gliedere_schritte_in_bloecke(
     block_titel = _safe(start_werkzeug.name) if start_werkzeug else "block_01"
     block_idx = 1
 
-    def schliesse_block():
+    def schliesse_block(hinweis: str = ""):
         nonlocal aktuelle_paths, aktuelle_inline, block_idx
         if aktuelle_paths or aktuelle_inline:
             bloecke.append(GcodeBlock(
@@ -88,6 +91,7 @@ def gliedere_schritte_in_bloecke(
                 titel=block_titel,
                 toolpaths=list(aktuelle_paths),
                 inline_zeilen=list(aktuelle_inline),
+                abschluss_hinweis=hinweis,
             ))
             block_idx += 1
         aktuelle_paths = []
@@ -131,8 +135,11 @@ def gliedere_schritte_in_bloecke(
                 ))
                 aktuelles_wz = neues_wz
         elif isinstance(s, AchsWechselSchritt):
-            schliesse_block()
-            block_titel = f"{block_idx:02d}_{_safe(s.modus_neu)}"
+            if getattr(s, "getrennte_datei", True):
+                schliesse_block(_umbau_hinweis(
+                    "Achswechsel", f"{s.modus_alt} -> {s.modus_neu}", s.anweisung))
+                block_titel = f"{block_idx:02d}_{_safe(s.modus_neu)}"
+            # getrennte_datei=False: Moduswechsel ohne Datei-Trennung (selten)
         elif isinstance(s, OperationSchritt):
             paths = toolpaths_pro_operation.get(s.operation_id, [])
             aktuelle_paths.extend(paths)
@@ -142,8 +149,14 @@ def gliedere_schritte_in_bloecke(
                 zeilen.insert(0, "G0 Z5  ; sicher anfahren")
             aktuelle_inline.append((len(aktuelle_paths), zeilen))
         elif isinstance(s, (PauseSchritt, UmspannSchritt)):
-            # Reine Mensch-Pausen — keine G-Code-Auswirkung,
-            # Arbeitsplan kennt sie aber bereits aus dem Setup
+            # Mensch-Pause: standardmaessig keine G-Code-Auswirkung (M0 kommt aus
+            # dem Arbeitsplan). MIT getrennte_datei wird hier jedoch die Datei
+            # getrennt — fuer Umbauten bei AUSGESCHALTETER Maschine (Umkabeln),
+            # wo eine M0-Pause nicht reicht (Verbindung reisst ab).
+            if getattr(s, "getrennte_datei", False):
+                kat = "Umspannen" if isinstance(s, UmspannSchritt) else "Umbau/Pause"
+                schliesse_block(_umbau_hinweis(kat, "", getattr(s, "anweisung", "")))
+                block_titel = f"{block_idx:02d}_nach_{_safe(s.titel or kat)}"
             continue
 
     schliesse_block()
@@ -200,6 +213,10 @@ def schreibe_gcode_aus_schritten(
             extra = [z for _, group in block.inline_zeilen for z in group]
             zeilen = extra + zeilen
 
+        # Umbau-Hinweis am Datei-Ende (Maschine aus / umkabeln / naechste Datei).
+        if block.abschluss_hinweis:
+            zeilen.append(f"; >>> {block.abschluss_hinweis} <<<")
+
         ext = post.file_extension
         pfad = ziel / f"{setup.id}_b{block.index:02d}_{block.titel}{ext}"
         pfad.write_text("\n".join(zeilen) + "\n", encoding="utf-8")
@@ -216,6 +233,19 @@ def _tool_nummer(werkzeug: Werkzeug) -> int:
     """
     h = abs(hash(werkzeug.id)) % 99 + 1
     return h
+
+
+def _umbau_hinweis(kategorie: str, detail: str, anweisung: str) -> str:
+    """Baut den Datei-Abschluss-Hinweis fuer einen Umbau bei Maschine-Aus."""
+    kopf = f"Maschine ausschalten + umbauen ({kategorie}"
+    if detail:
+        kopf += f": {detail}"
+    kopf += ")"
+    teile = [kopf]
+    if anweisung and anweisung.strip():
+        teile.append(anweisung.strip())
+    teile.append("Danach naechste Datei laden.")
+    return " — ".join(teile)
 
 
 def _safe(name: str) -> str:

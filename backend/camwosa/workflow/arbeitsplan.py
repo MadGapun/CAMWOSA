@@ -136,7 +136,12 @@ def _pause_md(pause: SetupPause, nr: int) -> str:
     return (
         f"## [{nr:2d}] [ ] PAUSE: {pause.titel}\n"
         f"- Typ: {pause.typ.value}\n"
-        f"- Anweisung:\n  {pause.anweisung.replace(chr(10), chr(10) + '  ')}\n"
+        + (
+            "- **Maschine ausschalten → eigene G-Code-Datei** "
+            "(Umkabeln; Streaming-Verbindung wird getrennt)\n"
+            if getattr(pause, "getrennte_datei", False) else ""
+        )
+        + f"- Anweisung:\n  {pause.anweisung.replace(chr(10), chr(10) + '  ')}\n"
         + (f"- Foto: {pause.foto_pfad}\n" if pause.foto_pfad else "")
     )
 
@@ -164,7 +169,12 @@ def _pause_pdf(pause: SetupPause, nr: int, h2, body):
     text = (
         f"<b>[{nr:2d}] [  ] PAUSE: {pause.titel}</b><br/>"
         f"Typ: <i>{pause.typ.value}</i><br/>"
-        f"{pause.anweisung.replace(chr(10), '<br/>')}"
+        + (
+            "<b>Maschine ausschalten &rarr; eigene G-Code-Datei</b> "
+            "(Umkabeln; Verbindung wird getrennt)<br/>"
+            if getattr(pause, "getrennte_datei", False) else ""
+        )
+        + f"{pause.anweisung.replace(chr(10), '<br/>')}"
     )
     return Paragraph(text, body)
 

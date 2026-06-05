@@ -124,6 +124,34 @@ class TestArbeitsplan:
         assert "Auf Rotary umspannen" in md
         assert "ROTARY EIN" in md
 
+    def test_markdown_zeigt_getrennte_datei_hinweis(
+        self, rohmaterial_buche_platte, proverxl_maschine
+    ) -> None:
+        v = Variante(
+            id="x", name="X", rohmaterial=rohmaterial_buche_platte,
+            setups=[
+                Setup(id="s1", name="Seite A", werkzeug_id="t1"),
+                Setup(
+                    id="s2", name="Rotary", maschinen_modus="rotary_y",
+                    werkzeug_id="t1",
+                    pause_vor=SetupPause(
+                        typ=SetupPauseTyp.UMSPANN,
+                        titel="Umkabeln auf Rotary",
+                        anweisung="Y-Motor auf A umkabeln",
+                        getrennte_datei=True,
+                    ),
+                ),
+            ],
+        )
+        md = erzeuge_arbeitsplan_markdown(v, "Test", proverxl_maschine)
+        # Eindeutige Phrase des getrennte_datei-Hinweises (der Footer enthaelt
+        # generell "Maschine ausschalten" — daher auf die spezifische Phrase pruefen)
+        assert "eigene G-Code-Datei" in md
+        # Ohne Flag kein Hinweis
+        v.setups[1].pause_vor.getrennte_datei = False
+        md2 = erzeuge_arbeitsplan_markdown(v, "Test", proverxl_maschine)
+        assert "eigene G-Code-Datei" not in md2
+
     def test_pdf_wird_erzeugt(
         self, variante_zwei_setups, proverxl_maschine, tmp_path: Path
     ) -> None:

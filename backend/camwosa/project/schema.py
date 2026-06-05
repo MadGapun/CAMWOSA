@@ -116,6 +116,11 @@ class SetupPause(BaseModel):
     werkzeug_neu_id: str | None = None  # nur fuer Werkzeugwechsel
     nullpunkt_neu: tuple[float, float, float] | None = None  # nur fuer Umspann
     bestaetigung_text: str = "Verstanden"
+    getrennte_datei: bool = False
+    """G-Code an dieser Pause in eine NEUE Datei trennen statt M0-Pause.
+    Noetig wenn die Maschine fuer den Umbau ausgeschaltet werden muss (z.B.
+    Umkabeln auf Rotary, Spindel-Umverdrahtung) — dann reisst die Verbindung
+    ab und eine Einzeldatei mit Pause laeuft nicht durch."""
 
 
 class Setup(BaseModel):

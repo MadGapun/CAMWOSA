@@ -99,6 +99,36 @@ dateien = schreibe_gcode_pro_setup(
 
 CNCjs laedt einfach die naechste Datei, wenn du am Maschinen-Bediener bist.
 
+### Getrennte Dateien bei Umbau / Umkabeln (Maschine aus) — M7
+
+Eine **`M0`-Pause** im G-Code setzt voraus, dass die Maschine **eingeschaltet und
+verbunden** bleibt — der Bediener drückt nach dem Eingriff einfach „Resume".
+
+Manche Umbauten gehen aber **nur bei ausgeschalteter Maschine**: das **Umkabeln**
+der Motoren beim Wechsel XYZ ↔ Rotary, oder das **Umverdrahten der Spindel**. Wird
+die Maschine ausgeschaltet, **reißt die Streaming-Verbindung ab** — eine einzelne
+Datei mit `M0`-Pause läuft dann nicht durch.
+
+Dafür gibt es das Flag **`getrennte_datei`** auf Umspann-/Pause-/Achswechsel-Schritten
+(in der Workflow-Ansicht: Checkbox *„Getrennte G-Code-Datei (Maschine aus / Umkabeln)"*
+an der Pause). Ist es gesetzt, **endet der G-Code an dieser Stelle** und der Rest
+kommt in eine eigene Datei. Die erste Datei bekommt am Ende einen Hinweis:
+
+```
+; >>> Maschine ausschalten + umbauen (Umspannen): Auf Rotary umkabeln — Danach naechste Datei laden. <<<
+```
+
+Ablauf am Bediener: Datei A laufen lassen → Maschine **aus** → umkabeln → Maschine
+**an** → neu verbinden/homen → Datei B laden und starten.
+
+- **Achswechsel** (`AchsWechselSchritt`, z.B. XYZ↔Rotary) hat `getrennte_datei`
+  **standardmäßig an** — er bedeutet praktisch immer Umkabeln.
+- **Umspannen/Pause** haben es standardmäßig aus (reines Umspannen geht bei laufender
+  Maschine per `M0`) — du schaltest es ein, wenn der Eingriff Strom-Aus braucht.
+
+> Passt zum **„kein direkter Sender-Push"**-Prinzip: getrennte Dateien sind genau der
+> dateibasierte Übergabepunkt, an dem der Mensch die Maschine sicher stromlos macht.
+
 ## Werkstück-Umspannung (A49) — 2-/N-seitige Bearbeitung
 
 Wenn du das Werkstück zwischen zwei Setups **umdrehst** (2-seitig) oder

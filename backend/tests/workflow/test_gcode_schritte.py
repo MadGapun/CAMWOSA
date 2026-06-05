@@ -14,8 +14,11 @@ from camwosa.db.models import (
 from camwosa.gcode.toolpath import Bewegung, BewegungsTyp, OperationsTyp, Toolpath
 from camwosa.project.schema import OperationsKonfig, Setup
 from camwosa.project.schritte import (
+    AchsWechselSchritt,
     ManualNCSchritt,
     OperationSchritt,
+    PauseSchritt,
+    UmspannSchritt,
     WerkzeugWechselSchritt,
     WerkzeugWechselStrategie,
 )
@@ -136,6 +139,105 @@ class TestGliederung:
             start_werkzeug=wz,
         )
         assert len(bloecke[0].toolpaths) == 1
+
+
+class TestGetrennteDatei:
+    """M7: getrennte Dateien bei Umbau/Umkabeln (Maschine aus → Verbindung weg)."""
+
+    def test_umspann_mit_flag_splittet_und_hinweis(self):
+        wz = _wz("t1", 6)
+        schritte = [
+            OperationSchritt(id="s1", operation_id="op1"),
+            UmspannSchritt(id="u1", anweisung="Auf Rotary umkabeln",
+                           getrennte_datei=True),
+            OperationSchritt(id="s2", operation_id="op2"),
+        ]
+        bloecke = gliedere_schritte_in_bloecke(
+            schritte,
+            werkzeug_index={"t1": wz},
+            toolpaths_pro_operation={"op1": [_tp(1)], "op2": [_tp(2)]},
+            start_werkzeug=wz,
+        )
+        assert len(bloecke) == 2
+        assert "ausschalten" in bloecke[0].abschluss_hinweis.lower()
+        assert "Auf Rotary umkabeln" in bloecke[0].abschluss_hinweis
+
+    def test_umspann_ohne_flag_kein_split(self):
+        wz = _wz("t1", 6)
+        schritte = [
+            OperationSchritt(id="s1", operation_id="op1"),
+            UmspannSchritt(id="u1", anweisung="nur umspannen"),  # getrennte_datei default False
+            OperationSchritt(id="s2", operation_id="op2"),
+        ]
+        bloecke = gliedere_schritte_in_bloecke(
+            schritte,
+            werkzeug_index={"t1": wz},
+            toolpaths_pro_operation={"op1": [_tp(1)], "op2": [_tp(2)]},
+            start_werkzeug=wz,
+        )
+        assert len(bloecke) == 1
+        assert len(bloecke[0].toolpaths) == 2
+
+    def test_achswechsel_default_splittet(self):
+        wz = _wz("t1", 6)
+        schritte = [
+            OperationSchritt(id="s1", operation_id="op1"),
+            AchsWechselSchritt(id="a1", modus_alt="standard_xyz", modus_neu="rotary_y"),
+            OperationSchritt(id="s2", operation_id="op2"),
+        ]
+        bloecke = gliedere_schritte_in_bloecke(
+            schritte,
+            werkzeug_index={"t1": wz},
+            toolpaths_pro_operation={"op1": [_tp(1)], "op2": [_tp(2)]},
+            start_werkzeug=wz,
+        )
+        assert len(bloecke) == 2
+        # Hinweis nennt den Modus-Wechsel
+        assert "rotary_y" in bloecke[0].abschluss_hinweis
+
+    def test_achswechsel_ohne_trennung(self):
+        wz = _wz("t1", 6)
+        schritte = [
+            OperationSchritt(id="s1", operation_id="op1"),
+            AchsWechselSchritt(id="a1", modus_alt="a", modus_neu="b",
+                               getrennte_datei=False),
+            OperationSchritt(id="s2", operation_id="op2"),
+        ]
+        bloecke = gliedere_schritte_in_bloecke(
+            schritte,
+            werkzeug_index={"t1": wz},
+            toolpaths_pro_operation={"op1": [_tp(1)], "op2": [_tp(2)]},
+            start_werkzeug=wz,
+        )
+        assert len(bloecke) == 1
+
+    def test_hinweis_landet_im_gcode(self, tmp_path):
+        wz = _wz("t1", 6)
+        setup = Setup(
+            id="setup_01", name="Zweiseitig",
+            werkzeug_id="t1",
+            operationen=[
+                OperationsKonfig(id="op1", name="A", typ="tasche", parameter={}),
+                OperationsKonfig(id="op2", name="B", typ="tasche", parameter={}),
+            ],
+            schritte=[
+                OperationSchritt(id="s1", operation_id="op1"),
+                UmspannSchritt(id="u1", anweisung="Spindel umverdrahten",
+                               getrennte_datei=True),
+                OperationSchritt(id="s2", operation_id="op2"),
+            ],
+        )
+        pfade = schreibe_gcode_aus_schritten(
+            setup, _maschine(),
+            werkzeug_index={"t1": wz},
+            toolpaths_pro_operation={"op1": [_tp(1)], "op2": [_tp(2)]},
+            ziel_verzeichnis=tmp_path,
+        )
+        assert len(pfade) == 2
+        inhalt1 = pfade[0].read_text(encoding="utf-8")
+        assert "Maschine ausschalten" in inhalt1
+        assert "Spindel umverdrahten" in inhalt1
+        assert "naechste Datei laden" in inhalt1.lower() or "Datei laden" in inhalt1
 
 
 class TestSchreibenAufDisk:
