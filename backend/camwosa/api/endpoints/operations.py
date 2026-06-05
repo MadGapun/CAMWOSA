@@ -246,8 +246,13 @@ def postprocess():
         from camwosa.gcode.eintauchen import rampe_eintauchen
         winkel = float(data.get("rampen_winkel_grad", 5.0))
         mat_ok = float(data.get("material_oberkante", 0.0))
+        # Q2: variable Eintauchgeschwindigkeit (Rampe darf schneller sein als Plunge)
+        r_feed = data.get("rampen_vorschub")
+        r_feed = float(r_feed) if r_feed is not None else None
+        r_faktor = float(data.get("rampen_vorschub_faktor", 1.0))
         toolpaths = [
-            rampe_eintauchen(tp, winkel_grad=winkel, material_oberkante=mat_ok)
+            rampe_eintauchen(tp, winkel_grad=winkel, material_oberkante=mat_ok,
+                             rampe_feed=r_feed, rampe_faktor=r_faktor)
             for tp in toolpaths
         ]
     # J9/J10: intelligente Fahrwege (Reihenfolge optimieren + Freifahrten senken)

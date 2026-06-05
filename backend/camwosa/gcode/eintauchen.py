@@ -44,6 +44,8 @@ def rampe_eintauchen(
     material_oberkante: float = 0.0,
     max_rampe_mm: float | None = None,
     max_passes: int = 30,
+    rampe_feed: float | None = None,
+    rampe_faktor: float = 1.0,
     eps: float = 1e-9,
 ) -> Toolpath:
     """Ersetzt senkrechte Plunges durch Rampen entlang des Folgeschnitts.
@@ -105,11 +107,20 @@ def rampe_eintauchen(
             neu.append(Bewegung(BewegungsTyp.PLUNGE, b.x, b.y, z_top,
                                 feed=b.feed, kommentar="Anfahrt bis Material"))
 
+        # Q2: getrennter Rampen-Feed. Vorrang:
+        #   Bewegung.rampe_feed  >  Funktions-rampe_feed  >  b.feed * rampe_faktor
+        if b.rampe_feed is not None:
+            rampen_feed = b.rampe_feed
+        elif rampe_feed is not None:
+            rampen_feed = rampe_feed
+        else:
+            rampen_feed = b.feed * rampe_faktor if b.feed is not None else None
+
         # Zickzack-Rampe von z_top → b.z, XY zwischen P und P+d*r
         o = 0.0
         s = 1.0
         rest = run
-        feed = b.feed
+        feed = rampen_feed
         while rest > eps:
             ziel_o = r if s > 0 else 0.0
             leg = abs(ziel_o - o)

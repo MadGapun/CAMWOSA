@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { camwosaApi } from "../api/client";
 import { useAppStore } from "../state/store";
+import { quickcamProjektInStores } from "../state/projektIO";
 import { CoachMark } from "../components/Tooltip";
 
 interface TemplateParameter {
@@ -31,6 +33,7 @@ export default function QuickStartView({ onErzeugt }: { onErzeugt?: () => void }
   const [eingaben, setEingaben] = useState<Record<string, unknown>>({});
   const [fehler, setFehler] = useState<string | null>(null);
   const [erzeugt, setErzeugt] = useState(false);
+  const navigate = useNavigate();
 
   const maschinen = useAppStore((s) => s.maschinen);
   const werkzeuge = useAppStore((s) => s.werkzeuge);
@@ -63,12 +66,15 @@ export default function QuickStartView({ onErzeugt }: { onErzeugt?: () => void }
     if (!aktiv) return;
     setFehler(null);
     try {
-      await camwosaApi.quickcamErzeugen(
+      const { projekt } = await camwosaApi.quickcamErzeugen(
         aktiv.id, eingaben, maschineId, werkzeugId, materialId,
         `QuickCAM: ${aktiv.name}`,
       );
+      // #50: erzeugtes Projekt in die flachen Stores laden (sonst Dead-End)
+      quickcamProjektInStores(projekt);
       setErzeugt(true);
       onErzeugt?.();
+      navigate("/operationen");  // direkt zur Bearbeitung fuehren
     } catch (e: any) {
       setFehler(e.response?.data?.fehler ?? e.message ?? "Erzeugen fehlgeschlagen");
     }

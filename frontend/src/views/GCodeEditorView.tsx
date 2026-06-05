@@ -56,9 +56,10 @@ export default function GCodeEditorView() {
   // Cluster P: Output-Härtung
   const [modal, setModal] = useState(true);
   const [rapidSafety, setRapidSafety] = useState(true);
-  // J5: Rampen-Eintauchen
+  // J5: Rampen-Eintauchen + Q2: Rampen-Feed-Faktor (variable Eintauchgeschwindigkeit)
   const [rampe, setRampe] = useState(false);
   const [rampenWinkel, setRampenWinkel] = useState(5);
+  const [rampenFaktor, setRampenFaktor] = useState(1);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
   const beforeMount: BeforeMount = (m) => {
@@ -101,6 +102,7 @@ export default function GCodeEditorView() {
           rapid_safety: rapidSafety,
           rampe_eintauchen: rampe,
           rampen_winkel_grad: rampenWinkel,
+          rampen_vorschub_faktor: rampenFaktor,
           // P1: Hochlauf-Dwell folgt der im UI gewählten (aktiven) Spindel
           spindel_hochlauf_s: aktiveSpindel?.rampen_zeit_s ?? null,
         },
@@ -202,7 +204,15 @@ export default function GCodeEditorView() {
             onChange={(e) => setRampenWinkel(Number(e.target.value))}
             className="w-14 rounded bg-camwosa-bg px-2 py-0.5"
           />
-          ° Winkel
+          ° Winkel ·
+          <input
+            type="number" step={0.5} min={1} max={5} value={rampenFaktor}
+            disabled={!rampe}
+            onChange={(e) => setRampenFaktor(Number(e.target.value))}
+            className="w-14 rounded bg-camwosa-bg px-2 py-0.5"
+            title="Rampe darf schneller eintauchen als senkrecht (× Eintauch-Vorschub)"
+          />
+          × Feed
         </span>
       </div>
 

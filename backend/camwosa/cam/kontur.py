@@ -225,6 +225,7 @@ def _generiere_bewegungen(
             bewegungen.append(
                 Bewegung(BewegungsTyp.PLUNGE, start_x, start_y, z_aktuell,
                          feed=parameter.eintauch_vorschub,
+                         rampe_feed=parameter.rampe_eintauch_vorschub,
                          kommentar=f"Pass {pass_nr} Z={z_aktuell:.2f}")
             )
 

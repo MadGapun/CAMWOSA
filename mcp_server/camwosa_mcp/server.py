@@ -307,6 +307,8 @@ def gcode_erzeugen(
     spindel_hochlauf_s: float | None = None,
     rampe_eintauchen: bool = False,
     rampen_winkel_grad: float = 5.0,
+    rampen_vorschub: float | None = None,
+    rampen_vorschub_faktor: float = 1.0,
 ) -> dict:
     """Postprocesst eine Liste von Toolpaths zu G-Code.
 
@@ -335,6 +337,8 @@ def gcode_erzeugen(
         "spindel_hochlauf_s": spindel_hochlauf_s,
         "rampe_eintauchen": rampe_eintauchen,
         "rampen_winkel_grad": rampen_winkel_grad,
+        "rampen_vorschub": rampen_vorschub,
+        "rampen_vorschub_faktor": rampen_vorschub_faktor,
     })
 
 

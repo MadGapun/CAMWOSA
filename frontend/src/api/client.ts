@@ -362,6 +362,8 @@ export const camwosaApi = {
       spindel_hochlauf_s?: number | null;
       rampe_eintauchen?: boolean;
       rampen_winkel_grad?: number;
+      rampen_vorschub?: number | null;
+      rampen_vorschub_faktor?: number;
     },
   ): Promise<{ gcode: string; zeilen: number }> =>
     api

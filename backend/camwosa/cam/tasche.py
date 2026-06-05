@@ -387,7 +387,8 @@ def _generiere_bewegungen(
             )
             bewegungen.append(
                 Bewegung(BewegungsTyp.PLUNGE, start_x, start_y, z_aktuell,
-                         feed=parameter.eintauch_vorschub)
+                         feed=parameter.eintauch_vorschub,
+                         rampe_feed=parameter.rampe_eintauch_vorschub)
             )
             for x, y in bahn[1:]:
                 bewegungen.append(

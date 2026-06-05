@@ -18,6 +18,7 @@ import OverrideOperationForm from "../components/OverrideOperationForm";
 import FeedsSpeedsPanel from "../components/FeedsSpeedsPanel";
 import OperationPreview3D, { VorschauModusToggle, istHeavy } from "../components/OperationPreview3D";
 import WerkzeugGrafik from "../components/WerkzeugGrafik";
+import OperationGrafik from "../components/OperationGrafik";
 import { anzeigename } from "../api/werkzeugName";
 import { schaetzeToolpathZeit, formatiereDauer } from "../api/zeit";
 import { useUIPrefs } from "../state/uiPrefs";
@@ -198,9 +199,14 @@ export default function OperationenView() {
               )}
               onClick={() => setAktiveOpId(op.id)}
             >
-              <div className="flex justify-between">
-                <span className="font-medium">{op.name}</span>
-                <span className="text-camwosa-muted">{OP_LABELS[op.typ]}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-camwosa-muted">
+                    <OperationGrafik typ={op.typ} mode="piktogramm" size={20} />
+                  </span>
+                  <span className="truncate font-medium">{op.name}</span>
+                </span>
+                <span className="shrink-0 text-camwosa-muted">{OP_LABELS[op.typ]}</span>
               </div>
               <div className="mt-1 flex items-center gap-2">
                 {op.toolpath && (

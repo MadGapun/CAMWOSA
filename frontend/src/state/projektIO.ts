@@ -17,6 +17,7 @@
  */
 
 import { camwosaApi } from "../api/client";
+import type { GeometrieObjekt, OperationEintrag } from "../api/types";
 import { useAppStore } from "./store";
 import { useProjektStore } from "./projektStore";
 import { useRohmaterialStore } from "./rohmaterialStore";
@@ -152,6 +153,64 @@ export function projektNeu(name: string = "Unbenanntes Projekt"): void {
   const projektState = useProjektStore.getState();
   projektState.setDateiname(name);
   projektState.setDirty(false);
+}
+
+/**
+ * Uebernimmt ein bereits serverseitig erzeugtes QuickCAM-Projekt (Issue #50)
+ * in die flachen Working-Stores. Der Payload kommt direkt aus
+ * /api/quickcam/erzeugen (NICHT aus /projects/load).
+ *
+ * QuickCAM-Besonderheiten (backend/.../quickcam/templates.py):
+ *  - Operationen liegen in varianten[0].setups[].operationen (nicht flach)
+ *  - Geometrie steckt in op.parameter['__geometrie'], geometrien=[] global
+ * Beides wird hier in die flachen Stores (operationen/geometrien) ausgepackt,
+ * die OperationenView/ZeichnenView lesen.
+ */
+export function quickcamProjektInStores(projektRaw: unknown): void {
+  const projekt = projektRaw as CWPProjektPayload;
+  const store = useAppStore.getState();
+
+  // 1. Aktive Maschine setzen (sonst stimmen Spindel-/Werkzeug-IDs nicht)
+  const m = projekt.maschine as { id?: string } | undefined;
+  if (m?.id) store.setAktiveMaschine(m.id);
+
+  // 2. Operationen aus setups ausflachen + Geometrien aus op.parameter heben
+  const flacheOps: OperationEintrag[] = [];
+  const geometrien: GeometrieObjekt[] = [];
+  const v0 = (projekt.varianten ?? [])[0];
+  for (const setup of (v0?.setups ?? []) as Array<{ operationen?: unknown[] }>) {
+    for (const opRaw of setup.operationen ?? []) {
+      const op = opRaw as OperationEintrag & {
+        parameter?: Record<string, unknown> & { __geometrie?: GeometrieObjekt };
+      };
+      const geo = op.parameter?.__geometrie;
+      let geometrie_ids = op.geometrie_ids ?? [];
+      if (geo) {
+        const gid = geo.id ?? `geo_${op.id}`;
+        geometrien.push({ ...geo, id: gid });
+        geometrie_ids = [gid];
+      }
+      flacheOps.push({ ...op, geometrie_ids, aktiviert: op.aktiviert ?? true } as OperationEintrag);
+    }
+  }
+
+  // 3. Flache Stores setzen (genau das, was OperationenView/ZeichnenView lesen)
+  store.setGeometrien(geometrien as never[]);
+  useAppStore.setState({
+    operationen: flacheOps,
+    aktiveOperationId: flacheOps[0]?.id ?? null,
+  });
+
+  // 4. Rohmaterial + Setups in ihre Stores
+  if (v0?.rohmaterial && typeof v0.rohmaterial === "object") {
+    useRohmaterialStore.getState().setze(v0.rohmaterial as never);
+  }
+  useWorkflowStore.setState({ setups: (v0?.setups ?? []) as Setup[], erledigt: {} });
+
+  // 5. Projekt-Metadaten (dirty = ungespeichert)
+  const projektState = useProjektStore.getState();
+  projektState.setDateiname(projekt.metadaten?.name || "QuickCAM-Projekt");
+  projektState.setDirty(true);
 }
 
 /** Startet einen Browser-Download fuer einen Blob. */

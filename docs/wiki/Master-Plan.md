@@ -169,6 +169,20 @@ Die **Profi-Seite** des Dual-Audience-Prinzips — die Anfänger-Schicht (K/L) d
 | M5 | **Multi-Setup mit Umspannung** — siehe **A49** (Werkstück-Transformation + Maschinen-Umbau + Spannmittel pro Setup + Stabilitäts-Heuristik). Power-User-Säule, hier referenziert + priorisiert. | [#44](https://github.com/MadGapun/CAMWOSA/issues/44) | ⬜ |
 | M6 | **Rotary/Drechseln (Profi)** — bereits umgesetzt (Phase 3 + A30): 3,5-Achs-Indexing, Wrapping, Continuous-Lathe, 4 Drechsel-Strategien. Hier als Power-User-Säule referenziert. | [#12](https://github.com/MadGapun/CAMWOSA/issues/12) | ✅ |
 
+### Cluster Q — Feinkörnige Einstellbarkeit + Piktogramme + Workflow-Logik (Wettbewerbs-Audit 2026-06-05)
+
+Quelle: `docs/ANALYSE-2026-06-05-Wettbewerb-Einstellbarkeit.md` (Vergleich Easel/Carbide/Estlcam/OpenBuilds/VCarve/OPUS). Markus' Anforderung „alle Parameter editierbar + jeder Workflow logisch/dokumentiert + alle Piktogramme da".
+
+| Nr | Funktion | Issue | Wiki | Status |
+|----|----------|-------|------|--------|
+| Q1 | **Override-UI-Vollständigkeit** — ~17 fehlende Modell-Felder in `OverrideOperationForm` ergänzt (freifahrt_hoehe, vorschub_anpassung_max, rampe_winkel_grad, schlichtgang(_wand/_boden), lead_in/out, adaptive_*, loch_durchmesser, helix_steigung, anbohr_tiefe, senk_*, gewinde_steigung). Jeder Operations-Parameter pro Operation editierbar. | [#56](https://github.com/MadGapun/CAMWOSA/issues/56) | [Per-Feature-Override](Per-Feature-Override.md) | ✅ |
+| Q2 | **Plunge-Feed vs. Rampen-Feed trennen** — variable Eintauchgeschwindigkeit. `OperationParameter.rampe_vorschub`/`rampe_vorschub_faktor` + Property `rampe_eintauch_vorschub`; `Bewegung.rampe_feed`; `rampe_eintauchen()` nutzt Rampen-Feed nur für Rampen-Segmente (Luft-Plunge bleibt langsam). Endpoint/MCP `rampen_vorschub(_faktor)` + UI. Rückwärtskompatibel (Default = wie bisher). 12 Tests. | [#56](https://github.com/MadGapun/CAMWOSA/issues/56) | [Feeds-Speeds](Feeds-Speeds.md) | ✅ |
+| Q3 | **Per-Geometrie-Override** — Feed/Tiefe/Plunge pro Kontur **innerhalb** einer Operation (Estlcam Element-als-Entität-Modell). Größtes funktionales Delta. Recherche dokumentiert (`docs/ANALYSE-2026-06-05`). | [#56](https://github.com/MadGapun/CAMWOSA/issues/56) | [Per-Feature-Override](Per-Feature-Override.md) | ⬜ |
+| Q4 | **Operations- + Strategie-Piktogramme** — `OperationGrafik.tsx` (Kontur/Tasche/Bohren/Gravur/Relief) + `StrategieGrafik.tsx` (Tasche-/Eintauch-Strategien), parametrisch wie `WerkzeugGrafik`. In Operations-Liste + Override-Form verdrahtet. Render-Tests. | [#56](https://github.com/MadGapun/CAMWOSA/issues/56) | [Design-System](Design-System.md) | ✅ |
+| Q5 | **Innen/Außen/Tabs visuell** — `KonturSeiteGrafik.tsx` (innen/außen/auf_linie + Haltestege mit „Teil fliegt weg"-Hinweis), in der Kontur-Override-Form. | [#56](https://github.com/MadGapun/CAMWOSA/issues/56) | — | ✅ |
+| Q6 | **Workflow-Ablauf-Diagramme + K1 geführter Faden** (Idee→Design→Werkzeug→Operation→Sicherheit→G-Code→Maschine). | [#56](https://github.com/MadGapun/CAMWOSA/issues/56) | [Workflow-Modul](Workflow-Modul.md) | ⬜ |
+| Q7 | **QuickStart-Dead-End gefixt** (#50) — `quickcamProjektInStores()` in projektIO flacht `varianten[0].setups[].operationen` aus + hebt `op.parameter.__geometrie`; `QuickStartView.erzeugen()` nutzt jetzt die Rückgabe + navigiert zu /operationen. | [#50](https://github.com/MadGapun/CAMWOSA/issues/50) | [QuickCAM](QuickCAM.md) | ✅ |
+
 ## Teil B — REST-API + MCP
 
 | Nr | Funktion | Issue | Wiki | Status |

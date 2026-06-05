@@ -120,3 +120,66 @@ class TestMehrfach:
         ).bewegungen
         # Luft-Plunge endet bei z=2 (Materialoberkante)
         assert any(b.typ == BewegungsTyp.PLUNGE and abs(b.z - 2.0) < 1e-6 for b in out)
+
+
+class TestQ2VariablerEintauchFeed:
+    """Q2: Rampen-Feed getrennt vom senkrechten Plunge-Feed."""
+
+    def _rampen_segmente(self, out):
+        return [b for b in out
+                if b.kommentar in ("Rampen-Eintauchen", "Rampen-Ende")]
+
+    def test_default_rampe_uebernimmt_plunge_feed(self):
+        out = rampe_eintauchen(_tp(_kontur_mit_plunge())).bewegungen
+        segs = self._rampen_segmente(out)
+        assert segs
+        assert all(abs(b.feed - 300) < 1e-6 for b in segs)
+
+    def test_rampe_feed_absolut_aus_bewegung(self):
+        bew = [
+            Bewegung(BewegungsTyp.EILGANG, 0, 0, 5),
+            Bewegung(BewegungsTyp.PLUNGE, 0, 0, -2, feed=300, rampe_feed=900),
+            Bewegung(BewegungsTyp.LINEAR, 100, 0, -2, feed=800),
+            Bewegung(BewegungsTyp.EILGANG, 100, 0, 5),
+        ]
+        out = rampe_eintauchen(_tp(bew)).bewegungen
+        segs = self._rampen_segmente(out)
+        assert segs
+        assert all(abs(b.feed - 900) < 1e-6 for b in segs)
+
+    def test_rampe_faktor_multipliziert_plunge_feed(self):
+        out = rampe_eintauchen(_tp(_kontur_mit_plunge()), rampe_faktor=2.0).bewegungen
+        segs = self._rampen_segmente(out)
+        assert segs
+        assert all(abs(b.feed - 600) < 1e-6 for b in segs)
+
+    def test_funktions_rampe_feed_fallback(self):
+        out = rampe_eintauchen(_tp(_kontur_mit_plunge()), rampe_feed=1200, rampe_faktor=3.0).bewegungen
+        segs = self._rampen_segmente(out)
+        assert segs
+        assert all(abs(b.feed - 1200) < 1e-6 for b in segs)
+
+    def test_bewegung_rampe_feed_hat_vorrang_vor_funktion(self):
+        bew = [
+            Bewegung(BewegungsTyp.EILGANG, 0, 0, 5),
+            Bewegung(BewegungsTyp.PLUNGE, 0, 0, -2, feed=300, rampe_feed=750),
+            Bewegung(BewegungsTyp.LINEAR, 100, 0, -2, feed=800),
+            Bewegung(BewegungsTyp.EILGANG, 100, 0, 5),
+        ]
+        out = rampe_eintauchen(_tp(bew), rampe_feed=1200).bewegungen
+        segs = self._rampen_segmente(out)
+        assert segs
+        assert all(abs(b.feed - 750) < 1e-6 for b in segs)
+
+    def test_luft_plunge_behaelt_langsamen_feed(self):
+        bew = [
+            Bewegung(BewegungsTyp.EILGANG, 0, 0, 5),
+            Bewegung(BewegungsTyp.PLUNGE, 0, 0, -2, feed=300, rampe_feed=900),
+            Bewegung(BewegungsTyp.LINEAR, 100, 0, -2, feed=800),
+            Bewegung(BewegungsTyp.EILGANG, 100, 0, 5),
+        ]
+        out = rampe_eintauchen(_tp(bew)).bewegungen
+        luft = [b for b in out
+                if b.typ == BewegungsTyp.PLUNGE and abs(b.z) < 1e-6
+                and b.kommentar == "Anfahrt bis Material"]
+        assert luft and all(abs(b.feed - 300) < 1e-6 for b in luft)

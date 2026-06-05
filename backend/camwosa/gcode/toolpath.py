@@ -49,6 +49,9 @@ class Bewegung:
     i: float | None = None  # nur fuer Boegen
     j: float | None = None  # nur fuer Boegen
     kommentar: str = ""
+    # Q2: bevorzugter Vorschub, wenn diese PLUNGE-Bewegung von rampe_eintauchen()
+    # in eine Rampe umgewandelt wird. None = Rampe uebernimmt den senkrechten feed.
+    rampe_feed: float | None = None
 
 
 @dataclass

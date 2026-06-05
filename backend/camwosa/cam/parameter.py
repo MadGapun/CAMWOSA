@@ -70,7 +70,24 @@ class OperationParameter(BaseModel):
     werkzeug_id: str
     spindel_rpm: float = Field(gt=0)
     vorschub: float = Field(gt=0, description="mm/min")
-    eintauch_vorschub: float = Field(gt=0, description="mm/min")
+    eintauch_vorschub: float = Field(
+        gt=0,
+        description="Senkrechter Eintauch-Vorschub (mm/min). Gilt fuer reinen "
+                    "Plunge UND als Basis fuer den Rampen-Feed-Faktor (Q2).",
+    )
+    # Q2: Variable Eintauchgeschwindigkeit — das Rampen-Eintauchen darf schneller
+    # sein als der senkrechte Plunge (Werkzeug schneidet seitlich, nicht
+    # stirnseitig). Default = bisheriges Verhalten (Rampe = Plunge-Feed).
+    rampe_vorschub: float | None = Field(
+        default=None, gt=0,
+        description="Absoluter Rampen-Eintauch-Vorschub (mm/min). Vorrang vor "
+                    "rampe_vorschub_faktor.",
+    )
+    rampe_vorschub_faktor: float = Field(
+        default=1.0, ge=1.0, le=5.0,
+        description="Multiplikator auf eintauch_vorschub fuer das Rampen-"
+                    "Eintauchen (nur wenn rampe_vorschub None). 1.0 = wie heute.",
+    )
     sicherheitshoehe: float = Field(default=5.0, gt=0)
     max_tiefe: float = Field(gt=0, description="Max. Bearbeitungstiefe in mm (positiv)")
     stepdown: float = Field(gt=0, description="Tiefe pro Z-Pass in mm")
@@ -90,6 +107,18 @@ class OperationParameter(BaseModel):
         default=2.0, ge=1.0, le=5.0,
         description="Obergrenze des Vorschub-Anpassungsfaktors (J11).",
     )
+
+    @property
+    def rampe_eintauch_vorschub(self) -> float:
+        """Effektiver Rampen-Eintauch-Vorschub (Q2).
+
+        Vorrang: expliziter Absolutwert > Faktor × senkrechter Plunge-Feed.
+        Default (Faktor 1.0, kein Absolutwert) = senkrechter Plunge-Feed,
+        also identisch zum bisherigen Verhalten.
+        """
+        if self.rampe_vorschub is not None:
+            return self.rampe_vorschub
+        return self.eintauch_vorschub * self.rampe_vorschub_faktor
 
     @model_validator(mode="after")
     def _stepdown_kleiner_max_tiefe(self) -> "OperationParameter":

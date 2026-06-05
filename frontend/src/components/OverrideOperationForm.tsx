@@ -13,7 +13,9 @@
 import { useEffect, useState } from "react";
 import { camwosaApi } from "../api/client";
 import OverrideField from "./OverrideField";
-import type { OperationsTyp } from "../api/types";
+import KonturSeiteGrafik from "./KonturSeiteGrafik";
+import StrategieGrafik from "./StrategieGrafik";
+import type { KonturSeite, OperationsTyp } from "../api/types";
 
 interface Props {
   typ: OperationsTyp;
@@ -149,11 +151,33 @@ export default function OverrideOperationForm({
         quelle={quelle("vorschub_anpassung")}
         effektivAnzeige={eff("vorschub_anpassung") ? "an" : "aus"}
       />
+      <OverrideField label="Vorschub-Anpassung max ×" step={0.5} min={1} max={5}
+        wert={ov<number>("vorschub_anpassung_max")}
+        onChange={(v) => set("vorschub_anpassung_max", v)}
+        onReset={() => set("vorschub_anpassung_max", null)}
+        quelle={quelle("vorschub_anpassung_max")}
+        effektivAnzeige={eff("vorschub_anpassung_max") as number}
+      />
+      <OverrideField label="Freifahrt-Höhe" einheit="mm" step={0.5}
+        wert={ov<number>("freifahrt_hoehe")}
+        onChange={(v) => set("freifahrt_hoehe", v)}
+        onReset={() => set("freifahrt_hoehe", null)}
+        quelle={quelle("freifahrt_hoehe")}
+        effektivAnzeige={eff("freifahrt_hoehe") as number}
+      />
     </>
   );
 
   if (typ === "kontur") {
     return (
+      <>
+      <div className="mb-2 rounded border border-gray-700 bg-camwosa-bg/40 p-2 text-camwosa-text">
+        <KonturSeiteGrafik
+          seite={(eff("seite") as KonturSeite | undefined) ?? null}
+          tabsAnzahl={(eff("tabs_anzahl") as number | undefined) ?? 0}
+          zeige="beide"
+        />
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {Basis}
         <OverrideField<"innen" | "aussen" | "auf_linie">
@@ -222,12 +246,46 @@ export default function OverrideOperationForm({
           quelle={quelle("aufmass")}
           effektivAnzeige={eff("aufmass") as number}
         />
+        <OverrideField label="Rampen-Winkel" einheit="°" step={1} min={1} max={45}
+          wert={ov<number>("rampe_winkel_grad")}
+          onChange={(v) => set("rampe_winkel_grad", v)}
+          onReset={() => set("rampe_winkel_grad", null)}
+          quelle={quelle("rampe_winkel_grad")}
+          effektivAnzeige={eff("rampe_winkel_grad") as number}
+        />
+        <OverrideField label="Lead-in" einheit="mm" step={0.5}
+          wert={ov<number>("lead_in_laenge")}
+          onChange={(v) => set("lead_in_laenge", v)}
+          onReset={() => set("lead_in_laenge", null)}
+          quelle={quelle("lead_in_laenge")}
+          effektivAnzeige={eff("lead_in_laenge") as number}
+        />
+        <OverrideField label="Lead-out" einheit="mm" step={0.5}
+          wert={ov<number>("lead_out_laenge")}
+          onChange={(v) => set("lead_out_laenge", v)}
+          onReset={() => set("lead_out_laenge", null)}
+          quelle={quelle("lead_out_laenge")}
+          effektivAnzeige={eff("lead_out_laenge") as number}
+        />
+        <OverrideField typ="checkbox" label="Schlichtgang"
+          wert={ov<boolean>("schlichtgang")}
+          onChange={(v) => set("schlichtgang", v)}
+          onReset={() => set("schlichtgang", null)}
+          quelle={quelle("schlichtgang")}
+          effektivAnzeige={eff("schlichtgang") ? "an" : "aus"}
+        />
       </div>
+      </>
     );
   }
 
   if (typ === "tasche") {
     return (
+      <>
+      <div className="mb-2 flex flex-wrap gap-4 rounded border border-gray-700 bg-camwosa-bg/40 p-2 text-camwosa-text">
+        <StrategieGrafik art="tasche" wert={(eff("strategie") as string) ?? "parallel"} mode="gross" />
+        <StrategieGrafik art="eintauchen" wert={(eff("eintauch_strategie") as string) ?? "helix"} mode="gross" />
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {Basis}
         <OverrideField<"parallel" | "offset_kontur" | "spiral_aussen" | "spiral_innen" | "adaptive">
@@ -279,7 +337,43 @@ export default function OverrideOperationForm({
           quelle={quelle("aufmass_boden")}
           effektivAnzeige={eff("aufmass_boden") as number}
         />
+        <OverrideField label="Rampen-Winkel" einheit="°" step={1} min={1} max={45}
+          wert={ov<number>("rampe_winkel_grad")}
+          onChange={(v) => set("rampe_winkel_grad", v)}
+          onReset={() => set("rampe_winkel_grad", null)}
+          quelle={quelle("rampe_winkel_grad")}
+          effektivAnzeige={eff("rampe_winkel_grad") as number}
+        />
+        <OverrideField typ="checkbox" label="Schlichtgang Wand"
+          wert={ov<boolean>("schlichtgang_wand")}
+          onChange={(v) => set("schlichtgang_wand", v)}
+          onReset={() => set("schlichtgang_wand", null)}
+          quelle={quelle("schlichtgang_wand")}
+          effektivAnzeige={eff("schlichtgang_wand") ? "an" : "aus"}
+        />
+        <OverrideField typ="checkbox" label="Schlichtgang Boden"
+          wert={ov<boolean>("schlichtgang_boden")}
+          onChange={(v) => set("schlichtgang_boden", v)}
+          onReset={() => set("schlichtgang_boden", null)}
+          quelle={quelle("schlichtgang_boden")}
+          effektivAnzeige={eff("schlichtgang_boden") ? "an" : "aus"}
+        />
+        <OverrideField label="Adaptive Amplitude ×" step={0.01} min={0} max={0.5}
+          wert={ov<number>("adaptive_amplitude_faktor")}
+          onChange={(v) => set("adaptive_amplitude_faktor", v)}
+          onReset={() => set("adaptive_amplitude_faktor", null)}
+          quelle={quelle("adaptive_amplitude_faktor")}
+          effektivAnzeige={eff("adaptive_amplitude_faktor") as number}
+        />
+        <OverrideField label="Adaptive Wellen/mm" step={0.1} min={0.1}
+          wert={ov<number>("adaptive_wellen_pro_mm")}
+          onChange={(v) => set("adaptive_wellen_pro_mm", v)}
+          onReset={() => set("adaptive_wellen_pro_mm", null)}
+          quelle={quelle("adaptive_wellen_pro_mm")}
+          effektivAnzeige={eff("adaptive_wellen_pro_mm") as number}
+        />
       </div>
+      </>
     );
   }
 
@@ -322,6 +416,48 @@ export default function OverrideOperationForm({
           onReset={() => set("rueckzugs_hoehe", null)}
           quelle={quelle("rueckzugs_hoehe")}
           effektivAnzeige={eff("rueckzugs_hoehe") as number}
+        />
+        <OverrideField label="Loch-Ø (Helix/Reib)" einheit="mm" step={0.5}
+          wert={ov<number>("loch_durchmesser")}
+          onChange={(v) => set("loch_durchmesser", v)}
+          onReset={() => set("loch_durchmesser", null)}
+          quelle={quelle("loch_durchmesser")}
+          effektivAnzeige={eff("loch_durchmesser") as number}
+        />
+        <OverrideField label="Helix-Steigung" einheit="mm" step={0.1}
+          wert={ov<number>("helix_steigung")}
+          onChange={(v) => set("helix_steigung", v)}
+          onReset={() => set("helix_steigung", null)}
+          quelle={quelle("helix_steigung")}
+          effektivAnzeige={eff("helix_steigung") as number}
+        />
+        <OverrideField label="Anbohr-Tiefe" einheit="mm" step={0.5}
+          wert={ov<number>("anbohr_tiefe")}
+          onChange={(v) => set("anbohr_tiefe", v)}
+          onReset={() => set("anbohr_tiefe", null)}
+          quelle={quelle("anbohr_tiefe")}
+          effektivAnzeige={eff("anbohr_tiefe") as number}
+        />
+        <OverrideField label="Senk-Ø" einheit="mm" step={0.5}
+          wert={ov<number>("senk_durchmesser")}
+          onChange={(v) => set("senk_durchmesser", v)}
+          onReset={() => set("senk_durchmesser", null)}
+          quelle={quelle("senk_durchmesser")}
+          effektivAnzeige={eff("senk_durchmesser") as number}
+        />
+        <OverrideField label="Senk-Winkel (0=zylindr.)" einheit="°" step={1} min={0} max={180}
+          wert={ov<number>("senk_winkel_grad")}
+          onChange={(v) => set("senk_winkel_grad", v)}
+          onReset={() => set("senk_winkel_grad", null)}
+          quelle={quelle("senk_winkel_grad")}
+          effektivAnzeige={eff("senk_winkel_grad") as number}
+        />
+        <OverrideField label="Gewinde-Steigung" einheit="mm" step={0.1}
+          wert={ov<number>("gewinde_steigung")}
+          onChange={(v) => set("gewinde_steigung", v)}
+          onReset={() => set("gewinde_steigung", null)}
+          quelle={quelle("gewinde_steigung")}
+          effektivAnzeige={eff("gewinde_steigung") as number}
         />
       </div>
     );
