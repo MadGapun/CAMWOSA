@@ -92,6 +92,12 @@ jobs:
         with:
           name: camwosa-windows-portable
           path: electron/dist-portable/CAMWOSA-*.zip
+          # Actions-Speicher ist knapp (0,5 GB im Konto-Kontingent).
+          # Drei Plattform-Artefakte a ~145 MB pro Lauf sprengen das in
+          # wenigen Pushes; mit dem 90-Tage-Standard lagen im August 2026
+          # 45 Artefakte / 6,3 GB herum. Die Dateien haengen ohnehin am
+          # Release — als Lauf-Artefakt reichen 14 Tage.
+          retention-days: 14
 
   bundle-linux:
     needs: tests
@@ -136,6 +142,7 @@ jobs:
           path: |
             electron/dist-installer/*.AppImage
             electron/dist-installer/*.deb
+          retention-days: 14
           if-no-files-found: warn
 
   bundle-macos:
@@ -180,6 +187,7 @@ jobs:
           name: camwosa-macos-dmg
           path: electron/dist-installer/*.dmg
           if-no-files-found: warn
+          retention-days: 14
 
   # ---------------------------------------------------------------------------
   # Schritt 3: Release-Assets hochladen.
